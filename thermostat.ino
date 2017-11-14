@@ -15,7 +15,7 @@ All line ends printed are with MS Windows conventions due to Arduino print and p
 */
 #include <idDHTLib.h>
 #include <EEPROM.h>
-
+//Follows is not used: TODO:
 const char strFactoryDefaults[] PROGMEM = "\
 pin  0 \"Serial Rx communications received by Arduino board ( protected pin )\"\n\
 pin  1 \"Serial Tx communications sent out by Arduino board ( protected pin )\"\n\
@@ -32,7 +32,7 @@ pin 11 \"Air conditioner start/stop control, secondary stage\"\n\
 pin 12 \"Outdoor temperature sensor DHT22\"\n\
 pin 13 \"Air conditioner start/stop control, tertiary stage\"\n";
 //Where are other indoor sensors?
-//What about BUILTIN_LED pin?  Combine it with terciary A/C 
+//What about BUILTIN_LED pin?  Combine it with tertiary A/C 
 //What about utilizing PCI ISRs and how they control which pins to use?
 
 // INTENT: Access these values by reference and pointers.  They will be hardcoded here only.  The run-time code can only find out what they are, how many there are, and their names by calls to this function
