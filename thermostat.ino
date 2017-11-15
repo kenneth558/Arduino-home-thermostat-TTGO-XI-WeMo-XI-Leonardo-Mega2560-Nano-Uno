@@ -177,14 +177,13 @@ void printBasicInfo()
     Serial.println( F( ".." ) );
     if( fresh_powerup )
     {
-       Serial.println( F( "A way to read this in Ubuntu and Mint Linux is:" ) );
+       Serial.println( F( "A way to save talkback into a file in Ubuntu and Mint Linux is: (except change \"TIME_STAMP_THIS\" to lower case, not shown)" ) );
        Serial.print( F( "    nohup stty -F \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) " ) );
        Serial.print( _baud_rate_ );
 //The following would get time stamped inadvertently:
 //       Serial.println( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^time_stamp_this/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
-//So we have to cut time_stamp_this in pieces as follows:
-       Serial.print( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^time_sta" ) );
-       Serial.println( F( "mp_this/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
+//So we have to capitalize time_stamp_this
+       Serial.println( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^TIME_STAMP_THIS/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
        Serial.println( F( "." ) );
        Serial.println( F( "time_stamp_this Newly powered on:" ) );
     }
