@@ -15,7 +15,7 @@ All line ends printed are with MS Windows conventions due to Arduino print and p
 */
 #include <idDHTLib.h>
 #include <EEPROM.h>
-//Follows is not used: TODO:
+
 const char strFactoryDefaults[] PROGMEM = "\
 pin  0 \"Serial Rx communications received by Arduino board ( protected pin )\"\n\
 pin  1 \"Serial Tx communications sent out by Arduino board ( protected pin )\"\n\
@@ -32,7 +32,7 @@ pin 11 \"Air conditioner start/stop control, secondary stage\"\n\
 pin 12 \"Outdoor temperature sensor DHT22\"\n\
 pin 13 \"Air conditioner start/stop control, tertiary stage\"\n";
 //Where are other indoor sensors?
-//What about BUILTIN_LED pin?  Combine it with tertiary A/C 
+//What about BUILTIN_LED pin?  Combine it with terciary A/C 
 //What about utilizing PCI ISRs and how they control which pins to use?
 
 // INTENT: Access these values by reference and pointers.  They will be hardcoded here only.  The run-time code can only find out what they are, how many there are, and their names by calls to this function
@@ -178,9 +178,13 @@ void printBasicInfo()
     if( fresh_powerup )
     {
        Serial.println( F( "A way to read this in Ubuntu and Mint Linux is:" ) );
-       Serial.print( F( "    nohup stty -F \$( ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1 )" ) );
+       Serial.print( F( "    nohup stty -F \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) " ) );
        Serial.print( _baud_rate_ );
-       Serial.println( F( " -echo;while true;do cat \$( ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1 )|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^time_stamp_this/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
+//The following would get time stamped inadvertently:
+//       Serial.println( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^time_stamp_this/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
+//So we have to cut time_stamp_this in pieces as follows:
+       Serial.print( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^time_sta" ) );
+       Serial.println( F( "mp_this/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
        Serial.println( F( "." ) );
        Serial.println( F( "time_stamp_this Newly powered on:" ) );
     }
@@ -983,11 +987,11 @@ delay( 100 );
               digitalWrite( furnace_fan_pin, HIGH );
               if( logging )
               {
-                Serial.print( F( "time_stamp_this Furnace and furnace fan on ( pins " ) );
+                Serial.print( F( "time_stamp_this Furnace and furnace fan on  (pins " ) );
                 Serial.print( furnace_pin );
                 Serial.print( F( " and " ) );
                 Serial.print( furnace_fan_pin );
-                Serial.println( F( " )" ) );
+                Serial.println( F( ")" ) );
               }
           }
        }
@@ -1093,5 +1097,4 @@ delay( 100 );
 check_incoming( result );
   delay( 2000 );
 }
-
 
