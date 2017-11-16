@@ -74,7 +74,7 @@ int lower_furnace_temp = EEPROM.read( lower_furnace_temp_address );
 int upper_furnace_temp = EEPROM.read( upper_furnace_temp_address );
 char thermostat = ( char )EEPROM.read( thermostat_address );
 char fan_mode = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
-bool mswindows = true;  //Used for line-end on serial outputs.  Will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
+bool mswindows = true;  //Used for line-end on serial outputs.  
 
 
 /*  The following info plus NUM_DIGITAL_PINS, digitalPinToInterrupt and other digitalPinToxxxx macros, etc. can be used to determine board type at run time:
