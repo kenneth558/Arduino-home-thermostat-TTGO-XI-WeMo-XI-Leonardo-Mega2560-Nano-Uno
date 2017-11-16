@@ -10,6 +10,7 @@ All line ends printed are with MS Windows conventions due to Arduino print and p
  PORTB |= ( 1<<5); // set bit 5 of PORTB
  PORTC &= ~( 1<<3 ); // clear bit 3 of PORTC
  PORTD ^= ( 1<<2 ); // toggle bit 2 of PORTD
+Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 
 
 */
@@ -73,7 +74,7 @@ int lower_furnace_temp = EEPROM.read( lower_furnace_temp_address );
 int upper_furnace_temp = EEPROM.read( upper_furnace_temp_address );
 char thermostat = ( char )EEPROM.read( thermostat_address );
 char fan_mode = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
-bool mswindows = false;  //Used for line-end on serial outputs.  Will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
+bool mswindows = true;  //Used for line-end on serial outputs.  Will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
 
 
 /*  The following info plus NUM_DIGITAL_PINS, digitalPinToInterrupt and other digitalPinToxxxx macros, etc. can be used to determine board type at run time:
@@ -126,7 +127,8 @@ boolean IsValidPinNumber( String str )
     {
         if( !( isDigit( str.charAt( i ) )|| str.charAt( i ) == '.' ) )
         {
-        Serial.println( F( "Command must begin with a pin number" ) );
+        Serial.print( F( "Command must begin with a pin number" ) );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         return false;
         }
     }
@@ -134,7 +136,8 @@ boolean IsValidPinNumber( String str )
     if( pin_specified < 0 || pin_specified >= NUM_DIGITAL_PINS )
     {
         Serial.print( F( "Pin number must be 0 through " ) );
-        Serial.println( NUM_DIGITAL_PINS - 1 );
+        Serial.print( NUM_DIGITAL_PINS - 1 );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         return false;
     }
     return true;
@@ -149,7 +152,8 @@ if( reply )
 {
     Serial.print( F( "Sorry, but pin " ) );
     Serial.print( pin );
-    Serial.println( F( " is not yet set to output" ) );
+    Serial.print( F( " is not yet set to output" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 }
 return false;
 }
@@ -160,79 +164,120 @@ for( unsigned int i = 0; i < str.length(); i++ )
 {
     if( !( isDigit( str.charAt( i ) )|| str.charAt( i ) == '.' ) )
     {
-        Serial.println( F( "Command must begin with a temperature in Celsius" ) );
+        Serial.print( F( "Command must begin with a temperature in Celsius" ) );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         return false;
     }
 }
 temp_specified=str.toInt();
 if( temp_specified < 1 || temp_specified > 37 )
 {
-    Serial.println( F( "Celsius temperature must be 1 through 37" ) );
+    Serial.print( F( "Celsius temperature must be 1 through 37" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     return false;
 }
 return true;
 }
 void printBasicInfo()
 {
-    Serial.println( F( ".." ) );
+    Serial.print( F( ".." ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     if( fresh_powerup )
     {
-       Serial.println( F( "A way to save talkback into a file in Ubuntu and Mint Linux is: (except change \"TIME_STAMP_THIS\" to lower case, not shown)" ) );
+       Serial.print( F( "A way to save talkback into a file in Ubuntu and Mint Linux is: (except change \"TIME_STAMP_THIS\" to lower case, not shown)" ) );
+       Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
        Serial.print( F( "    nohup stty -F \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) " ) );
        Serial.print( _baud_rate_ );
 //The following would get time stamped inadvertently:
 //       Serial.println( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^time_stamp_this/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
 //So we have to capitalize time_stamp_this
-       Serial.println( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^TIME_STAMP_THIS/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
-       Serial.println( F( "." ) );
-       Serial.println( F( "time_stamp_this Newly powered on:" ) );
+       Serial.print( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^TIME_STAMP_THIS/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
+       Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+       Serial.print( F( "." ) );
+       Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+       Serial.print( F( "time_stamp_this Newly powered on:" ) );
+       Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     }
     Serial.print( F( "Version: " ) );
-    Serial.println( version );
+    Serial.print( version );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Operating mode (heating/cooling/auto) = " ) );
-    Serial.println( thermostat );
+    Serial.print( thermostat );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Fan mode = " ) );
-    Serial.println( fan_mode );
+    Serial.print( fan_mode );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "lower_furnace_temp = " ) );
-    Serial.println( lower_furnace_temp );
+    Serial.print( lower_furnace_temp );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "upper_furnace_temp = " ) );
-    Serial.println( upper_furnace_temp );
+    Serial.print( upper_furnace_temp );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Talkback for logging is turned o" ) );
-    if( logging ) Serial.println( F( "n" ) );
-    else  Serial.println( F( "ff" ) );
+    if( logging ) Serial.print( F( "n" ) );
+    else  Serial.print( F( "ff" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "primary_temp_sensor_pin = " ) );
-    Serial.println( primary_temp_sensor_pin );
+    Serial.print( primary_temp_sensor_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "furnace_pin = " ) );
-    Serial.println( furnace_pin );
+    Serial.print( furnace_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "furnace_fan_pin = " ) );
-    Serial.println( furnace_fan_pin );
+    Serial.print( furnace_fan_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "automation system power_cycle_pin = " ) );
-    Serial.println( power_cycle_pin );
+    Serial.print( power_cycle_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "LED_BUILTIN pin = " ) );
-    Serial.println( LED_BUILTIN );
-    Serial.println( F( "." ) );
-    Serial.println( F( "Valid commands (case sensitive, minimal sanity checking, one per line) are:" ) );
-    Serial.println( F( "." ) );
-    Serial.println( F( "help (re-display this information)" ) );
-    Serial.println( F( "ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat)" ) );
-    Serial.println( F( "<pin number> set pin [to] output (or ...pin set)" ) );
-    Serial.println( F( "<pin number> set pin [to] input [pers] (or ...pin set)optional persistence" ) );
-    Serial.println( F( "<pin number> set pin [to] input with pullup [pers] (or ...pin set)optional persistence" ) );
-    Serial.println( F( "<pin number> read pin (or ...pin read)(obtain the name if any, setting and voltage)" ) );
-    Serial.println( F( "read pins (or pins read )(obtain the names, settings and voltages of ALL pins)" ) );
-    Serial.println( F( "<pin number> set pin [to] low [pers] (or ...pin set )(only allowed to pins assigned as output)optional persistence" ) );
-    Serial.println( F( "<pin number> set pin [to] high [pers] (or ...pin set )(only allowed to pins assigned as output)optional persistence" ) );
-    Serial.println( F( "<°C> set lower furnace temp (to turn furnace on at any lower temperature than this, always persistent)" ) );
-    Serial.println( F( "<°C> set upper furnace temp (to turn furnace off at any higher temperature than this, always persistent)" ) );
-    Serial.println( F( "talkback on/off (or logging on/off)(for the host system to log when each output pin gets set high or low, always persistent)" ) );
-    Serial.println( F( "report master room temp" ) );
-    Serial.println( F( "power cycle (or cycle power)" ) );
-    Serial.println( F( "ch[ange] pers[istent memory] <address> <value>" ) );
-    Serial.println( F( "ch[ange] pers[istent memory] <StartingAddress> \"<character string>[\"[ 0]] (store character string as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])" ) );
-    Serial.println( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>]" ) );
-    Serial.println( F( "vi[ew] fact[ory defaults] (so you can what would happen before you reset to them)" ) );
-    Serial.println( F( "reset (factory defaults: pure, simple and absolute)" ) );
-    Serial.println( F( ".." ) );
+    Serial.print( LED_BUILTIN );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "." ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "Valid commands (case sensitive, minimal sanity checking, one per line) are:" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "." ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "help (re-display this information)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "<pin number> set pin [to] output (or ...pin set)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "<pin number> set pin [to] input [pers] (or ...pin set)optional persistence" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "<pin number> set pin [to] input with pullup [pers] (or ...pin set)optional persistence" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "<pin number> read pin (or ...pin read)(obtain the name if any, setting and voltage)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "read pins (or pins read )(obtain the names, settings and voltages of ALL pins)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "<pin number> set pin [to] low [pers] (or ...pin set )(only allowed to pins assigned as output)optional persistence" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "<pin number> set pin [to] high [pers] (or ...pin set )(only allowed to pins assigned as output)optional persistence" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "<°C> set lower furnace temp (to turn furnace on at any lower temperature than this, always persistent)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "<°C> set upper furnace temp (to turn furnace off at any higher temperature than this, always persistent)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "talkback on/off (or logging on/off)(for the host system to log when each output pin gets set high or low, always persistent)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "report master room temp" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "power cycle (or cycle power)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "ch[ange] pers[istent memory] <address> <value>" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "ch[ange] pers[istent memory] <StartingAddress> \"<character string>[\"[ 0]] (store character string as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>]" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "vi[ew] fact[ory defaults] (so you can what would happen before you reset to them)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "reset (factory defaults: pure, simple and absolute)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( ".." ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 }
 
 void restore_factory_defaults()
@@ -287,28 +332,40 @@ factory_setting_upper_furnace_temp;
 */
     Serial.print( F( "Version: " ) );
     Serial.print( version );
-    Serial.println( F( " Factory defaults:" ) );
+    Serial.print( F( " Factory defaults:" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Operating mode (heating/cooling/auto) = " ) );
-    Serial.println( factory_setting_thermostat_mode );
+    Serial.print( factory_setting_thermostat_mode );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Fan mode = " ) );
-    Serial.println( factory_setting_fan_mode );
+    Serial.print( factory_setting_fan_mode );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "lower_furnace_temp = " ) );
-    Serial.println( factory_setting_lower_furnace_temp );
+    Serial.print( factory_setting_lower_furnace_temp );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "upper_furnace_temp = " ) );
-    Serial.println( factory_setting_upper_furnace_temp );
+    Serial.print( factory_setting_upper_furnace_temp );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Talkback for logging o" ) );
-    if( factory_setting_logging_setting ) Serial.println( F( "n" ) );
-    else  Serial.println( F( "ff" ) );
+    if( factory_setting_logging_setting ) Serial.print( F( "n" ) );
+    else   Serial.print( F( "ff" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "primary_temp_sensor_pin = " ) );
-    Serial.println( factory_setting_primary_temp_sensor_pin );
+    Serial.print( factory_setting_primary_temp_sensor_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "furnace_pin = " ) );
-    Serial.println( factory_setting_furnace_pin );
+    Serial.print( factory_setting_furnace_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "furnace_fan_pin = " ) );
-    Serial.println( factory_setting_furnace_fan_pin );
+    Serial.print( factory_setting_furnace_fan_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "automation system power_cycle_pin = " ) );
-    Serial.println( factory_setting_power_cycle_pin );
+    Serial.print( factory_setting_power_cycle_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "LED_BUILTIN pin = " ) );
-    Serial.println( LED_BUILTIN );
+    Serial.print( LED_BUILTIN );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 }
 
 /*
@@ -395,7 +452,8 @@ void check_incoming( int result )
               Serial.print( F( ", powered back on, power control pin " ) );
               Serial.print( power_cycle_pin );
               Serial.print( F( " = " ) );
-              Serial.println( digitalRead( power_cycle_pin ) );
+              Serial.print( digitalRead( power_cycle_pin ) );
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
           }
           strFull = "";
         }
@@ -409,7 +467,11 @@ void check_incoming( int result )
                 lower_furnace_temp = temp_specified;
                 EEPROM.update( lower_furnace_temp_address, temp_specified );
               }
-              else Serial.println( F( "Upper furnace temp too low for this value. Raise that setting before retrying this value" ) );
+              else 
+              {
+                Serial.print( F( "Upper furnace temp too low for this value. Raise that setting before retrying this value" ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+              }
             }
             strFull = "";
         }
@@ -423,7 +485,11 @@ void check_incoming( int result )
                 upper_furnace_temp = temp_specified;
                 EEPROM.update( upper_furnace_temp_address, temp_specified );
               }
-              else Serial.println( F( "Lower furnace temp too high for this value. Lower that setting before retrying this value" ) );
+              else 
+              {
+                Serial.print( F( "Lower furnace temp too high for this value. Lower that setting before retrying this value" ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+              }
            }
            strFull = "";
         }
@@ -432,25 +498,33 @@ void check_incoming( int result )
             if( result == IDDHTLIB_OK )
             {
                Serial.print( F( "Humidity (%): " ) );
-               Serial.println( DHTLib.getHumidity(), 0 );
+               Serial.print( DHTLib.getHumidity(), 0 );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Temperature (°C): " ) );
-               Serial.println( DHTLib.getCelsius(), 0 );
+               Serial.print( DHTLib.getCelsius(), 0 );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 
                
                Serial.print( F( "Temperature furnace is set to start: " ) );
-               Serial.println( lower_furnace_temp );
+               Serial.print( lower_furnace_temp );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Temperature furnace is set to stop: " ) );
-               Serial.println( upper_furnace_temp );
+               Serial.print( upper_furnace_temp );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Furnace output: " ) );
-               Serial.println( digitalRead( furnace_pin ) );
+               Serial.print( digitalRead( furnace_pin ) );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Furnace fan: " ) );
-               Serial.println( digitalRead( furnace_fan_pin ) );
+               Serial.print( digitalRead( furnace_fan_pin ) );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             }
             else 
             {
-              Serial.println( F( "." ) );
+              Serial.print( F( "." ) );
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
               Serial.print( F( "Sensor not reporting.  Result is: " ) );
-              Serial.println( result );
+              Serial.print( result );
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             }
             strFull = "";
         }
@@ -494,7 +568,7 @@ void check_incoming( int result )
                   Serial.print( bitRead(bmask, 7-i ) );
               }
 */
-              Serial.println();
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
           }
            strFull = "";
         }
@@ -530,7 +604,8 @@ void check_incoming( int result )
                      Serial.print( F( " is an input that reads a digital " ) );
                  }
               }
-              Serial.println( digitalRead( pin_specified ) );
+              Serial.print( digitalRead( pin_specified ) );
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 
            }
            strFull = "";
@@ -557,14 +632,15 @@ void check_incoming( int result )
                     Serial.print( F( " set to high level" ) );
                     int pinState = digitalRead( pin_specified );
                     if( pinState == LOW ) Serial.print( F( " but is reading back a 0 because something was/is forcing that line low. DANGER WILL ROBINSON! That pin voltage isn't right" ) );
-                    Serial.println();
+                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  }
               }
               else
               {
                  if( logging )
                  {
-                    Serial.println( F( "time_stamp_this Sorry, unable to control that pin because it hasn't been made into an output, yet" ) );                
+                    Serial.print( F( "time_stamp_this Sorry, unable to control that pin because it hasn't been made into an output, yet" ) );
+                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  }
               }
            }
@@ -592,14 +668,15 @@ void check_incoming( int result )
                     Serial.print( F( " set to low level" ) );
                     int pinState = digitalRead( pin_specified );
                     if( pinState == HIGH ) Serial.print( F( ". DANGER WILL ROBINSON! That pin voltage isn't right.  Something off the board was/is forcing that line high and conflicting with the low voltage that the board is trying to put on it" ) );
-                    Serial.println();
+                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  }
               }
               else
               {
                  if( logging )
                  {
-                    Serial.println( F( "time_stamp_this Sorry, unable to control that pin because it hasn't been made into an output, yet" ) );                
+                    Serial.print( F( "time_stamp_this Sorry, unable to control that pin because it hasn't been made into an output, yet" ) );
+                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  }
               }
            }
@@ -623,12 +700,14 @@ void check_incoming( int result )
                     }
                  Serial.print( pin_specified );
                  Serial.print( F( " now set to output and has a digital " ) );
-                 Serial.println( digitalRead( pin_specified ) );
+                 Serial.print( digitalRead( pin_specified ) );
+                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
               }
            }
            else
            {
-              Serial.println( F( "time_stamp_this Sorry, but pin 0 is dedicated to receive communications from the host" ) );
+              Serial.print( F( "time_stamp_this Sorry, but pin 0 is dedicated to receive communications from the host" ) );
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            }
            strFull = "";
         }
@@ -642,9 +721,10 @@ void check_incoming( int result )
                  if( logging )
                  {
                    Serial.print( F( "Sorry, unable to allow that pin to be made an input. It is dedicated as output only for " ) );
-                   if( pin_specified == power_cycle_pin ) Serial.println( F( "cycling the power to the host system." ) );
-                   if( pin_specified == furnace_fan_pin ) Serial.println( F( "the furnace blower fan." ) );
-                   if( pin_specified == furnace_pin ) Serial.println( F( "the furnace." ) );
+                   if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
+                   if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
+                   if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
+                   Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  }
               }
               else
@@ -661,13 +741,15 @@ void check_incoming( int result )
                        Serial.print( F( "time_stamp_this Pin " ) );
                     }
                     Serial.print( pin_specified );
-                    Serial.println( F( " now set to input with pullup" ) );                 
+                    Serial.print( F( " now set to input with pullup" ) );
+                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  }
               }
            }
            else
            {
-              Serial.println( F( "time_stamp_this Sorry, but pin 1 is dedicated to send communications to the host" ) );
+              Serial.print( F( "time_stamp_this Sorry, but pin 1 is dedicated to send communications to the host" ) );
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            }
            strFull = "";
         }
@@ -678,16 +760,19 @@ void check_incoming( int result )
            {
               if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin )
               {
-                Serial.println( F( "Sorry, unable to allow that pin to be made an input. You've dedicated output only for " ) );
-                if( pin_specified == power_cycle_pin ) Serial.println( F( "cycling the power to the host system." ) );
-                if( pin_specified == furnace_fan_pin ) Serial.println( F( "the furnace blower fan." ) );
-                if( pin_specified == furnace_pin ) Serial.println( F( "the furnace." ) );
+                Serial.print( F( "Sorry, unable to allow that pin to be made an input. You've dedicated output only for " ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
+                else if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
+                else if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
               }
               else
               {
                  pinMode( pin_specified, OUTPUT );
                  digitalWrite( pin_specified, LOW );
-                 int pinState = Serial.println( digitalRead( pin_specified ) );
+                 int pinState = Serial.print( digitalRead( pin_specified ) );
+                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  pinMode( pin_specified, INPUT );
                  if( logging )
                  {
@@ -702,13 +787,14 @@ void check_incoming( int result )
                     Serial.print( pin_specified );
                     Serial.print( F( " now set to input" ) );
                     if( pinState == HIGH ) Serial.print( F( " with pullup because something was/is forcing that line high. DANGER WILL ROBINSON! That pin voltage isn't right" ) );
-                    Serial.println();
+                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  }
               }
            }
            else
            {
-              Serial.println( F( "time_stamp_this Sorry, but pin 1 is dedicated to send communications to the host" ) );
+              Serial.print( F( "time_stamp_this Sorry, but pin 1 is dedicated to send communications to the host" ) );
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            }
            strFull = "";
         }
@@ -716,11 +802,12 @@ void check_incoming( int result )
         {
            Serial.print( F( "Thermostat being set to " ) );
            int charat = strFull.indexOf( F( "ther " ) )+ 5;
-           if( strFull.charAt( charat ) == 'a' ) Serial.println( F( "auto" ) );
-           else if( strFull.charAt( charat ) == 'o' ) Serial.println( F( "off" ) );
-           else if( strFull.charAt( charat ) == 'h' ) Serial.println( F( "heat" ) );
-           else if( strFull.charAt( charat ) == 'c' ) Serial.println( F( "cool" ) );
-           else { Serial.println( F( "<fault>. No change made" ) ); goto after_change_thermostat; } //Making extra sure that no invalid mode gets saved
+           if( strFull.charAt( charat ) == 'a' ) Serial.print( F( "auto" ) );
+           else if( strFull.charAt( charat ) == 'o' ) Serial.print( F( "off" ) );
+           else if( strFull.charAt( charat ) == 'h' ) Serial.print( F( "heat" ) );
+           else if( strFull.charAt( charat ) == 'c' ) Serial.print( F( "cool" ) );
+           else { Serial.print( F( "<fault>. No change made" ) ); goto after_change_thermostat; } //Making extra sure that no invalid mode gets saved
+           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 //change_thermostat:
            EEPROM.update( thermostat_address, strFull.charAt( charat ) );
 after_change_thermostat:
@@ -730,13 +817,15 @@ after_change_thermostat:
         {
             if( strFull.indexOf( F( " " ) ) >= 4 )
             {
-                Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c.  They mean auto, off, heat, and cool and optionally may be spelled out completely" ) );
+                Serial.print( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c.  They mean auto, off, heat, and cool and optionally may be spelled out completely" ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             }
             Serial.print( F( "Thermostat is " ) );
-            if( thermostat == 'a' ) Serial.println( F( "auto" ) );
-            else if( thermostat == 'o' ) Serial.println( F( "off" ) );
-            else if( thermostat == 'h' ) Serial.println( F( "heat" ) );
-            else if( thermostat == 'c' ) Serial.println( F( "cool" ) );
+            if( thermostat == 'a' ) Serial.print( F( "auto" ) );
+            else if( thermostat == 'o' ) Serial.print( F( "off" ) );
+            else if( thermostat == 'h' ) Serial.print( F( "heat" ) );
+            else if( thermostat == 'c' ) Serial.print( F( "cool" ) );
+            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
         else if( strFull.indexOf( F( "logging o" ) ) >= 0 )
@@ -746,15 +835,17 @@ after_change_thermostat:
            if( strFull.charAt( charat ) == 'n' ) logging = true;
            else logging = false;
            EEPROM.update( logging_address, ( uint8_t )logging );
-           if( logging ) Serial.println( strFull.charAt( charat ) );
-           else  Serial.println( F( "ff" ) );
+           if( logging ) Serial.print( strFull.charAt( charat ) );
+           else  Serial.print( F( "ff" ) );
+           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
         else if( strFull.indexOf( F( "logging" ) ) >= 0 )
         {
            Serial.print( F( "Talkback for logging is turned o" ) );
-           if( logging ) Serial.println( F( "n" ) );
-           else  Serial.println( F( "ff" ) );
+           if( logging ) Serial.print( F( "n" ) );
+           else  Serial.print( F( "ff" ) );
+           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
         else if( strFull.indexOf( F( "vi pers" ) ) == 0 )
@@ -767,14 +858,16 @@ after_change_thermostat:
           if( address_start < 0 || address_start >= EEPROM.length() || address_end < 0 || address_end >= EEPROM.length() )
           {
             Serial.print( F( "Out of range.  Each address can only be 0 to " ) );
-            Serial.println( EEPROM.length() - 1 );
+            Serial.print( EEPROM.length() - 1 );
+            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
           }
           else
           {
              Serial.print( F( "Start address: " ) );
              Serial.print( address_start );
              Serial.print( F( " End address: " ) );
-             Serial.println( address_end );
+             Serial.print( address_end );
+             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 //             signed int drection = 1;
              if( address_start > address_end )
              {
@@ -797,7 +890,8 @@ after_change_thermostat:
                if( data < 10 ) Serial.print( F( " " ) );
                Serial.print( data );
                Serial.print( F( "  " ) );
-               Serial.println( ( char )EEPROM.read( address ) );
+               Serial.print( ( char )EEPROM.read( address ) );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
              }
           }
            strFull = "";
@@ -810,7 +904,8 @@ after_change_thermostat:
           String data_str = address_str.substring( address_str.indexOf( ' ' )+ 1 );
               Serial.print( F( " entered data: <" ) );
               Serial.print( data_str );
-              Serial.println( F( ">" ) );
+              Serial.print( F( ">" ) );
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
           uint8_t data = data_str.toInt();
           if( data == 0 && data_str != "0" )
           {
@@ -829,8 +924,10 @@ after_change_thermostat:
 //             Serial.println( address_end );
                for( unsigned int address = address_start; address <= address_end; address++ )
                {
-                Serial.println( address_end-address );
-                Serial.println( sizeof( data_str )- ( address_end-address )- 3 );
+                Serial.print( address_end-address );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                Serial.print( sizeof( data_str )- ( address_end-address )- 3 );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  if( data_str[sizeof( data_str )- ( address_end-address )] != '\"' )
                  {
                     Serial.print( F( "Address: " ) );
@@ -841,7 +938,8 @@ after_change_thermostat:
                     Serial.print( EEPROM.read( address ) );
                     EEPROM.update( address, data );
                     Serial.print( F( " newly stored data: " ) );
-                    Serial.println( EEPROM.read( address ) );
+                    Serial.print( EEPROM.read( address ) );
+                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                   }
                   else
                   {
@@ -850,7 +948,8 @@ after_change_thermostat:
                         if( data_str.endsWith( "\" 0" ) )
                         {
                            Serial.print( F( "Putting a null termination at Address: " ) );
-                           Serial.println( ++address );
+                           Serial.print( ++address );
+                           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                            EEPROM.update( address, 0 );
                         }
                     }
@@ -859,7 +958,8 @@ after_change_thermostat:
                 }
                 else
                 {
-                Serial.println( F( "That data string is too long to go to that address so close to the end of the EEPROM.  It would not fit." ) );
+                Serial.print( F( "That data string is too long to go to that address so close to the end of the EEPROM.  It would not fit." ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                 strFull = "";
 //                return false;
                 return;
@@ -868,7 +968,8 @@ after_change_thermostat:
               }
               else
               {
-                Serial.println( F( "Invalid data entered" ) );
+                Serial.print( F( "Invalid data entered" ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                 strFull = "";
 //                return false;
                 return;
@@ -878,7 +979,8 @@ after_change_thermostat:
           {
             Serial.print( F( "Out of range.  Address can only be 0 to " ) );
             Serial.print( EEPROM.length() - 1 );
-            Serial.println( F( ", data can only be 0 to 255" ) );
+            Serial.print( F( ", data can only be 0 to 255" ) );
+            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
           }
           else
           {
@@ -890,7 +992,8 @@ after_change_thermostat:
               Serial.print( EEPROM.read( address ) );
               EEPROM.update( address, data );
               Serial.print( F( " newly stored data: " ) );
-              Serial.println( EEPROM.read( address ) );
+              Serial.print( EEPROM.read( address ) );
+              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
           }
            strFull = "";
         }
@@ -908,10 +1011,11 @@ after_change_thermostat:
         {
           if( strFull.indexOf( F( "help" ) )< 0 )
           {
-             Serial.println();
+             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
              Serial.print( strFull );
-             Serial.println( F( ": not a valid command" ) );
-             Serial.println();
+             Serial.print( F( ": not a valid command" ) );
+             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
           }
           printBasicInfo();
           strFull = "";
@@ -990,7 +1094,8 @@ delay( 100 );
                 Serial.print( furnace_pin );
                 Serial.print( F( " and " ) );
                 Serial.print( furnace_fan_pin );
-                Serial.println( F( ")" ) );
+                Serial.print( F( ")" ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
               }
           }
        }
@@ -1016,7 +1121,8 @@ delay( 100 );
                     Serial.print( F( " and " ) );
                 Serial.print( furnace_fan_pin );
                 }
-                Serial.println( F( ")" ) );
+                Serial.print( F( ")" ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
               }
            }
        
