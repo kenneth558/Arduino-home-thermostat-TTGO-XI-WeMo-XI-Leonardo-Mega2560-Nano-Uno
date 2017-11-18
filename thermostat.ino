@@ -439,6 +439,8 @@ void check_incoming( int result )
         strFull.replace( F( "persistent memory" ), F( "pers" ) );
         strFull.replace( F( "change" ), F( "ch" ) );
         strFull.replace( F( "thermostat" ), F( "ther" ) );
+        strFull.replace( F( "fan auto" ), F( "fan a" ) );
+        strFull.replace( F( "fan on" ), F( "fan o" ) );
         strFull.replace( F( "factory" ), F( "fact" ) );
         if( strFull.indexOf( F( "power cycle" ) ) >= 0 || strFull.indexOf( F( "cycle power" ) ) >= 0 )
         {
@@ -841,7 +843,7 @@ after_change_thermostat:
             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
-        else if( strFull.indexOf( F( "fan a" ) ) == 0 || strFull.indexOf( F( "fan o" ) ) == 0 )
+        else if( strFull.length == 5 && ( strFull.indexOf( F( "fan a" ) ) == 0 || strFull.indexOf( F( "fan o" ) ) == 0 ) )
         {
            Serial.print( F( "Fan being set to " ) );
            int charat = strFull.indexOf( F( "fan " ) ) + 4;
