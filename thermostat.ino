@@ -74,7 +74,7 @@ int lower_furnace_temp = EEPROM.read( lower_furnace_temp_address );
 int upper_furnace_temp = EEPROM.read( upper_furnace_temp_address );
 char thermostat = ( char )EEPROM.read( thermostat_address );
 char fan_mode = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
-bool mswindows = true;  //Used for line-end on serial outputs.  
+bool mswindows = false;  //Used for line-end on serial outputs.  Will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
 
 
 /*  The following info plus NUM_DIGITAL_PINS, digitalPinToInterrupt and other digitalPinToxxxx macros, etc. can be used to determine board type at run time:
@@ -242,6 +242,8 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "fan[ a[uto]/ o[n]] (to read or set fan)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "<pin number> set pin [to] output (or ...pin set)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "<pin number> set pin [to] input [pers] (or ...pin set)optional persistence" ) );
@@ -290,8 +292,12 @@ void restore_factory_defaults()
     logging = factory_setting_logging_setting;
     thermostat = factory_setting_thermostat_mode;
     fan_mode = factory_setting_fan_mode;
+    
     lower_furnace_temp = factory_setting_lower_furnace_temp;
     upper_furnace_temp = factory_setting_upper_furnace_temp;
+    if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
+    else digitalWrite( furnace_fan_pin, LOW );
+    if( thermostat == 'o' ) digitalWrite( furnace_pin, LOW );//Need to do the same for A/C pin here, when known
     Serial.print( F( "Storing thermostat-related.  Temp sensor belongs either on pin 2 or on a pin capable of PCINT function served by the lowest number PCINT ISR that is populated with any DHT device and having a Digital pin number lowest of all DHT devices (don't regard Analog pin numbers possibly printed on the board)discovered on that ISR, furnace controlled by pin 3, aux furnace fan or whatnot controlled by pin 4, power cycle of automation system or whatnot controlled by pin 5, logging on, lower furnace temp=21, upper furnace temp=21, furnace mode=auto" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     EEPROM.update( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );//2 );
@@ -390,7 +396,8 @@ digitalWrite( power_cycle_pin, LOW );
 pinMode( furnace_pin, OUTPUT );
 digitalWrite( furnace_pin, LOW );
 pinMode( furnace_fan_pin, OUTPUT );
-digitalWrite( furnace_fan_pin, LOW );
+if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
+else digitalWrite( furnace_fan_pin, LOW );
 //read EEPROM addresses 0 (LSB)and 1 (MSB).  MSB combined with LSB should always contain ( NUM_DIGITAL_PINS + 1 ) * 3.
 u16 tattoo = EEPROM.read( 1 ) << 8;
 tattoo |= EEPROM.read( 0 ); //Location 0 should contain 
@@ -801,14 +808,20 @@ void check_incoming( int result )
         else if( strFull.indexOf( F( "ther a" ) ) == 0 || strFull.indexOf( F( "ther o" ) ) == 0 || strFull.indexOf( F( "ther h" ) ) == 0 || strFull.indexOf( F( "ther c" ) ) == 0 )
         {
            Serial.print( F( "Thermostat being set to " ) );
-           int charat = strFull.indexOf( F( "ther " ) )+ 5;
+           int charat = strFull.indexOf( F( "ther " ) ) + 5;
            if( strFull.charAt( charat ) == 'a' ) Serial.print( F( "auto" ) );
-           else if( strFull.charAt( charat ) == 'o' ) Serial.print( F( "off" ) );
+           else if( strFull.charAt( charat ) == 'o' ) 
+           {
+                Serial.print( F( "off" ) );
+                digitalWrite( furnace_pin, LOW );//Need to do the same for A/C pin here, when known
+           }
            else if( strFull.charAt( charat ) == 'h' ) Serial.print( F( "heat" ) );
            else if( strFull.charAt( charat ) == 'c' ) Serial.print( F( "cool" ) );
            else { Serial.print( F( "<fault>. No change made" ) ); goto after_change_thermostat; } //Making extra sure that no invalid mode gets saved
            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 //change_thermostat:
+           thermostat = strFull.charAt( charat );
+           
            EEPROM.update( thermostat_address, strFull.charAt( charat ) );
 after_change_thermostat:
            strFull = "";
@@ -825,6 +838,35 @@ after_change_thermostat:
             else if( thermostat == 'o' ) Serial.print( F( "off" ) );
             else if( thermostat == 'h' ) Serial.print( F( "heat" ) );
             else if( thermostat == 'c' ) Serial.print( F( "cool" ) );
+            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+           strFull = "";
+        }
+        else if( strFull.indexOf( F( "fan a" ) ) == 0 || strFull.indexOf( F( "fan o" ) ) == 0 )
+        {
+           Serial.print( F( "Fan being set to " ) );
+           int charat = strFull.indexOf( F( "fan " ) ) + 4;
+           if( strFull.charAt( charat ) == 'a' ) Serial.print( F( "auto" ) );
+           else if( strFull.charAt( charat ) == 'o' ) Serial.print( F( "on" ) );
+           else { Serial.print( F( "<fault>. No change made" ) ); goto after_change_fan; } //Making extra sure that no invalid mode gets saved
+           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+//change_fan:
+           fan_mode = strFull.charAt( charat );
+           if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
+           else digitalWrite( furnace_fan_pin, LOW );
+           EEPROM.update( fan_mode_address, strFull.charAt( charat ) );
+after_change_fan:
+           strFull = "";
+        }
+        else if( strFull.indexOf( F( "fan" ) ) == 0 )
+        {
+            if( strFull.indexOf( F( " " ) ) >= 3 )
+            {
+                Serial.print( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a or o.  They mean auto and on and optionally may be spelled out completely" ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+            }
+            Serial.print( F( "Fan is " ) );
+            if( fan_mode == 'a' ) Serial.print( F( "auto" ) );
+            else if( fan_mode == 'o' ) Serial.print( F( "on" ) );
             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
@@ -1086,8 +1128,7 @@ delay( 100 );
           if( last_three_temps[ 0 ] < lower_furnace_temp && last_three_temps[ 1 ] < lower_furnace_temp && last_three_temps[ 2 ] < lower_furnace_temp && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp )
           {
 //      Serial.println( F( "Turning furnace on" ) );
-              digitalWrite( furnace_pin, HIGH );
-              digitalWrite( furnace_fan_pin, HIGH );
+              digitalWrite( furnace_pin, HIGH ); 
               if( logging )
               {
                 Serial.print( F( "time_stamp_this Furnace and furnace fan on  (pins " ) );
@@ -1107,7 +1148,7 @@ delay( 100 );
            {
 //      Serial.println( F( "Turning furnace off" ) );
                digitalWrite( furnace_pin, LOW );
-               if( fan_mode == 'a' ) digitalWrite( furnace_fan_pin, LOW );
+//               if( fan_mode == 'a' ) digitalWrite( furnace_fan_pin, LOW ); 
               if( logging )
               {
                 Serial.print( F( "time_stamp_this Furnace" ) );
