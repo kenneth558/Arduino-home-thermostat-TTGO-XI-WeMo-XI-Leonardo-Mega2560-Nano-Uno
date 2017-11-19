@@ -843,7 +843,7 @@ after_change_thermostat:
             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
-        else if( strFull.length() == 5 && ( strFull.indexOf( F( "fan a" ) ) == 0 || strFull.indexOf( F( "fan o" ) ) == 0 ) )
+        else if( strFull.length() < 7 && ( strFull.indexOf( F( "fan a" ) ) == 0 || strFull.indexOf( F( "fan o" ) ) == 0 ) )
         {
            Serial.print( F( "Fan being set to " ) );
            int charat = strFull.indexOf( F( "fan " ) ) + 4;
