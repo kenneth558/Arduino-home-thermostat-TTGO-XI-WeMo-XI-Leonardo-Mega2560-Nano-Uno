@@ -1069,6 +1069,8 @@ after_change_fan:
 
 }
 int last_three_temps_index = 0;
+int old_getCelsius_temp = 0;
+float oldtemp = 0;
 void loop()
 {
 if( fresh_powerup && logging )
@@ -1119,31 +1121,40 @@ delay( 100 );
 
     if( result == IDDHTLIB_OK )
     {
-    last_three_temps[ last_three_temps_index ] = ( int )DHTLib.getCelsius();
-    last_three_temps_index = ++last_three_temps_index % 3;
-    int furnace_state = ( int )digitalRead( furnace_pin );
-       if( furnace_state == 0 && ( thermostat == 'h' || thermostat == 'a' ) )
-       {
-//            Serial.print( F( "Furnace is off?: " ) );
-//            Serial.println( furnace_state );
-
-          if( last_three_temps[ 0 ] < lower_furnace_temp && last_three_temps[ 1 ] < lower_furnace_temp && last_three_temps[ 2 ] < lower_furnace_temp && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp )
-          {
-//      Serial.println( F( "Turning furnace on" ) );
-              digitalWrite( furnace_pin, HIGH ); 
-              if( logging )
+        last_three_temps[ last_three_temps_index ] = ( int )DHTLib.getCelsius();
+        float newtemp = ( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] ) )/ 3;
+        if( newtemp != oldtemp && last_three_temps[ last_three_temps_index ] != old_getCelsius_temp )
+        {
+            Serial.print( F( "time_stamp_this Temperature change to " ) );
+            Serial.print( last_three_temps[ last_three_temps_index ] );
+            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        }
+        old_getCelsius_temp = last_three_temps[ last_three_temps_index ];
+        oldtemp = newtemp;
+        last_three_temps_index = ++last_three_temps_index % 3;
+        int furnace_state = ( int )digitalRead( furnace_pin );
+           if( furnace_state == 0 && ( thermostat == 'h' || thermostat == 'a' ) )
+           {
+    //            Serial.print( F( "Furnace is off?: " ) );
+    //            Serial.println( furnace_state );
+    
+              if( last_three_temps[ 0 ] < lower_furnace_temp && last_three_temps[ 1 ] < lower_furnace_temp && last_three_temps[ 2 ] < lower_furnace_temp && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp )
               {
-                Serial.print( F( "time_stamp_this Furnace and furnace fan on  (pins " ) );
-                Serial.print( furnace_pin );
-                Serial.print( F( " and " ) );
-                Serial.print( furnace_fan_pin );
-                Serial.print( F( ")" ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    //      Serial.println( F( "Turning furnace on" ) );
+                  digitalWrite( furnace_pin, HIGH ); 
+                  if( logging )
+                  {
+                    Serial.print( F( "time_stamp_this Furnace and furnace fan on  (pins " ) );
+                    Serial.print( furnace_pin );
+                    Serial.print( F( " and " ) );
+                    Serial.print( furnace_fan_pin );
+                    Serial.print( F( ")" ) );
+                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                  }
               }
-          }
-       }
-       else if( furnace_state == 1 && ( thermostat == 'h' || thermostat == 'a' ) )
-       {
+           }
+           else if( furnace_state == 1 && ( thermostat == 'h' || thermostat == 'a' ) )
+           {
 //            Serial.print( F( "Furnace is on?: " ) );
 //            Serial.println( furnace_state );
            if( last_three_temps[ 0 ] > upper_furnace_temp && last_three_temps[ 1 ] > upper_furnace_temp && last_three_temps[ 2 ] > upper_furnace_temp && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp )
@@ -1196,31 +1207,42 @@ delay( 100 );
                 Serial.println( F( " )" ) );
               }
            }
-       
+*/       
+    }
+    else
+    {
+      switch ( result )
+      {
+      case IDDHTLIB_ERROR_CHECKSUM: 
+        break;
+      case IDDHTLIB_ERROR_TIMEOUT: 
+        Serial.print( F( "time_stamp_this Temperature sensor error" ) );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( F( "Time out error" ) ); 
+        break;
+      case IDDHTLIB_ERROR_ACQUIRING: 
+        Serial.print( F( "time_stamp_this Temperature sensor error" ) );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( F( "Acquiring" ) ); 
+        break;
+      case IDDHTLIB_ERROR_DELTA: 
+        Serial.print( F( "time_stamp_this Temperature sensor error" ) );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( F( "Delta time to small" ) ); 
+        break;
+      case IDDHTLIB_ERROR_NOTSTARTED: 
+        Serial.print( F( "time_stamp_this Temperature sensor error" ) );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( F( "Not started" ) ); 
+        break;
+      default: 
+        Serial.print( F( "time_stamp_this Temperature sensor unknown error" ) ); 
+        break;
         }
-*/
-/*
-  
-    break;
-  case IDDHTLIB_ERROR_CHECKSUM: 
-    break;
-  case IDDHTLIB_ERROR_TIMEOUT: 
-    Serial.println( F( "Error\n\r\tTime out error" ) ); 
-    break;
-  case IDDHTLIB_ERROR_ACQUIRING: 
-    Serial.println( F( "Error\n\r\tAcquiring" ) ); 
-    break;
-  case IDDHTLIB_ERROR_DELTA: 
-    Serial.println( F( "Error\n\r\tDelta time to small" ) ); 
-    break;
-  case IDDHTLIB_ERROR_NOTSTARTED: 
-    Serial.println( F( "Error\n\r\tNot started" ) ); 
-    break;
-  default: 
-    Serial.println( F( "Unknown error" ) ); 
-    break;
-    */
-     }
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    }
+
+     
 
 
 
