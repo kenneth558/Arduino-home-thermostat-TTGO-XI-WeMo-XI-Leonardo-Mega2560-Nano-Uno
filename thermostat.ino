@@ -1123,7 +1123,7 @@ delay( 100 );
     {
         last_three_temps[ last_three_temps_index ] = ( int )DHTLib.getCelsius();
         float newtemp = ( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] ) )/ 3;
-        if( newtemp != oldtemp && last_three_temps[ last_three_temps_index ] != old_getCelsius_temp )
+        if( logging && newtemp != oldtemp && last_three_temps[ last_three_temps_index ] != old_getCelsius_temp )
         {
             Serial.print( F( "time_stamp_this Temperature change to " ) );
             Serial.print( last_three_temps[ last_three_temps_index ] );
