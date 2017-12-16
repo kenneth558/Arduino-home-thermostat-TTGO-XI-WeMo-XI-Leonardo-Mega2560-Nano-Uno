@@ -594,7 +594,7 @@ void check_incoming( int result )
               {
                  Serial.print( F( "Pin " ) );
                  Serial.print( pin_specified );
-                 Serial.print( F( " (name functionality coming soon )" ) );
+                 Serial.print( F( " (name functionality coming soon)" ) );
 /*
                  char data = EEPROM.read( pin_specified*3 );
                  char data2 = EEPROM.read(( pin_specified*3 )+1 );
@@ -1122,14 +1122,15 @@ delay( 100 );
     if( result == IDDHTLIB_OK )
     {
         last_three_temps[ last_three_temps_index ] = ( int )DHTLib.getCelsius();
-        float newtemp = ( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] ) )/ 3;
-        if( logging && newtemp != oldtemp && last_three_temps[ last_three_temps_index ] != old_getCelsius_temp )
+        float newtemp = ( float )( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )/ 3 );
+        if( logging && ( newtemp != oldtemp ) && ( last_three_temps[ last_three_temps_index ] != old_getCelsius_temp ) )
         {
             Serial.print( F( "time_stamp_this Temperature change to " ) );
             Serial.print( last_three_temps[ last_three_temps_index ] );
+            Serial.print( F( " °C" ) );
             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+            old_getCelsius_temp = last_three_temps[ last_three_temps_index ];
         }
-        old_getCelsius_temp = last_three_temps[ last_three_temps_index ];
         oldtemp = newtemp;
         last_three_temps_index = ++last_three_temps_index % 3;
         int furnace_state = ( int )digitalRead( furnace_pin );
