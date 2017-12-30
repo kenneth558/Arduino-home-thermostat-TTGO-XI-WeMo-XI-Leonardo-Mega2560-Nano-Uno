@@ -15,4 +15,15 @@ while true;do
 done >> "$home_dir/arduino.log" 2>/dev/null &
 
 The file called toemailadds needs to be put in the same directory.  It has email addresses, one per line...simple as that.
-Postfix is the emailling program I use.
+Postfix is the emailing program I use.
+
+
+I use the following Ubuntu bash command from the host terminal manually to send to the Arduino thermostat: (sudo'd as needed or desired)
+    stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "help" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout 2 tail -fn0 /home/homeowner/arduino.log
+
+Then replace "help" with one of the other commands that will be displayed by the command and send again.  NOTE: The baud rate is extremely dependent on the host's ability to receive at speed.
+
+
+I found firewalling to be important.  I wrote poofitee to be a universal installer of a bulletproof firewall, but soon
+realized that Linux is far too fragmented both across flavors and across supporting program upgrades to think I could
+maintain it.
