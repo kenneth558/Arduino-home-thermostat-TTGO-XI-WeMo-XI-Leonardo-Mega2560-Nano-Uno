@@ -1,0 +1,18 @@
+The following is the contents of an script file called arduinolog, launched at system startup:
+
+#! /bin/bash
+trap '' HUP
+home_dir="$( cd -P "$( dirname "$0" )" && pwd )"
+[[ -z "$(ps auxf|grep -v grep|grep 'cat -s /dev/tty')" ]] && nohup stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo
+while true;do
+	cat -s $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do
+		echo "$line"|sed 's/time_stamp_this/'"$(date)"'/g'
+		if [[ "$line" =~ [[:space:]]ALERT[[:space:]] ]];then
+#			echo "Attempting to send email to $(cat $home_dir/toemailadds)" >> "$0.log"
+			nohup timeout 10 echo "$line"|sed 's/time_stamp_this/'"$(date)"'/g'|/usr/bin/mail -s "Furnace ALERT" "$(cat $home_dir/toemailadds)" 2>/dev/null  &
+		fi
+	done
+done >> "$home_dir/arduino.log" 2>/dev/null &
+
+The file called toemailadds needs to be put in the same directory.  It has email addresses, one per line...simple as that.
+Postfix is the emailling program I use.
