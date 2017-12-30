@@ -26,4 +26,4 @@ Then replace "help" with one of the other commands that will be displayed by the
 
 I found firewalling to be important.  I wrote poofitee to be a universal installer of a bulletproof firewall, but soon
 realized that Linux is far too fragmented both across flavors and across supporting program upgrades to think I could
-maintain it.
+maintain it.  Help yourself to what I've put out here.
