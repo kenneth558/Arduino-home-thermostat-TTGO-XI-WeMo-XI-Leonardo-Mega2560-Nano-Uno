@@ -282,7 +282,7 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "reset (factory defaults: pure, simple and absolute)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "test ALERT (sends an ALERT message to host for testing purposes)" ) );
+    Serial.print( F( "test alert (sends an alert message to host for testing purposes)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( ".." ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
