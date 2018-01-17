@@ -1,6 +1,6 @@
 /*
 	FILE: 		idDHTLib.h
-	VERSION: 	0.0.3
+	VERSION: 	0.0.4
 	PURPOSE: 	Interrupt driven Lib for DHT11 and DHT22 with Arduino.
 	LICENCE:	GPL v3 (http://www.gnu.org/licenses/gpl.html)
 	DATASHEET: http://www.micro4you.com/files/sensor/DHT11.pdf
