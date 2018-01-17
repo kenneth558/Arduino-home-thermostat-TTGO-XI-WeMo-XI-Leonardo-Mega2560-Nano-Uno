@@ -82,7 +82,7 @@ private:
 	volatile byte bits[5];
 	volatile byte cnt;
 	volatile byte idx;
-	volatile int us;
+	volatile unsigned long us;
 	int intNumber;
 	int pin;
 	volatile int hum;
