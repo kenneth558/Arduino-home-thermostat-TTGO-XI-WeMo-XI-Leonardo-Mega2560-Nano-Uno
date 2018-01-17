@@ -78,8 +78,18 @@ int idDHTLib::acquire() {
 }
 int idDHTLib::acquireAndWait() {
 	acquire();
+        long unsigned nowmicros;
 	while(acquiring())
-		;
+        {
+             nowmicros = micros();
+             if( us < us + 200 )
+             {
+                  if( ( nowmicros > us + 200 ) || ( nowmicros < us ) )
+                       break;
+             }
+             else if( ( nowmicros > us + 200 ) && ( nowmicros < us ) )
+                  break;
+        }
 	return getStatus();
 }
 void idDHTLib::dht11Callback() {
@@ -263,4 +273,4 @@ double idDHTLib::getDewPointSlow() {
 	double T = log(VP/0.61078);   // temp var
 	return (241.88 * T) / (17.558-T);
 }
-
+// EOF
