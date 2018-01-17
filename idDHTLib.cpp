@@ -22,6 +22,7 @@
 			(Dessimat0r from Arduino forum)
 		v 0.0.4
 			Time limit added to acquireAndWait()
+			us volatile var type correection to long unsigned
 			(kenneth558)
  */
 
