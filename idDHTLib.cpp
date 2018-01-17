@@ -1,6 +1,6 @@
 /*
 	FILE: 		idDHTLib.cpp
-	VERSION: 	0.0.3
+	VERSION: 	0.0.4
 	PURPOSE: 	Interrupt driven Lib for DHT11 and DHT22 with Arduino.
 	LICENCE:	GPL v3 (http://www.gnu.org/licenses/gpl.html)
 	DATASHEET: http://www.micro4you.com/files/sensor/DHT11.pdf
@@ -20,6 +20,9 @@
 		v 0.0.3
 			Timing correction to finally work properly on DHT22
 			(Dessimat0r from Arduino forum)
+		v 0.0.4
+			Time limit added to acquireAndWait()
+			(kenneth558)
  */
 
 #include "idDHTLib.h"
