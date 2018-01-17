@@ -1125,7 +1125,7 @@ delay( 100 );
 delay( 100 );
   digitalWrite(LED_BUILTIN, HIGH ); //informs us that temp sensor is being communicated with
 */
-  int result = DHTLib.acquire();
+  int result = DHTLib.acquireAndWait();
 //  if( result != IDDHTLIB_OK ) delay( 1000 );
 //  digitalWrite(LED_BUILTIN, LOW ); 
 //  Serial.println( F( "Sensor read complete" ) );
