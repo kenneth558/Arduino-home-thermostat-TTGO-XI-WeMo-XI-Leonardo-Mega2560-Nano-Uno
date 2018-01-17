@@ -1279,23 +1279,23 @@ delay( 100 );
         Serial.print( F( "time_stamp_this " ) );
         if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );
         Serial.print( F( "Temperature sensor TIMEOUT error" ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( F( "Time out error" ) ); 
+//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+//        Serial.print( F( "Time out error" ) ); 
         break;
       case IDDHTLIB_ERROR_ACQUIRING: 
         Serial.print( F( "time_stamp_this ALERT Temperature sensor ACQUIRING error" ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( F( "Acquiring" ) ); 
+//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+//        Serial.print( F( "Acquiring" ) ); 
         break;
       case IDDHTLIB_ERROR_DELTA: 
         Serial.print( F( "time_stamp_this ALERT Temperature sensor DELTA error" ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( F( "Delta time to small" ) ); 
+//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+//       Serial.print( F( "Delta time to small" ) ); 
         break;
       case IDDHTLIB_ERROR_NOTSTARTED: 
         Serial.print( F( "time_stamp_this ALERT Temperature sensor NOTSTARTED error" ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( F( "Not started" ) ); 
+//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+//        Serial.print( F( "Not started" ) ); 
         break;
       default: 
         Serial.print( F( "time_stamp_this ALERT Temperature sensor unknown error" ) ); 
