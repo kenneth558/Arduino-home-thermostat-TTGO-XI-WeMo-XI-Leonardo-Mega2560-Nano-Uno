@@ -95,7 +95,7 @@ int idDHTLib::acquireAndWait() {
 //             continue;
                         goto timedout;
              }
-             else if( ( nowmicros > startedmicros + 200 ) && ( nowmicros < startedmicros ) )
+             else if( ( nowmicros > deadlinemicros ) && ( nowmicros < startedmicros ) )
 //             continue;
                         goto timedout;
         }
