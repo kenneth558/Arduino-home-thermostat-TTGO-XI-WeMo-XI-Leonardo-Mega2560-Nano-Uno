@@ -1274,10 +1274,10 @@ delay( 100 );
       {
       case IDDHTLIB_ERROR_CHECKSUM: 
         break;
-      case IDDHTLIB_ERROR_TIMEOUT: //TODO: Only insert the ALERT if error has been going on for certain number of ms.  Say 120000 ms (2 mins)
+      case IDDHTLIB_ERROR_TIMEOUT: //TODO: Only insert the ALERT if error has been going on for certain number of check cycles.  Say 100
         timeOfLastSensorTimeoutError++;
         Serial.print( F( "time_stamp_this " ) );
-        if( timeOfLastSensorTimeoutError > 120000 ) Serial.print( F( "ALERT " ) );
+        if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );
         Serial.print( F( "Temperature sensor TIMEOUT error" ) );
         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         Serial.print( F( "Time out error" ) ); 
