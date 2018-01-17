@@ -78,19 +78,31 @@ int idDHTLib::acquire() {
 }
 int idDHTLib::acquireAndWait() {
 	acquire();
+        long unsigned startedmicros = micros();
+        long unsigned deadlinemicros = startedmicros + 7000;
         long unsigned nowmicros;
 	while(acquiring())
         {
+//             continue;
              nowmicros = micros();
-             if( us < us + 200 )
+             if( startedmicros < deadlinemicros )
              {
-                  if( ( nowmicros > us + 200 ) || ( nowmicros < us ) )
-                       break;
+                  if( ( nowmicros > deadlinemicros ) || ( nowmicros < startedmicros ) )
+//             continue;
+                        goto timedout;
              }
-             else if( ( nowmicros > us + 200 ) && ( nowmicros < us ) )
-                  break;
+             else if( ( nowmicros > startedmicros + 200 ) && ( nowmicros < startedmicros ) )
+//             continue;
+                        goto timedout;
         }
+//          ;
 	return getStatus();
+timedout:;
+        status = IDDHTLIB_ERROR_TIMEOUT;
+        state = STOPPED;
+        detachInterrupt(intNumber);
+	return getStatus();
+ 
 }
 void idDHTLib::dht11Callback() {
 	isDHT22 = false;
