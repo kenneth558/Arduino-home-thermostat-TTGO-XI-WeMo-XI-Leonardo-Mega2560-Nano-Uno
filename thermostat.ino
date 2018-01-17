@@ -1,4 +1,4 @@
-char version[] = "0.0.002";//TODO:  add labels to pins
+char version[] = "0.0.003";//TODO:  add labels to pins
 short unsigned _baud_rate_ = 57600;
 /*
 EEPROM addressing: use digital pin number * 2 as LSB of start address that pin description is found. The MSB of that start address is located in the following EEPROM location (digital pin number * 2 )+ 1.  
@@ -6,7 +6,8 @@ EEPROM addressing: use digital pin number * 2 as LSB of start address that pin d
 All line ends printed are with MS Windows conventions due to Arduino print and println commands.  To retain line ends compatability between *nix and MS Windows, we won't embed any new lines into print[ln] literals.  
 ...TODO: Interrupts should be better utilized so that loop()program flow is not paused for all those time frames ( seconds between reads and data stream bit times.  Always allow for event of defective/disconnection of devices
 ...TODO: Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
-...TODO:
+...TODO: alert when back pressure within furnace indicates to change filter
+...TODO: damper operation with multiple temp sensors
  PORTB |= ( 1<<5); // set bit 5 of PORTB
  PORTC &= ~( 1<<3 ); // clear bit 3 of PORTC
  PORTD ^= ( 1<<2 ); // toggle bit 2 of PORTD
@@ -250,17 +251,17 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "<pin number> set pin [to] output (or ...pin set)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "<pin number> set pin [to] input [pers] (or ...pin set)optional persistence" ) );
+    Serial.print( F( "<pin number> set pin [to] input [pers] (or ...pin set) optional persistence" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "<pin number> set pin [to] input with pullup [pers] (or ...pin set)optional persistence" ) );
+    Serial.print( F( "<pin number> set pin [to] input with pullup [pers] (or ...pin set) optional persistence" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "<pin number> read pin (or ...pin read)(obtain the name if any, setting and voltage)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "read pins (or pins read )(obtain the names, settings and voltages of ALL pins)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "<pin number> set pin [to] low [pers] (or ...pin set )(only allowed to pins assigned as output)optional persistence" ) );
+    Serial.print( F( "<pin number> set pin [to] low [pers] (or ...pin set )(only allowed to pins assigned as output) optional persistence" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "<pin number> set pin [to] high [pers] (or ...pin set )(only allowed to pins assigned as output)optional persistence" ) );
+    Serial.print( F( "<pin number> set pin [to] high [pers] (or ...pin set )(only allowed to pins assigned as output) optional persistence" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "<°C> set lower furnace temp (to turn furnace on at any lower temperature than this, always persistent)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
@@ -278,7 +279,7 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>]" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "vi[ew] fact[ory defaults] (so you can what would happen before you reset to them)" ) );
+    Serial.print( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "reset (factory defaults: pure, simple and absolute)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
@@ -1124,7 +1125,7 @@ delay( 100 );
 delay( 100 );
   digitalWrite(LED_BUILTIN, HIGH ); //informs us that temp sensor is being communicated with
 */
-  int result = DHTLib.acquireAndWait();
+  int result = DHTLib.acquire();
 //  if( result != IDDHTLIB_OK ) delay( 1000 );
 //  digitalWrite(LED_BUILTIN, LOW ); 
 //  Serial.println( F( "Sensor read complete" ) );
