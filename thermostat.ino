@@ -1088,6 +1088,8 @@ int last_three_temps_index = 0;
 int old_getCelsius_temp = 0;
 float oldtemp = 0;
 u8 furnace_state = 0;
+unsigned long timeOfLastSensorTimeoutError = 0;
+
 void loop()
 {
 long unsigned check_furnace_effectiveness_time;
@@ -1140,6 +1142,7 @@ delay( 100 );
 
     if( result == IDDHTLIB_OK )
     {
+        timeOfLastSensorTimeoutError = 0;
         last_three_temps[ last_three_temps_index ] = ( int )DHTLib.getCelsius();
         float newtemp = ( float )( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )/ 3 );
         if( ( newtemp != oldtemp ) && ( last_three_temps[ last_three_temps_index ] != old_getCelsius_temp ) )
@@ -1271,8 +1274,11 @@ delay( 100 );
       {
       case IDDHTLIB_ERROR_CHECKSUM: 
         break;
-      case IDDHTLIB_ERROR_TIMEOUT: 
-        Serial.print( F( "time_stamp_this ALERT Temperature sensor TIMEOUT error" ) );
+      case IDDHTLIB_ERROR_TIMEOUT: //TODO: Only insert the ALERT if error has been going on for certain number of ms.  Say 120000 ms (2 mins)
+        timeOfLastSensorTimeoutError++;
+        Serial.print( F( "time_stamp_this " ) );
+        if( timeOfLastSensorTimeoutError > 120000 ) Serial.print( F( "ALERT " ) );
+        Serial.print( F( "Temperature sensor TIMEOUT error" ) );
         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         Serial.print( F( "Time out error" ) ); 
         break;
