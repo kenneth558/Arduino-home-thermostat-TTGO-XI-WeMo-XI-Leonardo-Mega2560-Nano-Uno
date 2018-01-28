@@ -236,7 +236,7 @@ void printBasicInfo()
     Serial.print( F( "Version: " ) );
     Serial.print( F( VERSION ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "Operating mode (heating/cooling/auto) = " ) );
+    Serial.print( F( "Operating mode (heating/cooling/auto/off) = " ) );
     Serial.print( thermostat );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Fan mode = " ) );
