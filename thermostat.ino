@@ -1,5 +1,6 @@
-char version[] = "0.0.003";//TODO:  add labels to pins
-short unsigned _baud_rate_ = 57600;
+#define VERSION "0.0.004"//;//TODO:  add labels to pins
+#include <Arduino.h>
+short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 /*
 EEPROM addressing: use digital pin number * 2 as LSB of start address that pin description is found. The MSB of that start address is located in the following EEPROM location (digital pin number * 2 )+ 1.  
 
@@ -15,26 +16,35 @@ Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 
 
 */
-#include <idDHTLib.h>
 #include <EEPROM.h>
-
+#include "DHTdirectRead.h"
+//All temps are shorts until displayed
 const char strFactoryDefaults[] PROGMEM = "\
-pin  0 \"Serial Rx communications received by Arduino board ( protected pin )\"\n\
-pin  1 \"Serial Tx communications sent out by Arduino board ( protected pin )\"\n\
-pin  2 \"Primary indoor temperature sensor DHT11/22\"\n\
+pin  0 \"Serial Rx communications received by Arduino board ( protected pin of several boards )\"\n\
+pin  1 \"Serial Tx communications sent out by Arduino board ( protected pin of several boards )\"\n\
+pin  2 \"Main room primary indoor temperature sensor DHT11/22\"\n\
 pin  3 \"Furnace start/stop control, primary stage\"\n\
-pin  4 \"Furnace start/stop control, secondary stage\"\n\
-pin  5 \"Furnace start/stop control, tertiary stage\"\n\
-pin  6 \"Furnace blower fan auto/on control\"\n\
-pin  7 \"Furnace humidifier on/off control ( starts only with furnace heat )\"\n\
-pin  8 \"Stand-alone humidifier start/stop control\"\n\
-pin  9 \"Power cycle start/stop control of installer-selected system\"\n\
-pin 10 \"Air conditioner start/stop control, primary stage\"\n\
-pin 11 \"Air conditioner start/stop control, secondary stage\"\n\
-pin 12 \"Outdoor temperature sensor DHT22\"\n\
-pin 13 \"Air conditioner start/stop control, tertiary stage\"\n";
+pin  4 \"Furnace blower fan auto/on control\"\n\
+pin  5 \"Power cycle start/stop control of installer-selected system\"\n\
+pin   \"Furnace humidifier on/off control ( starts only with furnace heat )\"\n\
+pin   \"Side room A primary indoor temperature sensor DHT11/22\"\n\
+pin   \"Side room A damper sensor return ( analog signal )\"\n\
+pin   \"Side room A damper control\"\n\
+pin   \"Furnace start/stop control, secondary stage\"\n\
+pin   \"Furnace start/stop control, tertiary stage\"\n\
+pin  6 \"Front porch light\"\n\
+pin  7 \"Back porch light\"\n\
+pin   \"Stand-alone humidifier start/stop control\"\n\
+pin   \"Air conditioner start/stop control, primary stage\"\n\
+pin   \"Air conditioner start/stop control, secondary stage\"\n\
+pin 13 \"BUILTIN_LED ( protected pin of several boards )\"\n\
+pin   \"Outdoor temperature sensor DHT22\"\n\
+pin   \"Air conditioner start/stop control, tertiary stage\"\n\
+pin   \"Side room A secondary indoor temperature sensor DHT11/22\"\n\
+pin  8 \"Main room secondary indoor temperature sensor DHT11/22\"\n\
+";
+
 //Where are other indoor sensors?
-//What about BUILTIN_LED pin?  Combine it with terciary A/C 
 //What about utilizing PCI ISRs and how they control which pins to use?
 
 // INTENT: Access these values by reference and pointers.  They will be hardcoded here only.  The run-time code can only find out what they are, how many there are, and their names by calls to this function
@@ -48,17 +58,19 @@ if( i_t_sens_pin_0 < i_t_sens_pin_1 && i_t_sens_pin_0 )
 uint8_t primary_temp_sensor_pin = 
 */
 //  The following are addresses in EEPROM of values that need to be persistent across power outages.
-short int primary_temp_sensor_address = 2;
-short int furnace_address = 3;
-short int furnace_fan_pin_address = 4;
-short int power_cycle_address = 5;
-short int thermostat_address = 6;
-short int fan_mode_address = 7;
+//The first two address locations in EEPROM store a tatoo used to ensure EEPROM contents are valid for this sketch
+u8 primary_temp_sensor_address = 2;
+u8 furnace_address = 3;
+u8 furnace_fan_pin_address = 4;
+u8 power_cycle_address = 5;
+u8 thermostat_address = 6;
+u8 fan_mode_address = 7;
+u8 secondary_temp_sensor_address = 8;
 
-int logging_address = EEPROM.length() - 1;
-int upper_furnace_temp_address = EEPROM.length() - 2;
-int lower_furnace_temp_address = EEPROM.length() - 3;
-
+unsigned int logging_address = EEPROM.length() - sizeof( boolean );
+unsigned int upper_furnace_temp_address = logging_address - sizeof( short );//EEPROM.length() - 2;
+unsigned int lower_furnace_temp_address = upper_furnace_temp_address - sizeof( short );//EEPROM.length() - 3;
+unsigned int logging_temp_changes_address = lower_furnace_temp_address - sizeof( boolean );//EEPROM.length() - 4;
 
 // So we don't assume every board has exactly three
 //in case of boards that have more than 24 pins ( three virtual 8-bit ports )
@@ -66,16 +78,19 @@ int lower_furnace_temp_address = EEPROM.length() - 3;
 
 // main temperature sensor, furnace, auxiliary furnace device, system power cycle, porch light, dining room coffee outlet
 //  The following values need to be stored persistent through power outages
-u8 primary_temp_sensor_pin = EEPROM.read( primary_temp_sensor_address  ); 
+u8 primary_temp_sensor_pin = EEPROM.read( primary_temp_sensor_address ); 
+u8 secondary_temp_sensor_pin = EEPROM.read( secondary_temp_sensor_address ); 
 u8 furnace_pin = EEPROM.read( furnace_address );
 u8 furnace_fan_pin = EEPROM.read( furnace_fan_pin_address );
 u8 power_cycle_pin = EEPROM.read( power_cycle_address );
 boolean logging = ( boolean )EEPROM.read( logging_address );
-int lower_furnace_temp = EEPROM.read( lower_furnace_temp_address );
-int upper_furnace_temp = EEPROM.read( upper_furnace_temp_address );
+boolean logging_temp_changes = ( boolean )EEPROM.read( logging_temp_changes_address );
+float lower_furnace_temp_floated;//filled in setup
+float upper_furnace_temp_floated;
 char thermostat = ( char )EEPROM.read( thermostat_address );
 char fan_mode = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
-bool mswindows = false;  //Used for line-end on serial outputs.  Will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
+
+//bool mswindows = false;  //Used for line-end on serial outputs.  FUTURE Will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
 
 
 /*  The following info plus NUM_DIGITAL_PINS, digitalPinToInterrupt and other digitalPinToxxxx macros, etc. can be used to determine board type at run time:
@@ -98,43 +113,51 @@ Micro, Leonardo, other 32u4-based    0, 1, 2, 3, 7
  Leonardo, Leonardo ETH and Micro allow pins 0 and 1 to be changed by user
  */
 
-int idDHTLibPin = primary_temp_sensor_pin; //Digital pin for communications
-int idDHTLibIntNumber = digitalPinToInterrupt( idDHTLibPin );
+//int idDHTLibPin = primary_temp_sensor_pin; //Digital pin for communications
+//int idDHTLibIntNumber = digitalPinToInterrupt( idDHTLibPin );
 
 //declaration
-void dhtLib_wrapper(); // must be declared before the lib initialization
+//void dhtLib_wrapper(); // must be declared before the lib initialization
 
 // Lib instantiate
-idDHTLib DHTLib( idDHTLibPin, idDHTLibIntNumber, dhtLib_wrapper );
+//idDHTLib DHTLib( idDHTLibPin, idDHTLibIntNumber, dhtLib_wrapper );
 
 String str;
 String strFull = "";
-int last_three_temps[] = { -100, -101, -102 };
-int furnace_started_temp_x_3 = last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ];
-int pin_specified;
-int temp_specified;
+float last_three_temps[] = { -100, -101, -102 };
+float furnace_started_temp_x_3 = last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ];
+u8 pin_specified;
+float temp_specified_floated;
 boolean fresh_powerup = true;
 long unsigned timer_alert_furnace_sent = 0;
 const PROGMEM u8 factory_setting_primary_temp_sensor_pin = 2;
 const PROGMEM u8 factory_setting_furnace_pin = 3;
 const PROGMEM u8 factory_setting_furnace_fan_pin = 4;
 const PROGMEM u8 factory_setting_power_cycle_pin = 5;
-const PROGMEM bool factory_setting_logging_setting = ( uint8_t )true;
+const PROGMEM bool factory_setting_logging_setting = true;
+const PROGMEM bool factory_setting_logging_temp_changes_setting = true;
 const PROGMEM char factory_setting_thermostat_mode = 'a';
 const PROGMEM char factory_setting_fan_mode = 'a';
-const PROGMEM int factory_setting_lower_furnace_temp = 21;
-const PROGMEM int factory_setting_upper_furnace_temp = 21;
-const PROGMEM u8 minutes_furnace_should_be_effective_after = 5;
-const PROGMEM long unsigned loop_cycles_to_skip_between_alert_outputs = 5 * 60 * 30;//estimating 5 loops per second, 60 seconds per minute, 30 minutes per alert
+const PROGMEM float factory_setting_lower_furnace_temp_floated = 21.3;
+const PROGMEM float factory_setting_upper_furnace_temp_floated = 22.4;
+const PROGMEM u8 factory_setting_secondary_temp_sensor_pin = 8;
+const PROGMEM float minutes_furnace_should_be_effective_after = 5.5; //Can be decimal this way
+const PROGMEM unsigned long loop_cycles_to_skip_between_alert_outputs = 5 * 60 * 30;//estimating 5 loops per second, 60 seconds per minute, 30 minutes per alert
+
 boolean IsValidPinNumber( String str )
 {
     for( unsigned int i = 0; i < str.length(); i++ )
     {
-        if( !( isDigit( str.charAt( i ) )|| str.charAt( i ) == '.' ) )
+        if( !( isDigit( str.charAt( i ) ) || str.charAt( i ) == '.' ) )
         {
-        Serial.print( F( "Command must begin with a pin number" ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        return false;
+            Serial.print( F( "Command must begin or end with a pin number as specified in help screen" ) );
+            Serial.print( str );
+//            Serial.print( F( ">" ) );
+//            Serial.print( str.length() );
+//            Serial.print( F( "," ) );
+//            Serial.print( i );
+            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+            return false;
         }
     }
     pin_specified=str.toInt();
@@ -165,24 +188,31 @@ return false;
 
 boolean IsValidTemp( String str )
 {
-for( unsigned int i = 0; i < str.length(); i++ )
-{
-    if( !( isDigit( str.charAt( i ) )|| str.charAt( i ) == '.' ) )
+    for( unsigned int i = 0; i < str.length(); i++ )
     {
-        Serial.print( F( "Command must begin with a temperature in Celsius" ) );
+        if( !( isDigit( str.charAt( i ) )|| str.charAt( i ) == '.' || ( !i && str.charAt( 0 ) == '-' ) ) )
+        {
+            Serial.print( F( "Command must begin with a temperature in Celsius" ) );
+            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+            return false;
+        }
+    }
+    temp_specified_floated = ( float )str.toInt();
+    if( str.indexOf('.') ){ temp_specified_floated += ( ( float )str.substring( str.indexOf('.') + 1 ).toInt() ) / 10; };
+    signed char upper_limit = 37;
+    signed char lower_limit = -37;
+    if(  temp_specified_floated < lower_limit || temp_specified_floated > upper_limit )//This check should be called for the rooms where it matters
+    {
+        Serial.print( F( "Temperature must be Celsius " ) );
+        Serial.print( lower_limit );
+        Serial.print( F( " through " ) );
+        Serial.print( upper_limit );
         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         return false;
     }
+//    return true;
 }
-temp_specified=str.toInt();
-if( temp_specified < 1 || temp_specified > 37 )
-{
-    Serial.print( F( "Celsius temperature must be 1 through 37" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    return false;
-}
-return true;
-}
+
 void printBasicInfo()
 {
     Serial.print( F( ".." ) );
@@ -204,7 +234,7 @@ void printBasicInfo()
        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     }
     Serial.print( F( "Version: " ) );
-    Serial.print( version );
+    Serial.print( F( VERSION ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Operating mode (heating/cooling/auto) = " ) );
     Serial.print( thermostat );
@@ -213,17 +243,24 @@ void printBasicInfo()
     Serial.print( fan_mode );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "lower_furnace_temp = " ) );
-    Serial.print( lower_furnace_temp );
+    Serial.print( lower_furnace_temp_floated, 1 );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "upper_furnace_temp = " ) );
-    Serial.print( upper_furnace_temp );
+    Serial.print( upper_furnace_temp_floated, 1 );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Talkback for logging is turned o" ) );
     if( logging ) Serial.print( F( "n" ) );
     else  Serial.print( F( "ff" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "Talkback for logging temp changes is turned o" ) );
+    if( logging_temp_changes ) Serial.print( F( "n" ) );
+    else  Serial.print( F( "ff" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "primary_temp_sensor_pin = " ) );
     Serial.print( primary_temp_sensor_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "secondary_temp_sensor_pin = " ) );
+    Serial.print( secondary_temp_sensor_pin );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "furnace_pin = " ) );
     Serial.print( furnace_pin );
@@ -267,7 +304,9 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "<°C> set upper furnace temp (to turn furnace off at any higher temperature than this, always persistent)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "talkback on/off (or logging on/off)(for the host system to log when each output pin gets set high or low, always persistent)" ) );
+    Serial.print( F( "talkback[ on/off] (or logging on/off)(for the host system to log when each output pin gets set high or low, always persistent)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "talkback temp change[s[ on/off]] (or logging temp changes on/off)(requires normal talkback on - for the host system to log whenever the main room temperature changes, always persistent)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "report master room temp" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
@@ -285,6 +324,10 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "test alert (sends an alert message to host for testing purposes)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "dht pin <pin number> (retrieves DHT device reading)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "test hidden function <pin number> (for experimental code debugging)" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( ".." ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 }
@@ -297,28 +340,64 @@ void restore_factory_defaults()
     furnace_fan_pin = factory_setting_furnace_fan_pin;
     power_cycle_pin = factory_setting_power_cycle_pin;
     logging = factory_setting_logging_setting;
+    logging_temp_changes = factory_setting_logging_temp_changes_setting;
+    secondary_temp_sensor_pin = factory_setting_secondary_temp_sensor_pin;
     thermostat = factory_setting_thermostat_mode;
     timer_alert_furnace_sent = 0;
     fan_mode = factory_setting_fan_mode;
     
-    lower_furnace_temp = factory_setting_lower_furnace_temp;
-    upper_furnace_temp = factory_setting_upper_furnace_temp;
+    lower_furnace_temp_floated = factory_setting_lower_furnace_temp_floated;
+    upper_furnace_temp_floated = factory_setting_upper_furnace_temp_floated;
     if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
     else digitalWrite( furnace_fan_pin, LOW );
     if( thermostat == 'o' ) digitalWrite( furnace_pin, LOW );//Need to do the same for A/C pin here, when known
-    Serial.print( F( "Storing thermostat-related.  Temp sensor belongs either on pin 2 or on a pin capable of PCINT function served by the lowest number PCINT ISR that is populated with any DHT device and having a Digital pin number lowest of all DHT devices (don't regard Analog pin numbers possibly printed on the board)discovered on that ISR, furnace controlled by pin 3, aux furnace fan or whatnot controlled by pin 4, power cycle of automation system or whatnot controlled by pin 5, logging on, lower furnace temp=21, upper furnace temp=21, furnace mode=auto" ) );
+    Serial.print( F( "Storing thermostat-related.  Primary temperature sensor goes on pin " ) );
+    Serial.print( factory_setting_primary_temp_sensor_pin );
+    Serial.print( F( ", secondary senosr on pin " ) );
+    Serial.print( factory_setting_secondary_temp_sensor_pin );
+    Serial.print( F( ", furnace controlled by pin " ) );
+    Serial.print( factory_setting_furnace_pin );
+    Serial.print( F( ", aux furnace fan or whatnot controlled by pin " ) );
+    Serial.print( factory_setting_furnace_fan_pin );
+    Serial.print( F( ", power cycle of automation system or whatnot controlled by pin " ) );
+    Serial.print( factory_setting_power_cycle_pin );
+    Serial.print( F( ", logging o" ) );
+    if( factory_setting_logging_setting ) Serial.print( F( "n" ) );
+    else Serial.print( F( "ff" ) );
+    Serial.print( F( ", logging temp changes o" ) );
+    if( factory_setting_logging_temp_changes_setting ) Serial.print( F( "n" ) );
+    else Serial.print( F( "ff" ) );
+    Serial.print( F( ", lower furnace temp=" ) );
+    Serial.print( factory_setting_upper_furnace_temp_floated, 1 );
+    Serial.print( F( ", upper furnace temp=" ) );
+    Serial.print( factory_setting_lower_furnace_temp_floated, 1 );
+    Serial.print( F( ", furnace mode=" ) );
+    if( factory_setting_thermostat_mode == 'a' )
+        Serial.print( F( "auto" ) );
+    else if( factory_setting_thermostat_mode == 'o' )
+        Serial.print( F( "off" ) );
+    else if( factory_setting_thermostat_mode == 'h' )
+        Serial.print( F( "heat" ) );
+    else if( factory_setting_thermostat_mode == 'c' )
+        Serial.print( F( "cool" ) );
+
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     EEPROM.update( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );//2 );
     EEPROM.update( furnace_address, factory_setting_furnace_pin );//3 );
     EEPROM.update( furnace_fan_pin_address, factory_setting_furnace_fan_pin );//4 );
     EEPROM.update( power_cycle_address, factory_setting_power_cycle_pin );//5);
     EEPROM.update( logging_address, factory_setting_logging_setting );//( uint8_t )true );
+    EEPROM.update( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );//( uint8_t )true );
     EEPROM.update( thermostat_address, factory_setting_thermostat_mode );//'a' );
     EEPROM.update( fan_mode_address, factory_setting_fan_mode );//'a' );
-    EEPROM.update( lower_furnace_temp_address, factory_setting_lower_furnace_temp );//21 );
-    EEPROM.update( upper_furnace_temp_address, factory_setting_upper_furnace_temp );//21 );
-    EEPROM.update( 0, ( u8 )( ( NUM_DIGITAL_PINS + 1 ) * 3 ) );//Tattoo the board
-    EEPROM.update( 1, ( u8 )( ( ( NUM_DIGITAL_PINS + 1 ) * 3 ) >> 8 ) );//Tattoo the board
+//These two must be put's because their data types are longer than one.  Data types of length one can be either updates or puts.
+    short factory_setting_lower_furnace_temp_shorted_times_ten = ( short )( factory_setting_lower_furnace_temp_floated * 10 );
+    short factory_setting_upper_furnace_temp_shorted_times_ten = ( short )( factory_setting_upper_furnace_temp_floated * 10 );
+    EEPROM.put( lower_furnace_temp_address, factory_setting_lower_furnace_temp_shorted_times_ten );//21 );
+    EEPROM.put( upper_furnace_temp_address, factory_setting_upper_furnace_temp_shorted_times_ten );//21 );
+    EEPROM.update( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );//2 );
+    EEPROM.put( 0, ( NUM_DIGITAL_PINS + 1 ) * 3 );//Tattoo the board
+//    EEPROM.update( 1, ( u8 )( ( ( NUM_DIGITAL_PINS + 1 ) * 3 ) >> 8 ) );//Tattoo the board
 //    EEPROM.update( EEPROM.length() - 4, 114 );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Factory initialization complete.  Now allowing you 10-13 seconds to unplug the Arduino in case this environment is for programming only." ) );
@@ -345,28 +424,43 @@ factory_setting_lower_furnace_temp;
 factory_setting_upper_furnace_temp;
 */
     Serial.print( F( "Version: " ) );
-    Serial.print( version );
+    Serial.print( F( VERSION ) );
     Serial.print( F( " Factory defaults:" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "Operating mode (heating/cooling/auto) = " ) );
-    Serial.print( factory_setting_thermostat_mode );
+    Serial.print( F( "Operating mode (heating/cooling/auto/off) = " ) );
+    if( factory_setting_thermostat_mode == 'a' )
+        Serial.print( F( "auto" ) );
+    else if( factory_setting_thermostat_mode == 'o' )
+        Serial.print( F( "off" ) );
+    else if( factory_setting_thermostat_mode == 'h' )
+        Serial.print( F( "heat" ) );
+    else if( factory_setting_thermostat_mode == 'c' )
+        Serial.print( F( "cool" ) );
+//    Serial.print( factory_setting_thermostat_mode );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Fan mode = " ) );
     Serial.print( factory_setting_fan_mode );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "lower_furnace_temp = " ) );
-    Serial.print( factory_setting_lower_furnace_temp );
+    Serial.print( factory_setting_lower_furnace_temp_floated, 1 );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "upper_furnace_temp = " ) );
-    Serial.print( factory_setting_upper_furnace_temp );
+    Serial.print( factory_setting_upper_furnace_temp_floated, 1 );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Talkback for logging o" ) );
     if( factory_setting_logging_setting ) Serial.print( F( "n" ) );
     else   Serial.print( F( "ff" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "Talkback for logging temp changes is turned o" ) );
+    if( factory_setting_logging_temp_changes_setting ) Serial.print( F( "n" ) );
+    else  Serial.print( F( "ff" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "primary_temp_sensor_pin = " ) );
     Serial.print( factory_setting_primary_temp_sensor_pin );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "secondary_temp_sensor_pin = " ) );
+    Serial.print( factory_setting_secondary_temp_sensor_pin );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "furnace_pin = " ) );
     Serial.print( factory_setting_furnace_pin );
@@ -407,8 +501,9 @@ pinMode( furnace_fan_pin, OUTPUT );
 if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
 else digitalWrite( furnace_fan_pin, LOW );
 //read EEPROM addresses 0 (LSB)and 1 (MSB).  MSB combined with LSB should always contain ( NUM_DIGITAL_PINS + 1 ) * 3.
-u16 tattoo = EEPROM.read( 1 ) << 8;
-tattoo |= EEPROM.read( 0 ); //Location 0 should contain 
+u16 tattoo = 0;
+EEPROM.get( 0, tattoo );
+//tattoo |= EEPROM.read( 0 ); //Location 0 should contain 
 //MAKE THE FOLLOWING INTO A STANDALONE ROUTINE INSTEAD OF EXPLICIT HERE because they can also be needed if end user wants to reset to factory defaults
 if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
 {
@@ -419,6 +514,12 @@ if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
 
    restore_factory_defaults();
 }
+short lower_furnace_temp_shorted_times_ten = 0;
+EEPROM.get( lower_furnace_temp_address, lower_furnace_temp_shorted_times_ten );
+lower_furnace_temp_floated = ( float )( ( float )( lower_furnace_temp_shorted_times_ten ) / 10 );
+short upper_furnace_temp_shorted_times_ten = 0;
+EEPROM.get( upper_furnace_temp_address, upper_furnace_temp_shorted_times_ten );
+upper_furnace_temp_floated = ( float )( ( float )( upper_furnace_temp_shorted_times_ten ) / 10 );
   delay( 3000 ); // The sensor needs time to initialize, if you have some code before this that make a delay, you can eliminate this delay
   //( pin_specified*3 )and ( pin_specified*3 )+1 contains the EEPROM address where the pin's assigned name is stored.  Pin 0 will always have its name stored at EEPROM address (NUM_DIGITAL_PINS+1 )*3, so address (NUM_DIGITAL_PINS+1 )*3 will always be stored in EEPROM addresses 0 and 1; 0 = ( pin_number*3 )and 1 = (( pin_number*3 )+1 ) )]
   // That will be the way we determine if the EEPROM is configured already or not
@@ -426,12 +527,12 @@ if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
 }
 // This wrapper is in charge of calling 
 // mus be defined like this for the lib work
-
+/*
 void dhtLib_wrapper(){
   DHTLib.dht11Callback(); // Change dht11Callback()for a dht22Callback()if you have a DHT22 sensor
 }
-
-void check_for_serial_input( int result )
+*/
+void check_for_serial_input( u8 result )
 {
   String pin_specified_str;
   String temp_specified_str;
@@ -445,6 +546,7 @@ void check_for_serial_input( int result )
         strFull.replace( F( "set pin to" ), F( "set pin" ) );
         strFull.replace( F( "view" ), F( "vi" ) );
         strFull.replace( F( "persistent memory" ), F( "pers" ) );
+        strFull.replace( F( "changes" ), F( "ch" ) );
         strFull.replace( F( "change" ), F( "ch" ) );
         strFull.replace( F( "thermostat" ), F( "ther" ) );
         strFull.replace( F( "fan auto" ), F( "fan a" ) );
@@ -479,11 +581,12 @@ void check_for_serial_input( int result )
            temp_specified_str = strFull.substring( 0, strFull.indexOf( ' ' ) );
            if( IsValidTemp( temp_specified_str ) )
            {
-              if( temp_specified <= upper_furnace_temp )
+              if( temp_specified_floated <= upper_furnace_temp_floated )
               {
-                lower_furnace_temp = temp_specified;
+                lower_furnace_temp_floated = temp_specified_floated;
                 timer_alert_furnace_sent = 0;
-                EEPROM.update( lower_furnace_temp_address, temp_specified );
+                short temp_specified_shorted_times_ten = ( short )( temp_specified_floated * 10 );
+                EEPROM.put( lower_furnace_temp_address, temp_specified_shorted_times_ten );
               }
               else 
               {
@@ -498,11 +601,12 @@ void check_for_serial_input( int result )
            temp_specified_str = strFull.substring( 0, strFull.indexOf( ' ' ) );
            if( IsValidTemp( temp_specified_str ) )
            {
-              if( temp_specified >= lower_furnace_temp )
+              if( temp_specified_floated >= lower_furnace_temp_floated )
               {
-                upper_furnace_temp = temp_specified;
+                upper_furnace_temp_floated = temp_specified_floated;
                 timer_alert_furnace_sent = 0;
-                EEPROM.update( upper_furnace_temp_address, temp_specified );
+                short temp_specified_shorted_times_ten = ( short )( temp_specified_floated * 10 );
+                EEPROM.put( upper_furnace_temp_address, temp_specified_shorted_times_ten );
               }
               else 
               {
@@ -514,37 +618,33 @@ void check_for_serial_input( int result )
         }
         else if( strFull.indexOf( F( "report master room temp" ) ) >=0 )
         {
-            if( result == IDDHTLIB_OK )
-            {
+           if( result == DEVICE_READ_SUCCESS )
+           {
                Serial.print( F( "Humidity (%): " ) );
-               Serial.print( DHTLib.getHumidity(), 0 );
+               Serial.print( _HumidityPercent, 1 );
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Temperature (°C): " ) );
-               Serial.print( DHTLib.getCelsius(), 0 );
+               Serial.print( _TemperatureCelsius, 1 );
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 
                
                Serial.print( F( "Temperature furnace is set to start: " ) );
-               Serial.print( lower_furnace_temp );
+               Serial.print( lower_furnace_temp_floated, 1 );
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Temperature furnace is set to stop: " ) );
-               Serial.print( upper_furnace_temp );
+               Serial.print( upper_furnace_temp_floated, 1 );
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Furnace output: " ) );
                Serial.print( digitalRead( furnace_pin ) );
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Furnace fan: " ) );
                Serial.print( digitalRead( furnace_fan_pin ) );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-            }
-            else 
-            {
-              Serial.print( F( "." ) );
-              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-              Serial.print( F( "Sensor not reporting.  Result is: " ) );
-              Serial.print( result );
-              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-            }
+           }
+           else
+           {
+                Serial.print( F( "Temperature sensor didn't read" ) );
+           }
+           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             strFull = "";
         }
         else if( strFull.indexOf( F( "read pins" ) ) >= 0 || strFull.indexOf( F( "pins read" ) ) >= 0 )
@@ -604,7 +704,7 @@ void check_for_serial_input( int result )
               {
                  Serial.print( F( "Pin " ) );
                  Serial.print( pin_specified );
-                 Serial.print( F( " (name functionality coming soon)" ) );
+                 Serial.print( F( " (name functionality coming in a future sketch version)" ) );
 /*
                  char data = EEPROM.read( pin_specified*3 );
                  char data2 = EEPROM.read(( pin_specified*3 )+1 );
@@ -704,7 +804,7 @@ void check_for_serial_input( int result )
         else if( strFull.indexOf( F( "set pin output" ) ) >= 0 )
         {
            pin_specified_str = strFull.substring( 0, strFull.indexOf( ' ' ) );
-           if( IsValidPinNumber( pin_specified_str )&& ( pin_specified != 0 || NUM_DIGITAL_PINS != 20 ) )
+           if( IsValidPinNumber( pin_specified_str ) && pin_specified != SERIAL_PORT_HARDWARE )
            {
               pinMode( pin_specified, OUTPUT );
               if( logging )
@@ -725,7 +825,10 @@ void check_for_serial_input( int result )
            }
            else
            {
-              Serial.print( F( "time_stamp_this Sorry, but pin 0 is dedicated to receive communications from the host" ) );
+illegal_attempt_SERIAL_PORT_HARDWARE:; 
+              Serial.print( F( "time_stamp_this Sorry, but pin " ) );
+              Serial.print( SERIAL_PORT_HARDWARE );
+              Serial.print( F( " is dedicated to receive communications from the host" ) );
               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            }
            strFull = "";
@@ -733,7 +836,7 @@ void check_for_serial_input( int result )
         else if( strFull.indexOf( F( "set pin input with pullup" ) ) >= 0 )
         {
            pin_specified_str = strFull.substring( 0, strFull.indexOf( ' ' ) );
-           if( IsValidPinNumber( pin_specified_str )&& ( pin_specified != 1 || NUM_DIGITAL_PINS != 20 ) )
+           if( IsValidPinNumber( pin_specified_str ) && pin_specified != SERIAL_PORT_HARDWARE )
            {
               if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin )
               {
@@ -765,17 +868,13 @@ void check_for_serial_input( int result )
                  }
               }
            }
-           else
-           {
-              Serial.print( F( "time_stamp_this Sorry, but pin 1 is dedicated to send communications to the host" ) );
-              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-           }
+           else goto illegal_attempt_SERIAL_PORT_HARDWARE;
            strFull = "";
         }
         else if( strFull.indexOf( F( "set pin input" ) ) >= 0 )
         {
            pin_specified_str = strFull.substring( 0, strFull.indexOf( ' ' ) );
-           if( IsValidPinNumber( pin_specified_str )&& ( pin_specified != 1 || NUM_DIGITAL_PINS != 20 ) )
+           if( IsValidPinNumber( pin_specified_str ) && pin_specified != SERIAL_PORT_HARDWARE )
            {
               if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin )
               {
@@ -810,11 +909,7 @@ void check_for_serial_input( int result )
                  }
               }
            }
-           else
-           {
-              Serial.print( F( "time_stamp_this Sorry, but pin 1 is dedicated to send communications to the host" ) );
-              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-           }
+           else goto illegal_attempt_SERIAL_PORT_HARDWARE;
            strFull = "";
         }
         else if( strFull.indexOf( F( "ther a" ) ) == 0 || strFull.indexOf( F( "ther o" ) ) == 0 || strFull.indexOf( F( "ther h" ) ) == 0 || strFull.indexOf( F( "ther c" ) ) == 0 )
@@ -882,6 +977,26 @@ after_change_fan:
             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
+        else if( strFull.indexOf( F( "logging temp ch o" ) ) >= 0 )
+        {
+           Serial.print( F( "Talkback for logging temp changes being turned o" ) );
+           int charat = strFull.indexOf( F( "logging temp ch o" ) )+ 17;
+           if( strFull.charAt( charat ) == 'n' ) logging_temp_changes = true;
+           else logging_temp_changes = false;
+           EEPROM.update( logging_temp_changes_address, ( uint8_t )logging_temp_changes );
+           if( logging_temp_changes ) Serial.print( strFull.charAt( charat ) );
+           else  Serial.print( F( "ff" ) );
+           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+           strFull = "";
+        }
+        else if( strFull.indexOf( F( "logging temp ch" ) ) >= 0 )
+        {
+           Serial.print( F( "Talkback for logging temp changes is turned o" ) );
+           if( logging_temp_changes ) Serial.print( F( "n" ) );
+           else  Serial.print( F( "ff" ) );
+           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+           strFull = "";
+        }
         else if( strFull.indexOf( F( "logging o" ) ) >= 0 )
         {
            Serial.print( F( "Talkback for logging being turned o" ) );
@@ -899,6 +1014,7 @@ after_change_fan:
            Serial.print( F( "Talkback for logging is turned o" ) );
            if( logging ) Serial.print( F( "n" ) );
            else  Serial.print( F( "ff" ) );
+           Serial.print( strFull );
            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
@@ -1067,6 +1183,68 @@ after_change_fan:
            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
+        else if( strFull.indexOf( F( "dht pin" ) ) == 0 )
+        {
+           pin_specified_str = strFull.substring( 8, strFull.length() - 1 );
+           if( IsValidPinNumber( pin_specified_str ) )
+           {
+//               Serial.print( F( ".." ) );
+               Serial.print( F( "Pin " ) );
+               Serial.print( ( u8 )pin_specified_str.toInt() );
+               Serial.print( F( " DHT read: " ) );
+               DHTresult* noInterrupt_result = ( DHTresult* )DHTread( ( u8 )pin_specified_str.toInt() );
+               if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
+               {
+                   Serial.print( ( float )( ( float )noInterrupt_result->TemperatureCelsius / 10 ), 1 );
+                   Serial.print( F( " °C, " ) );
+                   Serial.print( ( float )( ( float )noInterrupt_result->HumidityPercent / 10 ), 1 );
+                   Serial.print( F( " %" ) );
+               }
+               else
+               {
+                   Serial.print( F( "Error " ) );
+                   Serial.print( noInterrupt_result->ErrorCode );
+               }
+/*
+#define TYPE_KNOWN_DHT11 1
+#define TYPE_KNOWN_DHT22 2
+#define TYPE_LIKELY_DHT11 3
+#define TYPE_LIKELY_DHT22 4
+ */
+               if( noInterrupt_result->Type == TYPE_KNOWN_DHT11 ) Serial.print( F( " TYPE_KNOWN_DHT11" ) );
+               else if( noInterrupt_result->Type == TYPE_KNOWN_DHT22 ) Serial.print( F( " TYPE_KNOWN_DHT22" ) );
+               else if( noInterrupt_result->Type == TYPE_LIKELY_DHT11 ) Serial.print( F( " TYPE_LIKELY_DHT11" ) );
+               else if( noInterrupt_result->Type == TYPE_LIKELY_DHT22 ) Serial.print( F( " TYPE_LIKELY_DHT22" ) );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+           }
+           strFull = "";
+        }
+        else if( strFull.indexOf( F( "test hidden function" ) ) == 0 )
+        {//inside this section is playground sandbox,  rebuild as needed....
+           pin_specified_str = strFull.substring( 21, strFull.length() - 1 );
+           if( IsValidPinNumber( pin_specified_str ) )
+           {
+               Serial.print( F( ".." ) );
+               Serial.print( F( "For pin " ) );
+               Serial.print( ( u8 )pin_specified_str.toInt() );
+               Serial.print( F( ": " ) );
+               DHTresult* noInterrupt_result = ( DHTresult* )DHTread( ( u8 )pin_specified_str.toInt() );
+               if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
+               {
+                   Serial.print( ( float )( ( float )noInterrupt_result->TemperatureCelsius / 10 ), 1 );
+                   Serial.print( F( " °C, " ) );
+                   Serial.print( ( float )( ( float )noInterrupt_result->HumidityPercent / 10 ), 1 );
+                   Serial.print( F( " %" ) );
+               }
+               else
+               {
+                   Serial.print( F( "Error " ) );
+                   Serial.print( noInterrupt_result->ErrorCode );
+               }
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+           }
+           strFull = "";
+        }
         else
         {
           if( strFull.indexOf( F( "help" ) )< 0 )
@@ -1084,8 +1262,8 @@ after_change_fan:
 //  digitalWrite(LED_BUILTIN, LOW ); 
 
 }
-int last_three_temps_index = 0;
-int old_getCelsius_temp = 0;
+u8 last_three_temps_index = 0;
+float old_getCelsius_temp = 0;
 float oldtemp = 0;
 u8 furnace_state = 0;
 unsigned long timeOfLastSensorTimeoutError = 0;
@@ -1127,31 +1305,57 @@ delay( 100 );
 delay( 100 );
   digitalWrite(LED_BUILTIN, HIGH ); //informs us that temp sensor is being communicated with
 */
-  int result = DHTLib.acquireAndWait();
-//  if( result != IDDHTLIB_OK ) delay( 1000 );
-//  digitalWrite(LED_BUILTIN, LOW ); 
-//  Serial.println( F( "Sensor read complete" ) );
-//   int result = 1;
-  check_for_serial_input( result );
-//            Serial.print( F( "Result to match: " ) );
-//            Serial.println( IDDHTLIB_OK );
-//  switch ( result )
-//  {
-//  case IDDHTLIB_OK: 
-
-
-    if( result == IDDHTLIB_OK )
+//    int result = DHTLib.acquireAndWait();
+//Serial.print( F( "..primary_temp_sensor_pin =  " ) );
+//Serial.print( primary_temp_sensor_pin );
+//Serial.print( F( ".." ) );
+    DHTresult* noInterrupt_result = ( DHTresult* )( DHTread( primary_temp_sensor_pin ) );
+    if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( DHTread( secondary_temp_sensor_pin ) );
+    if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
     {
+/*
+        Serial.print( F( "Humidity (%): " ) );
+        Serial.print( _HumidityPercent, 1 );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( F( "Temperature (°C): " ) );
+        Serial.print( _TemperatureCelsius, 1 );
+*/
+//Serial.print( noInterrupt_result.TemperatureCelsius );
+//Serial.print( F( " °C, " ) );
+//Serial.print( noInterrupt_result.HumidityPercent );
+//Serial.print( F( " %" ) );
         timeOfLastSensorTimeoutError = 0;
-        last_three_temps[ last_three_temps_index ] = ( int )DHTLib.getCelsius();
+        
+        if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+        else _TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+        _HumidityPercent = ( float )( ( float )noInterrupt_result->HumidityPercent / 10 );
+        last_three_temps[ last_three_temps_index ] = _TemperatureCelsius;
         float newtemp = ( float )( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )/ 3 );
+        if( last_three_temps[ 0 ] != -100 && last_three_temps[ 1 ] != -101 && last_three_temps[ 2 ] != -102 )
+        {
+             if( furnace_state == 1 && furnace_started_temp_x_3 < last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )
+             {
+                  check_furnace_effectiveness_time = millis() + ( minutes_furnace_should_be_effective_after * 60000 );  //Will this become invalid if furnace temp setting gets adjusted?  TODO:  Account for that conditioin
+                  if( check_furnace_effectiveness_time < minutes_furnace_should_be_effective_after * 60000 )
+                  {
+                        millis_overflowed = true;
+                  }
+                  else
+                  {
+                        millis_overflowed = false;
+                  }
+             }
+        }
         if( ( newtemp != oldtemp ) && ( last_three_temps[ last_three_temps_index ] != old_getCelsius_temp ) )
         {
-            if( logging )
+            if( logging && logging_temp_changes )
             {
                 Serial.print( F( "time_stamp_this Temperature change to " ) );
-                Serial.print( last_three_temps[ last_three_temps_index ] );
-                Serial.print( F( " °C" ) );
+                Serial.print( ( float )last_three_temps[ last_three_temps_index ], 1 );
+                Serial.print( F( " °C " ) );
+                if( noInterrupt_result == &DHTfunctionResultsArray[ primary_temp_sensor_pin - 1 ] ) Serial.print( F( "primary" ) );
+                else Serial.print( F( "secondary" ) );
+                Serial.print( F( " sensor" ) );
                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             }
             old_getCelsius_temp = last_three_temps[ last_three_temps_index ];
@@ -1162,7 +1366,7 @@ delay( 100 );
            {
     //            Serial.print( F( "Furnace is off?: " ) );
     //            Serial.println( furnace_state );
-              if( last_three_temps[ 0 ] < lower_furnace_temp && last_three_temps[ 1 ] < lower_furnace_temp && last_three_temps[ 2 ] < lower_furnace_temp && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp )
+              if( last_three_temps[ 0 ] < lower_furnace_temp_floated && last_three_temps[ 1 ] < lower_furnace_temp_floated && last_three_temps[ 2 ] < lower_furnace_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp_floated )
               {
     //      Serial.println( F( "Turning furnace on" ) );
                   digitalWrite( furnace_pin, HIGH ); 
@@ -1178,8 +1382,8 @@ delay( 100 );
                         Serial.print( F( ")" ) );
                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                   }
-                  check_furnace_effectiveness_time = millis() + ( minutes_furnace_should_be_effective_after * 60000 );
-                  if( check_furnace_effectiveness_time < millis() )
+                  check_furnace_effectiveness_time = millis() + ( minutes_furnace_should_be_effective_after * 60000 );  //Will this become invalid if furnace temp setting gets adjusted?  TODO:  Account for that conditioin
+                  if( check_furnace_effectiveness_time < minutes_furnace_should_be_effective_after * 60000 )
                   {
                         millis_overflowed = true;
                   }
@@ -1194,7 +1398,7 @@ delay( 100 );
            {
 //            Serial.print( F( "Furnace is on?: " ) );
 //            Serial.println( furnace_state );
-               if( last_three_temps[ 0 ] > upper_furnace_temp && last_three_temps[ 1 ] > upper_furnace_temp && last_three_temps[ 2 ] > upper_furnace_temp )
+               if( last_three_temps[ 0 ] > upper_furnace_temp_floated && last_three_temps[ 1 ] > upper_furnace_temp_floated && last_three_temps[ 2 ] > upper_furnace_temp_floated )
                {
                     //      Serial.println( F( "Turning furnace off" ) );
                     digitalWrite( furnace_pin, LOW );
@@ -1221,19 +1425,30 @@ delay( 100 );
                }
                else if( !timer_alert_furnace_sent && furnace_started_temp_x_3 > last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )
                {
-                    if( millis() > check_furnace_effectiveness_time && ( !millis_overflowed || millis() < ( unsigned long )-1 ) )
-                    {//Thie following is output regardless of logging mode
-                        Serial.print( F( "time_stamp_this ALERT Furnace not heating after allowing " ) );
-                        Serial.print( ( u8 )( minutes_furnace_should_be_effective_after + ( ( millis() - check_furnace_effectiveness_time ) / 60000 ) ) );
+                    if( !millis_overflowed )
+                        if( millis() > check_furnace_effectiveness_time || millis() < check_furnace_effectiveness_time - minutes_furnace_should_be_effective_after * 60000 )
+                        {
+                              goto sendAlert;
+                        }
+                    else if( millis() > check_furnace_effectiveness_time && millis() < check_furnace_effectiveness_time )
+                    {
+                         goto sendAlert;
+                    }
+                    goto afterSendAlert;
+sendAlert:;
+//                    // check_furnace_effectiveness_time is set when the furnace is ON'd (turned on)
+                    //The following is output regardless of logging mode                                                         //  to millis() + ( minutes_furnace_should_be_effective_after * 60000 )
+                        Serial.print( F( "time_stamp_this ALERT Furnace not heating after allowing " ) );                          //  which is a millis() value to alert at if no heating happened yet
+                        Serial.print( ( u8 )( minutes_furnace_should_be_effective_after + ( ( millis() - check_furnace_effectiveness_time ) / 60000 ) ) ); //minutes_furnace_should_be_effective_after is a const of a number of minutes
                         Serial.print( F( " minutes" ) );
                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                         timer_alert_furnace_sent = loop_cycles_to_skip_between_alert_outputs;
                         if( !timer_alert_furnace_sent )
                             timer_alert_furnace_sent = 1;
-                    }
 /*                    send an alert output if furnace not working: temperature dropping even though furnace got turned on.  the way to determine this is to have a flag of whether the alert output is already sent;
- *                     That flag will unconditionally get reset in the following situations: thermostat setting gets changed, upper_furnace_temp or lower_furnace_temp gets changed, room temperature rises while furnace is on, 
+ *                     That flag will unconditionally get reset in the following situations: thermostat setting gets changed, upper_furnace_temp_floated or lower_furnace_temp_floated gets changed, room temperature rises while furnace is on, 
  */
+afterSendAlert:;
                }
                else if( timer_alert_furnace_sent )
                {
@@ -1245,7 +1460,7 @@ delay( 100 );
        {
             Serial.print( F( "Furnace is on?: " ) );
             Serial.println( furnace_state );
-           if( last_three_temps[ 0 ] > upper_furnace_temp && last_three_temps[ 1 ] > upper_furnace_temp && last_three_temps[ 2 ] > upper_furnace_temp && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp )
+           if( last_three_temps[ 0 ] > upper_furnace_temp_floated && last_three_temps[ 1 ] > upper_furnace_temp_floated && last_three_temps[ 2 ] > upper_furnace_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp_floated )
            {
 //      Serial.println( F( "Turning furnace off" ) );
                digitalWrite( furnace_pin, LOW );
@@ -1270,37 +1485,12 @@ delay( 100 );
     }
     else
     {
-      switch ( result )
-      {
-      case IDDHTLIB_ERROR_CHECKSUM: 
-        break;
-      case IDDHTLIB_ERROR_TIMEOUT: //TODO: Only insert the ALERT if error has been going on for certain number of check cycles.  Say 100
         timeOfLastSensorTimeoutError++;
         Serial.print( F( "time_stamp_this " ) );
         if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );
         Serial.print( F( "Temperature sensor TIMEOUT error" ) );
 //        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 //        Serial.print( F( "Time out error" ) ); 
-        break;
-      case IDDHTLIB_ERROR_ACQUIRING: 
-        Serial.print( F( "time_stamp_this ALERT Temperature sensor ACQUIRING error" ) );
-//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//        Serial.print( F( "Acquiring" ) ); 
-        break;
-      case IDDHTLIB_ERROR_DELTA: 
-        Serial.print( F( "time_stamp_this ALERT Temperature sensor DELTA error" ) );
-//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//       Serial.print( F( "Delta time to small" ) ); 
-        break;
-      case IDDHTLIB_ERROR_NOTSTARTED: 
-        Serial.print( F( "time_stamp_this ALERT Temperature sensor NOTSTARTED error" ) );
-//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//        Serial.print( F( "Not started" ) ); 
-        break;
-      default: 
-        Serial.print( F( "time_stamp_this ALERT Temperature sensor unknown error" ) ); 
-        break;
-        }
         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     }
 
@@ -1325,8 +1515,7 @@ delay( 100 );
 
 //  Serial.print( F( "Dew Point Slow (oC): " ) );
 //  Serial.println( DHTLib.getDewPointSlow() );
-
-check_for_serial_input( result );
+check_for_serial_input( noInterrupt_result->ErrorCode );
   delay( 2000 );
 }
 
