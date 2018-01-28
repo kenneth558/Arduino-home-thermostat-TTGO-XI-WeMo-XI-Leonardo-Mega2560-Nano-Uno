@@ -532,7 +532,7 @@ void dhtLib_wrapper(){
   DHTLib.dht11Callback(); // Change dht11Callback()for a dht22Callback()if you have a DHT22 sensor
 }
 */
-void check_for_serial_input( u8 result )
+void check_for_serial_input( char result )
 {
   String pin_specified_str;
   String temp_specified_str;
