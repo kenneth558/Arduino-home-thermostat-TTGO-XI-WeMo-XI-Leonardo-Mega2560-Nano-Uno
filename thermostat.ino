@@ -1,5 +1,4 @@
 #define VERSION "0.0.004"//;//TODO:  add labels to pins
-#include <Arduino.h>
 short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 /*
 EEPROM addressing: use digital pin number * 2 as LSB of start address that pin description is found. The MSB of that start address is located in the following EEPROM location (digital pin number * 2 )+ 1.  
@@ -1192,7 +1191,7 @@ after_change_fan:
                Serial.print( F( "Pin " ) );
                Serial.print( ( u8 )pin_specified_str.toInt() );
                Serial.print( F( " DHT read: " ) );
-               DHTresult* noInterrupt_result = ( DHTresult* )DHTread( ( u8 )pin_specified_str.toInt() );
+               DHTresult* noInterrupt_result = ( DHTresult* )DHTreadWhenRested( ( u8 )pin_specified_str.toInt() );
                if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
                {
                    Serial.print( ( float )( ( float )noInterrupt_result->TemperatureCelsius / 10 ), 1 );
@@ -1228,7 +1227,7 @@ after_change_fan:
                Serial.print( F( "For pin " ) );
                Serial.print( ( u8 )pin_specified_str.toInt() );
                Serial.print( F( ": " ) );
-               DHTresult* noInterrupt_result = ( DHTresult* )DHTread( ( u8 )pin_specified_str.toInt() );
+               DHTresult* noInterrupt_result = ( DHTresult* )DHTreadWhenRested( ( u8 )pin_specified_str.toInt() );
                if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
                {
                    Serial.print( ( float )( ( float )noInterrupt_result->TemperatureCelsius / 10 ), 1 );
@@ -1309,8 +1308,8 @@ delay( 100 );
 //Serial.print( F( "..primary_temp_sensor_pin =  " ) );
 //Serial.print( primary_temp_sensor_pin );
 //Serial.print( F( ".." ) );
-    DHTresult* noInterrupt_result = ( DHTresult* )( DHTread( primary_temp_sensor_pin ) );
-    if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( DHTread( secondary_temp_sensor_pin ) );
+    DHTresult* noInterrupt_result = ( DHTresult* )( DHTreadWhenRested( primary_temp_sensor_pin ) );
+    if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( DHTreadWhenRested( secondary_temp_sensor_pin ) );
     if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
     {
 /*
