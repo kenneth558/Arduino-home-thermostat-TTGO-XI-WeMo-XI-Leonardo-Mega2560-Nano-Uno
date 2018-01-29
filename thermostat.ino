@@ -198,8 +198,8 @@ boolean IsValidTemp( String str )
     }
     temp_specified_floated = ( float )str.toInt();
     if( str.indexOf('.') ){ temp_specified_floated += ( ( float )str.substring( str.indexOf('.') + 1 ).toInt() ) / 10; };
-    signed char upper_limit = 37;
-    signed char lower_limit = -37;
+    signed char upper_limit = 27;
+    signed char lower_limit = 10;
     if(  temp_specified_floated < lower_limit || temp_specified_floated > upper_limit )//This check should be called for the rooms where it matters
     {
         Serial.print( F( "Temperature must be Celsius " ) );
