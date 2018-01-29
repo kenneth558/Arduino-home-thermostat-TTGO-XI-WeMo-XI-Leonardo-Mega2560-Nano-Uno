@@ -1,4 +1,4 @@
-The following is the contents of an script file called arduinolog, launched at system startup:
+The following is the contents of an script file I name arduinolog and launch at system startup:
 
 #! /bin/bash
 trap '' HUP
