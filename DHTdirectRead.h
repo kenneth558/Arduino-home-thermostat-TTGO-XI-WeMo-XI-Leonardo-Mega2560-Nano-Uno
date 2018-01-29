@@ -1,6 +1,4 @@
 
-bool mswindows = false;  //Used for line-end on serial outputs.  Will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
-
 #define DEVICE_NOT_YET_ACCESSED -1 //255
 #define DEVICE_FAILS_DURING_INITIALIZE -2  //254
 #define DEVICE_FAILS_DURING_INITIALIZE1 -3 //253 common to dht22
