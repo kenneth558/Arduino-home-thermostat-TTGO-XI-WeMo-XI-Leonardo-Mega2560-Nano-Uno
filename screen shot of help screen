@@ -1,11 +1,13 @@
 ..
-Version: 0.0.002
+Version: 0.0.004
 Operating mode (heating/cooling/auto) = a
 Fan mode = a
-lower_furnace_temp = 12
-upper_furnace_temp = 12
+lower_furnace_temp = 10.3
+upper_furnace_temp = 11.4
 Talkback for logging is turned on
-primary_temp_sensor_pin = 2
+Talkback for logging temp changes is turned on
+primary_temp_sensor_pin = 8
+secondary_temp_sensor_pin = 2
 furnace_pin = 3
 furnace_fan_pin = 4
 automation system power_cycle_pin = 5
@@ -17,21 +19,24 @@ help (re-display this information)
 ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat)
 fan[ a[uto]/ o[n]] (to read or set fan)
 <pin number> set pin [to] output (or ...pin set)
-<pin number> set pin [to] input [pers] (or ...pin set)optional persistence
-<pin number> set pin [to] input with pullup [pers] (or ...pin set)optional persistence
+<pin number> set pin [to] input [pers] (or ...pin set) optional persistence
+<pin number> set pin [to] input with pullup [pers] (or ...pin set) optional persistence
 <pin number> read pin (or ...pin read)(obtain the name if any, setting and voltage)
 read pins (or pins read )(obtain the names, settings and voltages of ALL pins)
-<pin number> set pin [to] low [pers] (or ...pin set )(only allowed to pins assigned as output)optional persistence
-<pin number> set pin [to] high [pers] (or ...pin set )(only allowed to pins assigned as output)optional persistence
+<pin number> set pin [to] low [pers] (or ...pin set )(only allowed to pins assigned as output) optional persistence
+<pin number> set pin [to] high [pers] (or ...pin set )(only allowed to pins assigned as output) optional persistence
 <°C> set lower furnace temp (to turn furnace on at any lower temperature than this, always persistent)
 <°C> set upper furnace temp (to turn furnace off at any higher temperature than this, always persistent)
-talkback on/off (or logging on/off)(for the host system to log when each output pin gets set high or low, always persistent)
+talkback[ on/off] (or logging on/off)(for the host system to log when each output pin gets set high or low, always persistent)
+talkback temp change[s[ on/off]] (or logging temp changes on/off)(requires normal talkback on - for the host system to log whenever the main room temperature changes, always persistent)
 report master room temp
 power cycle (or cycle power)
 ch[ange] pers[istent memory] <address> <value>
 ch[ange] pers[istent memory] <StartingAddress> "<character string>["[ 0]] (store character string as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])
 vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>]
-vi[ew] fact[ory defaults] (so you can what would happen before you reset to them)
+vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)
 reset (factory defaults: pure, simple and absolute)
-test ALERT (sends an ALERT message to host for testing purposes)
+test alert (sends an alert message to host for testing purposes)
+dht pin <pin number> (retrieves DHT device reading)
+test hidden function <pin number> (for experimental code debugging)
 ..
