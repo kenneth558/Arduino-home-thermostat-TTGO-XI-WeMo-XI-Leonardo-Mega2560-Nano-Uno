@@ -1,4 +1,4 @@
-The following is the contents of an script file called arduinolog, launched at system startup:
+The following is the contents of a script file I titled arduinolog and launch at system startup:
 
 #! /bin/bash
 trap '' HUP
@@ -26,4 +26,4 @@ Then replace "help" with one of the other commands that will be displayed by the
 
 I found firewalling to be important.  I wrote poofitee to be a universal installer of a bulletproof firewall, but soon
 realized that Linux is far too fragmented both across flavors and across supporting program upgrades to think I could
-maintain it.  Help yourself to what I've put out here.
+maintain it.  With that caveat, help yourself to what I've put out here.
