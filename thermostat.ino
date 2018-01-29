@@ -15,6 +15,7 @@ Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 
 
 */
+bool mswindows = false;  //Used for line-end on serial outputs.  Make true to print line ends as MS Windows needs  
 #include <EEPROM.h>
 #include "DHTdirectRead.h"
 //All temps are shorts until displayed
