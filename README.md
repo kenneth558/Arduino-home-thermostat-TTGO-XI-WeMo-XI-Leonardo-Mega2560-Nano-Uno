@@ -1,10 +1,20 @@
 # Arduino_UNO_home_thermostat
-I use this sketch in the Arduino UNO to operate my furnace, and you can easily modify it for A/C and humidistat.  It is readable and settable from a host computer, if connected to one via USB.  For maximum capability, the host computer can optionally run [a] capturing daemon[s] to receive and process the logging output from the Arduino.  See the auxiliary host processing scripting that I use in Ubuntu in the file above titled similarly.
+I use this sketch in the Arduino UNO as my furnace thermostat, and you can easily modify it for A/C and humidistat.  It also makes Arduino digital pins to be readable and settable from a host computer, if connected to one via USB.  For maximum capability, the host computer can optionally run [a] capturing daemon[s] to receive and process the logging output from the Arduino.  Temperature changes logging, an option if main logging is also on, is on by default.  See the auxiliary host processing scripting that I use in Ubuntu in the file above titled similarly.
 
 Being connected via USB to my Ubuntu headless firewall, I have remote control of it from over the Internet. It will send alerts to the host for furnace failure to heat, which I use by a bash script on the host to email me in that event.  
 
 See the screen shot of the help screen that it can display.  Sensors must be either DHT11 or DHT22 in this version.  It expects two DHT sensors - a primary and a backup sensor for failsafe operation, called a secondary.  Because NO interrupts are used, the sensors can be connected to any digital pin!  
 
-This sketch also allows the host computer to read and control the Arduino digital pins!  An example: I have my host computer calculate when my porchlights are to be turned on and off by a pin by lookup file of sunset and sunrise times.  I have my coffee maker scheduled through another pin.  My host computer can read temperatures and humidities from more DHT11/22 devices on other pins.  Etc., etc.!  See the help screen for details.
+This sketch also allows the host computer to read and control the Arduino digital pins!  As examples:
 
-Future plans TODO: I2C and port expansion....
+-  I have my host computer calculate when my porchlights are to be turned on and off through a pin by lookup file of sunset and sunrise times.  
+
+-  I have my coffee maker outlet connected to another pin and host-controlled on a schedule.  
+
+-  The host computer can read temperatures and humidities from more DHT11/22 devices on other pins.  Outdoor temperature and humidity can thus be acquired by the host computer.
+
+-  Etc., etc.!  See the help screen for details.
+
+IMPORTANT SAFETY NOTE - Proper electrical isolation by relay or opto-isolation must be observed whenever connecting to building electrical or furnace controls or other electrical equipment.
+
+Future plans TODO: I2C, port expansion, duct damper operation for multi-thermostat-single-furnace environments.
