@@ -5,7 +5,7 @@ Being connected via USB to my Ubuntu headless firewall, I have remote control of
 
 See the screen shot of the help screen that it can display.  Sensors must be either DHT11 or DHT22 in this version.  It expects two DHT sensors - a primary and a backup sensor for failsafe operation, called a secondary.  Because sensors are read without utilizing interrupts,  any digital pin can be used for sensors!  
 
-This sketch is also a wrapper to allow the host computer to read and control the Arduino digital pins!  As examples:
+This sketch is also a wrapper to allow the host computer to read and control the Arduino digital pins with or without taking advantage of the thermostat functionality!  As examples:
 
 -  I have my host computer calculate when my porchlights are to be turned on and off through a pin by lookup file of sunset and sunrise times
 
