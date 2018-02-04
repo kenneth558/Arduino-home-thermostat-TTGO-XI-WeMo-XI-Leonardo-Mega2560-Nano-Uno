@@ -1,4 +1,3 @@
-
 #define DEVICE_NOT_YET_ACCESSED -1 //255
 #define DEVICE_FAILS_DURING_INITIALIZE -2  //254
 #define DEVICE_FAILS_DURING_INITIALIZE1 -3 //253 common to dht22
@@ -11,10 +10,14 @@
 #define DEVICE_FAILS_DURING_INITIALIZE8 -10 //246
 #define DEVICE_FAILS_DURING_DATA_STREAM -11 //245
 #define DEVICE_CRC_ERROR -12 //244
-#define DEVICE_READ_SUCCESS -13 //243
+#define DEVICE_BYTE0_ERROR -13 //243
+#define DEVICE_BYTE2_ERROR -14 //242
+#define DEVICE_BYTES0and1_ERROR -15 //241
+#define DEVICE_BYTES2and3_ERROR -16 //240
+#define DEVICE_READ_SUCCESS -17 //239
 
-#define REFUSED_ROLLOVER_EXPECTED -14
-#define REFUSED_INVALID_PIN -15
+#define REFUSED_ROLLOVER_EXPECTED -18
+#define REFUSED_INVALID_PIN -19
 
 #define TYPE_KNOWN_DHT11 1
 #define TYPE_KNOWN_DHT22 2
@@ -124,43 +127,95 @@ void GetReading( u8 pin )
             else startBitTime = micros();
             bitnumber++;
         }
-
         pinMode( pin, OUTPUT );
         digitalWrite( pin, HIGH );
+
         if( ( u8 )( DataStreamBits[ 0 ] + DataStreamBits[ 1 ] + DataStreamBits[ 2 ] + DataStreamBits[ 3 ] ) !=  DataStreamBits[ 4 ] )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_CRC_ERROR;
-/*
-        Serial.print( DataStreamBits[ 0 ], BIN );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( DataStreamBits[ 1 ], BIN );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( DataStreamBits[ 2 ], BIN );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( DataStreamBits[ 3 ], BIN );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( DataStreamBits[ 4 ], BIN );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-*/
             return;
         }
-        DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_READ_SUCCESS;
-        if( !DataStreamBits[ 1 ] && !DataStreamBits[ 3 ] && DataStreamBits[ 0 ] < 100 && DataStreamBits[ 2 ] < 50 )
-        {//big endian adjustment included
-            DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_LIKELY_DHT11;
-            *DataStreamBits0 = ( u16 )( ( DataStreamBits[ 0 ] << 1 ) + ( DataStreamBits[ 0 ] << 3 ) );//multiplies by 10
-            *DataStreamBits2 = ( u16 )( ( DataStreamBits[ 2 ] << 1 ) + ( DataStreamBits[ 2 ] << 3 ) );//multiplies by 10
+        else if( DataStreamBits[ 0 ] > 3 && DataStreamBits[ 0 ] < 18 ) //no values of 0 are ever valid if between 4 and 17 inclusive
+            goto byte0_error;
+        else if( DataStreamBits[ 2 ] > 129 || ( DataStreamBits[ 2 ] & 0x7f ) > 55 )
+        {
+            DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_BYTE2_ERROR;
+            return;
         }
-        else 
+        else if( DataStreamBits[ 2 ] & 0x80 )
+        {
+            if( ( ( DataStreamBits[ 2 ] & 0x7f ) * 256 ) + DataStreamBits[ 3 ] > 410 ) //81.0C max allowed
+            {
+                DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_BYTES0and1_ERROR;
+                return;
+            }
+            goto known_22;
+        }
+        else if( !DataStreamBits[ 1 ] && !DataStreamBits[ 3 ] )
+        {
+            if( DataStreamBits[ 0 ] < 4 && DataStreamBits[ 2 ] < 4 )
+                goto likely_22;//likely, not known, this is the readings of commonality between both 11 and 22.  We favor the 22 b/c its rest time is compatible with 11, not other way around
+            else if( DataStreamBits[ 0 ] > 81 || DataStreamBits[ 0 ] < 18 )//must be 18-81
+                goto byte0_error;
+            else if( DataStreamBits[ 2 ] > 55 )//must be 0-51 for 11, 22 already accounted for by above readings of commonality check
+            {
+                DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_BYTE2_ERROR;
+                return;
+            }
+            goto known_11;
+        }
+//known 22
+        else if( ( DataStreamBits[ 0 ] * 256 ) + DataStreamBits[ 1 ] > 1000 ) //100% max allowed
+        {
+            //check for 22 readings out of bounds 0-100%RH, -40-80C
+            DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_BYTES0and1_ERROR;
+            return;
+        }
+        else if( ( DataStreamBits[ 2 ] * 256 ) + DataStreamBits[ 3 ] > 810 ) //81.0C max allowed
+        {
+            DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_BYTES0and1_ERROR;
+            return;
+        }
+/*
+        DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_READ_SUCCESS;
+        if( !DataStreamBits[ 1 ] && !DataStreamBits[ 3 ] && DataStreamBits[ 0 ] > 3 )  or if over 3, no values of 2 are valid if between 4 and 19 inclusive
+            goto likely_11;
+        else
         {//big endian adjustment
+        
+*/
+//fall through as known dht22
+known_22:;
             DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_KNOWN_DHT22;
+known_22_plus_one:;
+            //changing from 22 to 11 is fine but not the other way
+            DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_READ_SUCCESS;
             DataStreamBits[ 4 ] = DataStreamBits[ 3 ];
             DataStreamBits[ 3 ] = DataStreamBits[ 2 ];
             DataStreamBits[ 2 ] = DataStreamBits[ 1 ];
             DataStreamBits[ 1 ] = DataStreamBits[ 0 ];
             DataStreamBits[ 0 ] = DataStreamBits[ 2 ];
             DataStreamBits[ 2 ] = DataStreamBits[ 4 ];
-        }
+//        }
+        goto past_device_type_sort;
+likely_22:;
+            //changing from 22 to 11 is fine but not the other way
+        DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_LIKELY_DHT22;
+        goto known_22_plus_one;
+byte0_error:;
+        DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_BYTE0_ERROR;
+        return;
+likely_11:;
+            //changing from 22 to 11 is fine but not the other way
+        DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_LIKELY_DHT11;
+        goto known_11_plus_one;
+known_11:;
+        DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_KNOWN_DHT11;
+known_11_plus_one:;
+        DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_READ_SUCCESS;
+        *DataStreamBits0 = ( u16 )( ( DataStreamBits[ 0 ] << 1 ) + ( DataStreamBits[ 0 ] << 3 ) );//multiplies by 10
+        *DataStreamBits2 = ( u16 )( ( DataStreamBits[ 2 ] << 1 ) + ( DataStreamBits[ 2 ] << 3 ) );//multiplies by 10
+past_device_type_sort:;
 /*
 float _TemperatureCelsius;  //GLOBAL TO SAVE SPACE IN STRUCT
 float _HumidityPercent;  //GLOBAL TO SAVE SPACE IN STRUCT
