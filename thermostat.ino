@@ -1,4 +1,4 @@
-#define VERSION "0.0.004"//;//TODO:  add labels to pins
+#define VERSION "0.0.0041"//;//TODO:  add labels to pins
 short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 /*
 EEPROM addressing: use digital pin number * 2 as LSB of start address that pin description is found. The MSB of that start address is located in the following EEPROM location (digital pin number * 2 )+ 1.  
