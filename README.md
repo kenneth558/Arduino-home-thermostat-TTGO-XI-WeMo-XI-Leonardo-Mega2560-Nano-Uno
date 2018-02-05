@@ -3,7 +3,7 @@ I use this sketch in the Arduino UNO (though nothing prevents it from being used
 
 Being connected via USB to my Ubuntu headless firewall, I have remote control of it from over the Internet.  It will send alerts to the host for furnace failure to heat. I use a bash script on the host to email me in event of furnace failure.  EEPROM is utilized so the thermostat settings are persistent across power cycling.
 
-See the screen shot of the help screen that it can display.  Sensors must be either DHT11 or DHT22 in this version.  It expects two DHT sensors - a primary and a backup sensor for failsafe operation, called a secondary.  Because sensors are read without utilizing interrupts, any digital pin can be used for sensors!  
+See the screen shot of the help screen that it can display.  Sensors must be either DHT11 or DHT22 in this version.  It expects two DHT sensors - a primary and a backup (secondary) sensor for failsafe operation.  Because sensors are read without utilizing interrupts, so any digital pin other than the serial communications can be used for sensors!  
 
 This sketch is also a wrapper to allow the host computer to read and control the Arduino digital pins with or without taking advantage of the thermostat functionality!  As examples:
 
