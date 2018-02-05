@@ -24,6 +24,108 @@ I use the following Ubuntu bash command from the host terminal manually to send 
 Then replace "help" with one of the other commands that will be displayed by the command and send again.  NOTE: The baud rate is extremely dependent on the host's ability to receive at speed.
 
 
+
+The following lines of bash script are the contents of an executable file I use to view and adjust the thermostat temperature settings:
+
+#!/bin/bash
+calc(){ awk "BEGIN { print $*}"; }
+none_of_the_above="false"
+tempsettings=$(stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 5 tail -fn0 /home/homeowner/arduino.log)
+if [ $1. == "+1." ]; then
+#     tempsettings=$(stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 3 tail -fn0 /home/homeowner/arduino.log)
+     ltempsetting="${tempsettings##*'Temperature furnace is set to start: '}"
+     utempsetting="${tempsettings##*'Temperature furnace is set to stop: '}"
+     ltempsetting="$(calc ${ltempsetting%%[[:cntrl:]]*}+1)"
+     utempsetting="$(calc ${utempsetting%%[[:cntrl:]]*}+1)"
+     echo "New Thermostat setting $ltempsetting °C (~$(calc $ltempsetting*9/5+32)°F)"
+     echo "New Furnace shutoff at $utempsetting °C (~$(calc $utempsetting*9/5+32)°F)"
+     sleep 1
+     stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "$utempsetting set upper furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+     sleep 1
+     stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "$ltempsetting set lower furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+     sleep 1
+elif [ $1. == "-1." ]; then
+#     tempsettings=$(stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 3 tail -fn0 /home/homeowner/arduino.log)
+     ltempsetting="${tempsettings##*'Temperature furnace is set to start: '}"
+     utempsetting="${tempsettings##*'Temperature furnace is set to stop: '}"
+     ltempsetting="$(calc ${ltempsetting%%[[:cntrl:]]*}-1)"
+     utempsetting="$(calc ${utempsetting%%[[:cntrl:]]*}-1)"
+     echo "New Thermostat setting $ltempsetting °C (~$(calc $ltempsetting*9/5+32)°F)"
+     echo "New Furnace shutoff at $utempsetting °C (~$(calc $utempsetting*9/5+32)°F)"
+     sleep 1
+     stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "$ltempsetting set lower furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+     sleep 1
+     stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "$utempsetting set upper furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+     sleep 1
+elif [ $1. == "+." ] && [ $2. != "." ] && [[ $(calc $2) > 0 ]]; then
+#     tempsettings=$(stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 3 tail -fn0 /home/homeowner/arduino.log)
+     ltempsetting="${tempsettings##*'Temperature furnace is set to start: '}"
+     utempsetting="${tempsettings##*'Temperature furnace is set to stop: '}"
+     ltempsetting="$(calc ${ltempsetting%%[[:cntrl:]]*}+$2)"
+     utempsetting="$(calc ${utempsetting%%[[:cntrl:]]*}+$2)"
+     echo "New Thermostat setting $ltempsetting °C (~$(calc $ltempsetting*9/5+32)°F)"
+     echo "New Furnace shutoff at $utempsetting °C (~$(calc $utempsetting*9/5+32)°F)"
+     sleep 1
+     stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "$utempsetting set upper furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+     sleep 1
+     stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "$ltempsetting set lower furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+      sleep 1
+elif [ $1. == "-." ] && [ $2. != "." ] && ([[ $(calc $2) > 0 ]] || [[ $2 == "0" ]]); then
+#     tempsettings=$(stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 3 tail -fn0 /home/homeowner/arduino.log)
+     ltempsetting="${tempsettings##*'Temperature furnace is set to start: '}"
+     utempsetting="${tempsettings##*'Temperature furnace is set to stop: '}"
+     ltempsetting="$(calc ${ltempsetting%%[[:cntrl:]]*}-$2)"
+     utempsetting="$(calc ${utempsetting%%[[:cntrl:]]*}-$2)"
+     echo "New Thermostat setting $ltempsetting °C (~$(calc $ltempsetting*9/5+32)°F)"
+     echo "New Furnace shutoff at $utempsetting °C (~$(calc $utempsetting*9/5+32)°F)"
+     sleep 1
+     stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "$ltempsetting set lower furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+     sleep 1
+     stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "$utempsetting set upper furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+     sleep 1
+elif [ $2. == "." ] && [ $1. != "." ] && ([[ $(calc $1) > 0 ]] || [[ $1. == "0." ]]); then
+#     tempsettings=$(stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 3 tail -fn0 /home/homeowner/arduino.log)
+     ltempsetting="${tempsettings##*'Temperature furnace is set to start: '}"
+     utempsetting="${tempsettings##*'Temperature furnace is set to stop: '}"
+     ltempsetting="$(calc ${ltempsetting%%[[:cntrl:]]*})"
+     utempsetting="$(calc ${utempsetting%%[[:cntrl:]]*})"
+     if [[ ${1} -lt ${ltempsetting} ]];then
+          echo "Setting new Thermostat setting $1 °C (~$(calc $1*9/5+32)°F)"
+          sleep 1
+          stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;sudo echo "$1 set lower furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+          sleep 1
+     fi
+     echo "Setting new Furnace shutoff at $1 °C (~$(calc $1*9/5+32)°F)"
+     sleep 1
+     stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;sudo echo "$1 set upper furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+     if [[ ${1} -ge ${ltempsetting} ]];then
+          echo "Setting new Thermostat setting $1 °C (~$(calc $1*9/5+32)°F)"
+          sleep 1
+          stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;sudo echo "$1 set lower furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
+     fi
+     sleep 1
+else
+     none_of_the_above="true"
+fi
+if [[ $none_of_the_above == "false" ]];then tempsettings=$(stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 5 tail -fn0 /home/homeowner/arduino.log);fi
+ctempsetting="${tempsettings##*'Temperature (°C): '}"
+ctempsetting="${ctempsetting%%[[:cntrl:]]*}"
+ltempsetting="${tempsettings##*'Temperature furnace is set to start: '}"
+utempsetting="${tempsettings##*'Temperature furnace is set to stop: '}"
+ltempsetting="$(calc ${ltempsetting%%[[:cntrl:]]*})"
+utempsetting="$(calc ${utempsetting%%[[:cntrl:]]*})"
+echo "tempsettings = $tempsettings"
+echo -n "$ctempsetting °C (~";echo -n "$(calc $ctempsetting*9/5+32)";echo "°F)"
+echo -n "Thermostat setting $ltempsetting °C (~";echo -n "$(calc $ltempsetting*9/5+32)";echo "°F)"
+echo -n "Furnace shutoff at $utempsetting °C (~";echo -n "$(calc $utempsetting*9/5+32)";echo "°F)"
+
+
+
+
+
+
+
+
 I found firewalling to be important.  I wrote poofitee to be a universal installer of a bulletproof firewall, but soon
 realized that Linux is far too fragmented both across flavors and across supporting program upgrades to think I could
 maintain it.  Help yourself to what I've put out here.
