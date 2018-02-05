@@ -124,6 +124,8 @@ Micro, Leonardo, other 32u4-based    0, 1, 2, 3, 7
 
 String str;
 String strFull = "";
+String pin_specified_str;
+String temp_specified_str;
 float last_three_temps[] = { -100, -101, -102 };
 float furnace_started_temp_x_3 = last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ];
 u8 pin_specified;
@@ -146,19 +148,22 @@ const PROGMEM unsigned long loop_cycles_to_skip_between_alert_outputs = 5 * 60 *
 
 boolean IsValidPinNumber( String str )
 {
+  bool first_run=true;
     for( unsigned int i = 0; i < str.length(); i++ )
     {
-        if( !( isDigit( str.charAt( i ) ) || str.charAt( i ) == '.' ) )
+        if( ( !( isDigit( str.charAt( i ) ) || str.charAt( i ) == '.' ) && first_run ) || ( !first_run && str.charAt( i ) != 10 && str.charAt( i ) != 13 ) )
         {
             Serial.print( F( "Command must begin or end with a pin number as specified in help screen" ) );
             Serial.print( str );
-//            Serial.print( F( ">" ) );
-//            Serial.print( str.length() );
+            Serial.print( F( ">" ) );
+            Serial.print( ( u8 )str.charAt( i ) );
+            Serial.print( str.charAt( i ) );
 //            Serial.print( F( "," ) );
 //            Serial.print( i );
             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             return false;
         }
+        first_run=false;
     }
     pin_specified=str.toInt();
     if( pin_specified < 0 || pin_specified >= NUM_DIGITAL_PINS )
@@ -534,8 +539,6 @@ void dhtLib_wrapper(){
 */
 void check_for_serial_input( char result )
 {
-  String pin_specified_str;
-  String temp_specified_str;
     if( Serial.available() > 0 )
     {
 //  digitalWrite(LED_BUILTIN, HIGH );
@@ -1185,43 +1188,47 @@ after_change_fan:
         }
         else if( strFull.indexOf( F( "dht pin" ) ) == 0 )
         {
-           pin_specified_str = strFull.substring( 8, strFull.length() - 1 );
-           if( IsValidPinNumber( pin_specified_str ) )
+           pin_specified_str = strFull.substring( 8 );
+           for( u8 next_pin = ( u8 )pin_specified_str.toInt(); next_pin < NUM_DIGITAL_PINS; next_pin++ )
            {
-//               Serial.print( F( ".." ) );
-               Serial.print( F( "Pin " ) );
-               Serial.print( ( u8 )pin_specified_str.toInt() );
-               Serial.print( F( " DHT read: " ) );
-               DHTresult* noInterrupt_result = ( DHTresult* )DHTreadWhenRested( ( u8 )pin_specified_str.toInt() );
-               if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
-               {
-                   Serial.print( ( float )( ( float )noInterrupt_result->TemperatureCelsius / 10 ), 1 );
-                   Serial.print( F( " °C, " ) );
-                   Serial.print( ( float )( ( float )noInterrupt_result->HumidityPercent / 10 ), 1 );
-                   Serial.print( F( " %" ) );
-               }
-               else
-               {
-                   Serial.print( F( "Error " ) );
-                   Serial.print( noInterrupt_result->ErrorCode );
-               }
-/*
-#define TYPE_KNOWN_DHT11 1
-#define TYPE_KNOWN_DHT22 2
-#define TYPE_LIKELY_DHT11 3
-#define TYPE_LIKELY_DHT22 4
- */
-               if( noInterrupt_result->Type == TYPE_KNOWN_DHT11 ) Serial.print( F( " TYPE_KNOWN_DHT11" ) );
-               else if( noInterrupt_result->Type == TYPE_KNOWN_DHT22 ) Serial.print( F( " TYPE_KNOWN_DHT22" ) );
-               else if( noInterrupt_result->Type == TYPE_LIKELY_DHT11 ) Serial.print( F( " TYPE_LIKELY_DHT11" ) );
-               else if( noInterrupt_result->Type == TYPE_LIKELY_DHT22 ) Serial.print( F( " TYPE_LIKELY_DHT22" ) );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+             if( IsValidPinNumber( pin_specified_str ) )
+             {
+                 Serial.print( F( "Pin " ) );
+                 Serial.print( next_pin );
+                 Serial.print( F( " DHT read: " ) );
+                 DHTresult* noInterrupt_result = ( DHTresult* )DHTreadWhenRested( next_pin );
+                 if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
+                 {
+                     Serial.print( ( float )( ( float )noInterrupt_result->TemperatureCelsius / 10 ), 1 );
+                     Serial.print( F( " °C, " ) );
+                     Serial.print( ( float )( ( float )noInterrupt_result->HumidityPercent / 10 ), 1 );
+                     Serial.print( F( " %" ) );
+                 }
+                 else
+                 {
+                     Serial.print( F( "Error " ) );
+                     Serial.print( noInterrupt_result->ErrorCode );
+                 }
+  /*
+  #define TYPE_KNOWN_DHT11 1
+  #define TYPE_KNOWN_DHT22 2
+  #define TYPE_LIKELY_DHT11 3
+  #define TYPE_LIKELY_DHT22 4
+   */
+                 if( noInterrupt_result->Type == TYPE_KNOWN_DHT11 ) Serial.print( F( " TYPE_KNOWN_DHT11" ) );
+                 else if( noInterrupt_result->Type == TYPE_KNOWN_DHT22 ) Serial.print( F( " TYPE_KNOWN_DHT22" ) );
+                 else if( noInterrupt_result->Type == TYPE_LIKELY_DHT11 ) Serial.print( F( " TYPE_LIKELY_DHT11" ) );
+                 else if( noInterrupt_result->Type == TYPE_LIKELY_DHT22 ) Serial.print( F( " TYPE_LIKELY_DHT22" ) );
+                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+             }
+             if( pin_specified_str.charAt( 0 ) != '.') next_pin = NUM_DIGITAL_PINS;
            }
            strFull = "";
         }
         else if( strFull.indexOf( F( "test hidden function" ) ) == 0 )
         {//inside this section is playground sandbox,  rebuild as needed....
-           pin_specified_str = strFull.substring( 21, strFull.length() - 1 );
+           pin_specified_str = strFull.substring( 21 );
+           if( pin_specified_str.length() < 1 ) pin_specified_str = strFull.substring( 8, strFull.length() ); //In case line not ended with that CR or LF
            if( IsValidPinNumber( pin_specified_str ) )
            {
                Serial.print( F( ".." ) );
@@ -1518,4 +1525,3 @@ afterSendAlert:;
 check_for_serial_input( noInterrupt_result->ErrorCode );
   delay( 2000 );
 }
-
