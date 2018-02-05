@@ -16,8 +16,8 @@
 #define DEVICE_BYTES2and3_ERROR -16 //240
 #define DEVICE_READ_SUCCESS -17 //239
 
-#define REFUSED_ROLLOVER_EXPECTED -18
-#define REFUSED_INVALID_PIN -19
+#define REFUSED_ROLLOVER_EXPECTED -18 //238
+#define REFUSED_INVALID_PIN -19 //237
 
 #define TYPE_KNOWN_DHT11 1
 #define TYPE_KNOWN_DHT22 2
@@ -176,14 +176,6 @@ void GetReading( u8 pin )
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_BYTES0and1_ERROR;
             return;
         }
-/*
-        DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_READ_SUCCESS;
-        if( !DataStreamBits[ 1 ] && !DataStreamBits[ 3 ] && DataStreamBits[ 0 ] > 3 )  or if over 3, no values of 2 are valid if between 4 and 19 inclusive
-            goto likely_11;
-        else
-        {//big endian adjustment
-        
-*/
 //fall through as known dht22
 known_22:;
             DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_KNOWN_DHT22;
@@ -216,85 +208,19 @@ known_11_plus_one:;
         *DataStreamBits0 = ( u16 )( ( DataStreamBits[ 0 ] << 1 ) + ( DataStreamBits[ 0 ] << 3 ) );//multiplies by 10
         *DataStreamBits2 = ( u16 )( ( DataStreamBits[ 2 ] << 1 ) + ( DataStreamBits[ 2 ] << 3 ) );//multiplies by 10
 past_device_type_sort:;
-/*
-float _TemperatureCelsius;  //GLOBAL TO SAVE SPACE IN STRUCT
-float _HumidityPercent;  //GLOBAL TO SAVE SPACE IN STRUCT
-
- */
         DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = *DataStreamBits2;
         DHTfunctionResultsArray[ pin - 1 ].HumidityPercent = *DataStreamBits0;
-/*
-        Serial.print( ( float )( *DataStreamBits0 / 10 ), 1 );
-        Serial.print( F( " % Humidity, " ) );
-        Serial.print( ( float )( *DataStreamBits2 / 10 ), 1 );
-        Serial.print( F( " °C, " ) );
-        if( DHTfunctionResultsArray[ pin - 1 ].ErrorCode == TYPE_KNOWN_DHT22 )
-            Serial.print( F( "0.1" ) );
-        else
-            Serial.print( F( "1.0" ) );
-        Serial.print( F( " resolution" ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-*/
-//        Serial.print( DataStreamBits[ 0 ], BIN );
-//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//        Serial.print( DataStreamBits[ 1 ], BIN );
-//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//        Serial.print( DataStreamBits[ 2 ], BIN );
-//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//        Serial.print( DataStreamBits[ 3 ], BIN );
-//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//        Serial.print( DataStreamBits[ 4 ], BIN );
-//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-/*        
-#define DEVICE_NOT_YET_ACCESSED ( u8 ) -1
-#define DEVICE_FAILS_DURING_INITIALIZE ( u8 ) -2
-#define DEVICE_FAILS_DURING_INITIALIZE1 ( u8 ) -3
-#define DEVICE_FAILS_DURING_INITIALIZE2 ( u8 ) -4
-#define DEVICE_FAILS_DURING_INITIALIZE3 ( u8 ) -5
-#define DEVICE_FAILS_DURING_INITIALIZE4 ( u8 ) -6
-#define DEVICE_FAILS_DURING_INITIALIZE5 ( u8 ) -7
-#define DEVICE_FAILS_DURING_INITIALIZE6 ( u8 ) -8
-#define DEVICE_FAILS_DURING_INITIALIZE7 ( u8 ) -9
-#define DEVICE_FAILS_DURING_INITIALIZE8 ( u8 ) -10
-#define DEVICE_FAILS_DURING_DATA_STREAM ( u8 ) -11
-#define DEVICE_CRC_ERROR ( u8 ) -12
-#define DEVICE_READ_SUCCESS ( u8 ) -13
-
-#define REFUSED_ROLLOVER_EXPECTED ( u8 ) -14
-#define REFUSED_INVALID_PIN ( u8 ) -15
-
- 
-        Serial.print( F( "DEVICE_NOT_YET_ACCESSED ( u8 ) -1 = " ) );
-        Serial.print( DEVICE_NOT_YET_ACCESSED );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( F( "DEVICE_FAILS_DURING_INITIALIZE ( u8 ) -2 = " ) );
-        Serial.print( DEVICE_FAILS_DURING_INITIALIZE );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-        Serial.print( F( "REFUSED_INVALID_PIN ( u8 ) -15 = " ) );
-        Serial.print( REFUSED_INVALID_PIN );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-*/
 }
 
 
-unsigned long DHTreadWhenRested( u8 pin )
+DHTresult* DHTreadWhenRested( u8 pin )
 {
-//           Serial.print( F( "..calling for pin " ) );
-//           Serial.print( pin );
-//           Serial.print( F( ".." ) );
     if( ( pin < 1 ) || ( pin > NUM_DIGITAL_PINS ) )
     {
         DHTfunctionResultsArray[ NUM_DIGITAL_PINS ].ErrorCode = REFUSED_INVALID_PIN;
         return &DHTfunctionResultsArray[ NUM_DIGITAL_PINS ];
     }
     while( ( micros() > ( long unsigned )-30000 ) || ( millis() > ( long unsigned )-30 ) );
-/*
-        if( ( micros() > ( long unsigned )-30000 ) || ( millis() > ( long unsigned )-30 ) )
-        {
-            DHTfunctionResultsArray[ NUM_DIGITAL_PINS ].ErrorCode = REFUSED_ROLLOVER_EXPECTED;
-            return DHTfunctionResultsArray[ NUM_DIGITAL_PINS ];
-        }
-*/
     for( u8 d = 0; d < NUM_DIGITAL_PINS; d++ )
     {
         if( DHTfunctionResultsArray[ d ].ErrorCode < DEVICE_READ_SUCCESS )
@@ -305,7 +231,6 @@ unsigned long DHTreadWhenRested( u8 pin )
         }
     }
 
-//    DHTfunctionResultsArray[ pin - 1 ];
     if( ( DHTfunctionResultsArray[ pin - 1 ].ErrorCode == DEVICE_NOT_YET_ACCESSED ) || !( *portModeRegister( digitalPinToPort( pin ) ) & digitalPinToBitMask( pin ) /* UNTESTED if pin voltage is low something is wrong  */) )
     {//"first read" loop
         DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis = millis();
@@ -316,31 +241,15 @@ unsigned long DHTreadWhenRested( u8 pin )
     }
     else
     {
-//           Serial.print( F( "..not the first time for pin " ) );
-//           Serial.print( pin );
-//           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         u16 rest_time = 1000;//1000 mSec or 1 full second
         rest_time += 30; // account for the 19 mSec plus 5 mSec start prep plus 6 mSec for  data stream
         if( ( DHTfunctionResultsArray[ pin - 1 ].Type == TYPE_KNOWN_DHT22 ) || ( DHTfunctionResultsArray[ pin - 1 ].Type == TYPE_LIKELY_DHT22 ) )
             rest_time += 1000;//adds another 1000 mSec on so now = 2 full seconds
-//           Serial.print( F( "..rest_time=" ) );
-//           Serial.print( rest_time );
-//           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         for( u8 d = 0; d < 1; d++ )
         {
-//                       Serial.print( F( "..checking for need to delay.." ) );
 
             if( DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis + rest_time > DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis )
             {
-//           Serial.print( F( " " ) );
-//           Serial.print( millis() );
-//           Serial.print( F( " now, millis pin " ) );
-//           Serial.print( pin );
-//           Serial.print( F( " was started last: " ) );
-//           Serial.print( DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis );
-//           Serial.print( F( ",  millis pin needed to rest to: " ) );
-//           Serial.print( DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis + rest_time );
-//           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                  if( ( millis() < DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis ) || ( millis() > DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis + rest_time ) )
                      break;
             }
@@ -351,9 +260,6 @@ unsigned long DHTreadWhenRested( u8 pin )
                  while( millis() > DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis );
             }
             while( millis() < DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis + rest_time );
-//           Serial.print( F( "..delayed.." ) );
-//           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-
         }
     }
     GetReading( pin );
