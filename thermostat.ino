@@ -1,4 +1,4 @@
-#define VERSION "0.0.0041"//;//TODO:  add labels to pins
+#define VERSION "0.0.0042"//;//TODO:  add labels to pins
 short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 /*
 EEPROM addressing: use digital pin number * 2 as LSB of start address that pin description is found. The MSB of that start address is located in the following EEPROM location (digital pin number * 2 )+ 1.  
@@ -122,7 +122,7 @@ Micro, Leonardo, other 32u4-based    0, 1, 2, 3, 7
 // Lib instantiate
 //idDHTLib DHTLib( idDHTLibPin, idDHTLibIntNumber, dhtLib_wrapper );
 
-String str;
+//String str;
 String strFull = "";
 String pin_specified_str;
 String temp_specified_str;
@@ -146,7 +146,7 @@ const PROGMEM u8 factory_setting_secondary_temp_sensor_pin = 8;
 const PROGMEM float minutes_furnace_should_be_effective_after = 5.5; //Can be decimal this way
 const PROGMEM unsigned long loop_cycles_to_skip_between_alert_outputs = 5 * 60 * 30;//estimating 5 loops per second, 60 seconds per minute, 30 minutes per alert
 
-boolean IsValidPinNumber( String str )
+boolean IsValidPinNumber( String &str )
 {
   bool first_run=true;
     for( unsigned int i = 0; i < str.length(); i++ )
@@ -191,7 +191,7 @@ if( reply )
 return false;
 }
 
-boolean IsValidTemp( String str )
+boolean IsValidTemp( String &str )
 {
     for( unsigned int i = 0; i < str.length(); i++ )
     {
@@ -542,8 +542,9 @@ void check_for_serial_input( char result )
     if( Serial.available() > 0 )
     {
 //  digitalWrite(LED_BUILTIN, HIGH );
-        str = Serial.readStringUntil( '\n' );
-        strFull = strFull + str;
+//        str = Serial.readStringUntil( '\n' );
+//        strFull = strFull + str;
+        strFull.concat(Serial.readStringUntil( '\n' ));
         strFull.replace( F( "talkback" ), F( "logging" ) );
         strFull.replace( F( "pin set" ), F( "set pin" ) );
         strFull.replace( F( "set pin to" ), F( "set pin" ) );
@@ -1221,7 +1222,7 @@ after_change_fan:
                  else if( noInterrupt_result->Type == TYPE_LIKELY_DHT22 ) Serial.print( F( " TYPE_LIKELY_DHT22" ) );
                  Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
              }
-             if( pin_specified_str.charAt( 0 ) != '.') next_pin = NUM_DIGITAL_PINS;
+             if( pin_specified_str.charAt( 0 ) != '.') break;
            }
            strFull = "";
         }
