@@ -1,63 +1,20 @@
-
 #define VERSION "0.0.0043"//;//TODO:  add labels to pins **************************WORKING ON LINES AT OR NEAR 1214-1225, must convert to remove all string objects due to wemo libraries not being string compatible
 short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 /*
-EEPROM addressing: use digital pin number * 2 as LSB of start address that pin description is found. The MSB of that start address is located in the following EEPROM location (digital pin number * 2 )+ 1.  
-
-All line ends printed are with MS Windows conventions due to Arduino print and println commands.  To retain line ends compatability between *nix and MS Windows, we won't embed any new lines into print[ln] literals.  
-...TODO: Interrupts should be better utilized so that loop()program flow is not paused for all those time frames ( seconds between reads and data stream bit times.  Always allow for event of defective/disconnection of devices
 ...TODO: Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
 ...TODO: alert when back pressure within furnace indicates to change filter
 ...TODO: damper operation with multiple temp sensors
- PORTB |= ( 1<<5); // set bit 5 of PORTB
- PORTC &= ~( 1<<3 ); // clear bit 3 of PORTC
- PORTD ^= ( 1<<2 ); // toggle bit 2 of PORTD
-Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-
-
+https://github.com/wemos/Arduino_XI 
 */
+//All temps are shorts until displayed
 bool mswindows = false;  //Used for line-end on serial outputs.  Make true to print line ends as MS Windows needs  
 #include <EEPROM.h>
-
-//#ifndef 
-//All temps are shorts until displayed
-
 #ifndef u8
     #define u8 uint8_t
 #endif
 #ifndef u16
     #define u16 uint16_t
 #endif
-//u8 LED_BUILTIN = NUM_DIGITAL_PINS;
-//    const bool LED_BUILTIN_NO = true;
-//https://github.com/wemos/Arduino_XI 
-/*
-#else
-    const char strFactoryDefaults[] PROGMEM = "\
-    pin  0 \"Serial Rx communications received by Arduino board ( protected pin of several boards )\"\n\
-    pin  1 \"Serial Tx communications sent out by Arduino board ( protected pin of several boards )\"\n\
-    pin  2 \"Main room primary indoor temperature sensor DHT11/22\"\n\
-    pin  3 \"Furnace start/stop control, primary stage\"\n\
-    pin  4 \"Furnace blower fan auto/on control\"\n\
-    pin  5 \"Power cycle start/stop control of installer-selected system\"\n\
-    pin   \"Furnace humidifier on/off control ( starts only with furnace heat )\"\n\
-    pin   \"Side room A primary indoor temperature sensor DHT11/22\"\n\
-    pin   \"Side room A damper sensor return ( analog signal )\"\n\
-    pin   \"Side room A damper control\"\n\
-    pin   \"Furnace start/stop control, secondary stage\"\n\
-    pin   \"Furnace start/stop control, tertiary stage\"\n\
-    pin  6 \"Front porch light\"\n\
-    pin  7 \"Back porch light\"\n\
-    pin   \"Stand-alone humidifier start/stop control\"\n\
-    pin   \"Air conditioner start/stop control, primary stage\"\n\
-    pin   \"Air conditioner start/stop control, secondary stage\"\n\
-    pin 13 \"BUILTIN_LED ( protected pin of several boards )\"\n\
-    pin   \"Outdoor temperature sensor DHT22\"\n\
-    pin   \"Air conditioner start/stop control, tertiary stage\"\n\
-    pin   \"Side room A secondary indoor temperature sensor DHT11/22\"\n\
-    pin  8 \"Main room secondary indoor temperature sensor DHT11/22\"\n\
-    ";
-*/
 #include "DHTdirectRead.h"
 
 //Where are other indoor sensors?
