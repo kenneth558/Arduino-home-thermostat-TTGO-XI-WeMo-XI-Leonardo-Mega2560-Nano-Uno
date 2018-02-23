@@ -339,7 +339,9 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>]" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );
+#ifndef __LGT8FX8E__
+    Serial.print( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );//Wemo XI does not have enough memory for this
+#endif
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "reset (factory defaults: pure, simple and absolute)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
@@ -1378,11 +1380,13 @@ after_change_fan:
           }
            strFull = "";
         }
-        else if( strstr( strFull.c_str(), "vi fact" ) )
+#ifndef __LGT8FX8E__
+        else if( strstr( strFull.c_str(), "vi fact" ) ) // The wemo xi does not have enough room in PROGMEM for this feature
         {
             print_factory_defaults();
            strFull = "";
         }
+#endif
         else if( strstr( strFull.c_str(), "reset" ) )
         {
            restore_factory_defaults();
@@ -1434,10 +1438,11 @@ after_change_fan:
   #define TYPE_LIKELY_DHT11 3
   #define TYPE_LIKELY_DHT22 4
    */
-                 if( noInterrupt_result->Type == TYPE_KNOWN_DHT11 ) Serial.print( F( " TYPE_KNOWN_DHT11" ) );
-                 else if( noInterrupt_result->Type == TYPE_KNOWN_DHT22 ) Serial.print( F( " TYPE_KNOWN_DHT22" ) );
-                 else if( noInterrupt_result->Type == TYPE_LIKELY_DHT11 ) Serial.print( F( " TYPE_LIKELY_DHT11" ) );
-                 else if( noInterrupt_result->Type == TYPE_LIKELY_DHT22 ) Serial.print( F( " TYPE_LIKELY_DHT22" ) );
+                 Serial.print( F( " TYPE_" ) );
+                 if( noInterrupt_result->Type == TYPE_KNOWN_DHT11 ) Serial.print( F( "KNOWN_DHT11" ) );
+                 else if( noInterrupt_result->Type == TYPE_KNOWN_DHT22 ) Serial.print( F( "KNOWN_DHT22" ) );
+                 else if( noInterrupt_result->Type == TYPE_LIKELY_DHT11 ) Serial.print( F( "LIKELY_DHT11" ) );
+                 else if( noInterrupt_result->Type == TYPE_LIKELY_DHT22 ) Serial.print( F( "LIKELY_DHT22" ) );
                  Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
              if( strFull.c_str()[ i ] != '.' && !( strFull.c_str()[ i ] == ' ' && strFull.c_str()[ i + 1 ] == '.' ) ) break;
              }
