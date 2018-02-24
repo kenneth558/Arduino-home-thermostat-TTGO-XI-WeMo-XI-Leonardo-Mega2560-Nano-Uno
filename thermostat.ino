@@ -574,6 +574,7 @@ void setup()
 #else
     tattoo = EEPROM.read( 0 );
     tattoo += ( u16 )( EEPROM.read( 1 ) << 8 );
+    delay( 2000 );//Needed for this board for Serial communications to be reliable
 #endif
     //tattoo |= EEPROM.read( 0 ); //Location 0 should contain 
     if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
@@ -973,7 +974,7 @@ void check_for_serial_input( char result )
         {
            number_specified_str_end = strchr( strFull.c_str(), ' ' );
            *number_specified_str_end = 0;
-           if( IsValidPinNumber( strFull.c_str() )  && pin_specified != SERIAL_PORT_HARDWARE )
+           if( IsValidPinNumber( strFull.c_str() ) && pin_specified != SERIAL_PORT_HARDWARE )
            {
               pinMode( pin_specified, OUTPUT );
               if( logging )
@@ -1050,7 +1051,7 @@ illegal_attempt_SERIAL_PORT_HARDWARE:;
               if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin )
               {
                 Serial.print( F( "Sorry, unable to allow that pin to be made an input. You've dedicated output only for " ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+//                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                 if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
                 else if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
                 else if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
