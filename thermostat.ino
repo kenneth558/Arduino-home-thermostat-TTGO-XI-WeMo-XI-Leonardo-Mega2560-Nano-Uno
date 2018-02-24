@@ -343,6 +343,8 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 #ifndef __LGT8FX8E__
     Serial.print( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );//Wemo XI does not have enough memory for this
+#else
+    Serial.print( F( "vi[ew] fact[ory defaults] not available due to lack of memory space " ) );//Wemo XI does not have enough memory for this
 #endif
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "reset (factory defaults: pure, simple and absolute)" ) );
