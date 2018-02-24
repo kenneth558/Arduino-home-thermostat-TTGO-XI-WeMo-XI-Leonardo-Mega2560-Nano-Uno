@@ -574,7 +574,7 @@ void setup()
 #else
     tattoo = EEPROM.read( 0 );
     tattoo += ( u16 )( EEPROM.read( 1 ) << 8 );
-    delay( 2000 );//Needed for this board for Serial communications to be reliable
+    delay( 10000 );//Needed for this board for Serial communications to be reliable
 #endif
     //tattoo |= EEPROM.read( 0 ); //Location 0 should contain 
     if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
