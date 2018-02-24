@@ -45,7 +45,7 @@ u8 secondary_temp_sensor_address = 8;
 #ifndef __LGT8FX8E__
     u16 EEPROMlength = EEPROM.length();
 #else
-    u16 EEPROMlength = 32768 - 29696;
+    u16 EEPROMlength = 1024;
 #endif
 #ifndef SERIAL_PORT_HARDWARE
     u8 SERIAL_PORT_HARDWARE = 0;
