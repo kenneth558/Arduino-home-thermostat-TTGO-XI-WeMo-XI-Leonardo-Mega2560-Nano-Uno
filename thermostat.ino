@@ -329,7 +329,7 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "talkback[ on/off] (or logging on/off)" ) );//(for the host system to log when each output pin gets set high or low, always persistent)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "talkback temp change[s[ on/off]] (or logging temp changes on/off)(requires normal talkback on" ) );// - for the host system to log whenever the main room temperature changes, always persistent)" ) );
+    Serial.print( F( "talkback temp change[s[ on/off]] (or logging temp changes on/off)(requires normal talkback on)" ) );// - for the host system to log whenever the main room temperature changes, always persistent)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "report master room temp" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
