@@ -1,5 +1,9 @@
 #define VERSION "0.0.0043"//;//TODO:  add labels to pins **************************WORKING ON LINES AT OR NEAR 1214-1225, must convert to remove all string objects due to wemo libraries not being string compatible
-short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
+#ifndef __LGT8FX8E__
+    short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
+#else
+    short unsigned _baud_rate_ = 19200;//In production environment the XI tends to power up at baud 19200 so we can't risk setting baud to anything but that
+#endif
 /*
 ...TODO: Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
 ...TODO: alert when back pressure within furnace indicates to change filter
@@ -30,8 +34,7 @@ uint9_t i_t_sens_pin_1 = strFactoryDefaults.indexOf( F( "temp" ) );
 if( i_t_sens_pin_0 < i_t_sens_pin_1 && i_t_sens_pin_0 )
 uint8_t primary_temp_sensor_pin = 
 */
-const PROGMEM char case_sensitive[] = "cAsE sEnSiTiVe";
-const PROGMEM char only_options_after_space[] = "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case ";
+//const PROGMEM char only_options_after_space[] = "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case ";
 //  The following are addresses in EEPROM of values that need to be persistent across power outages.
 //The first two address locations in EEPROM store a tatoo used to ensure EEPROM contents are valid for this sketch
 u8 primary_temp_sensor_address = 2;
@@ -61,18 +64,18 @@ unsigned int logging_temp_changes_address = lower_furnace_temp_address - sizeof(
 //int number_of_ports_that_present_pins = EEPROM.read( EEPROMlength - 5 );  // may never need this
 
 // main temperature sensor, furnace, auxiliary furnace device, system power cycle, porch light, dining room coffee outlet
-//  The following values need to be stored persistent through power outages
-u8 primary_temp_sensor_pin = EEPROM.read( primary_temp_sensor_address ); 
-u8 secondary_temp_sensor_pin = EEPROM.read( secondary_temp_sensor_address ); 
-u8 furnace_pin = EEPROM.read( furnace_address );
-u8 furnace_fan_pin = EEPROM.read( furnace_fan_pin_address );
-u8 power_cycle_pin = EEPROM.read( power_cycle_address );
-boolean logging = ( boolean )EEPROM.read( logging_address );
-boolean logging_temp_changes = ( boolean )EEPROM.read( logging_temp_changes_address );
+//  The following values need to be stored persistent through power outages.  Sadly, the __LGT8FX8E__ will not read EEPROM until the setup() loop starts executing, so these values get set there for all boards for simplicity
+u8 primary_temp_sensor_pin;// = EEPROM.read( primary_temp_sensor_address ); 
+u8 secondary_temp_sensor_pin;// = EEPROM.read( secondary_temp_sensor_address ); 
+u8 furnace_pin;// = EEPROM.read( furnace_address );
+u8 furnace_fan_pin;// = EEPROM.read( furnace_fan_pin_address );
+u8 power_cycle_pin;// = EEPROM.read( power_cycle_address );
+boolean logging;// = ( boolean )EEPROM.read( logging_address );
+boolean logging_temp_changes;// = ( boolean )EEPROM.read( logging_temp_changes_address );
 float lower_furnace_temp_floated;//filled in setup
 float upper_furnace_temp_floated;
-char thermostat = ( char )EEPROM.read( thermostat_address );
-char fan_mode = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
+char thermostat;// = ( char )EEPROM.read( thermostat_address );
+char fan_mode;// = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
 
 
 //bool mswindows = false;  //Used for line-end on serial outputs.  FUTURE Will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
@@ -296,9 +299,7 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "." ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "Valid commands (" ) );
-    Serial.print( case_sensitive );
-    Serial.print( F( ", minimal sanity checking, one per line) are:" ) );
+    Serial.print( F( "Valid commands (cAsE sEnSiTiVe, minimal sanity checking, one per line) are:" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "." ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
@@ -564,53 +565,63 @@ char* factory_default( name )
 
 void setup()
 {
-  Serial.begin( _baud_rate_ );
-Serial.setTimeout( 10 );
-pinMode( power_cycle_pin, OUTPUT );
-digitalWrite( power_cycle_pin, LOW );
-pinMode( furnace_pin, OUTPUT );
-digitalWrite( furnace_pin, LOW );
-pinMode( furnace_fan_pin, OUTPUT );
-if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
-else digitalWrite( furnace_fan_pin, LOW );
-//read EEPROM addresses 0 (LSB)and 1 (MSB).  MSB combined with LSB should always contain ( NUM_DIGITAL_PINS + 1 ) * 3.
-u16 tattoo = 0;
+    Serial.begin( _baud_rate_ );
+    Serial.setTimeout( 10 );
+    //read EEPROM addresses 0 (LSB)and 1 (MSB).  MSB combined with LSB should always contain ( NUM_DIGITAL_PINS + 1 ) * 3.
+    u16 tattoo = 0;
 #ifndef __LGT8FX8E__
-EEPROM.get( 0, tattoo );
+    EEPROM.get( 0, tattoo );
 #else
-tattoo = EEPROM.read( 0 );
-tattoo += ( u16 )( EEPROM.read( 1 ) << 8 );
+    tattoo = EEPROM.read( 0 );
+    tattoo += ( u16 )( EEPROM.read( 1 ) << 8 );
 #endif
-//tattoo |= EEPROM.read( 0 ); //Location 0 should contain 
-if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
-{
-    while ( !Serial ); // wait for serial port to connect. Needed for Leonardo's native USB
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "Detected first time run so initializing to factory default pin names, power-up states and thermostat assignments.  Please wait..." ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-
-   restore_factory_defaults();
-}
-short lower_furnace_temp_shorted_times_ten = 0;
+    //tattoo |= EEPROM.read( 0 ); //Location 0 should contain 
+    if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
+    {
+        while ( !Serial ); // wait for serial port to connect. Needed for Leonardo's native USB
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( F( "Detected first time run so initializing to factory default pin names, power-up states and thermostat assignments.  Please wait..." ) );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    
+       restore_factory_defaults();
+    }
+    primary_temp_sensor_pin = EEPROM.read( primary_temp_sensor_address ); 
+    secondary_temp_sensor_pin = EEPROM.read( secondary_temp_sensor_address ); 
+    furnace_pin = EEPROM.read( furnace_address );
+    furnace_fan_pin = EEPROM.read( furnace_fan_pin_address );
+    power_cycle_pin = EEPROM.read( power_cycle_address );
+    logging = ( boolean )EEPROM.read( logging_address );
+    logging_temp_changes = ( boolean )EEPROM.read( logging_temp_changes_address );
+    thermostat = ( char )EEPROM.read( thermostat_address );
+    fan_mode = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
+    pinMode( power_cycle_pin, OUTPUT );
+    digitalWrite( power_cycle_pin, LOW );
+    pinMode( furnace_pin, OUTPUT );
+    digitalWrite( furnace_pin, LOW );
+    pinMode( furnace_fan_pin, OUTPUT );
+    if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
+    else digitalWrite( furnace_fan_pin, LOW );
+    short lower_furnace_temp_shorted_times_ten = 0;
 #ifndef __LGT8FX8E__
-EEPROM.get( lower_furnace_temp_address, lower_furnace_temp_shorted_times_ten );
+    EEPROM.get( lower_furnace_temp_address, lower_furnace_temp_shorted_times_ten );
 #else
-lower_furnace_temp_shorted_times_ten = EEPROM.read( lower_furnace_temp_address );
-lower_furnace_temp_shorted_times_ten += ( u16 )( EEPROM.read( lower_furnace_temp_address + 1 ) << 8 );
+    lower_furnace_temp_shorted_times_ten = EEPROM.read( lower_furnace_temp_address );
+    lower_furnace_temp_shorted_times_ten += ( u16 )( EEPROM.read( lower_furnace_temp_address + 1 ) << 8 );
 #endif
-lower_furnace_temp_floated = ( float )( ( float )( lower_furnace_temp_shorted_times_ten ) / 10 );
-short upper_furnace_temp_shorted_times_ten = 0;
+    lower_furnace_temp_floated = ( float )( ( float )( lower_furnace_temp_shorted_times_ten ) / 10 );
+    short upper_furnace_temp_shorted_times_ten = 0;
 #ifndef __LGT8FX8E__
-EEPROM.get( upper_furnace_temp_address, upper_furnace_temp_shorted_times_ten );
+    EEPROM.get( upper_furnace_temp_address, upper_furnace_temp_shorted_times_ten );
 #else
-upper_furnace_temp_shorted_times_ten = EEPROM.read( upper_furnace_temp_address );
-upper_furnace_temp_shorted_times_ten += ( u16 )( EEPROM.read( upper_furnace_temp_address + 1 ) << 8 );
+    upper_furnace_temp_shorted_times_ten = EEPROM.read( upper_furnace_temp_address );
+    upper_furnace_temp_shorted_times_ten += ( u16 )( EEPROM.read( upper_furnace_temp_address + 1 ) << 8 );
+    logging = ( boolean )EEPROM.read( logging_address );
 #endif
-upper_furnace_temp_floated = ( float )( ( float )( upper_furnace_temp_shorted_times_ten ) / 10 );
-  delay( 3000 ); // The sensor needs time to initialize, if you have some code before this that make a delay, you can eliminate this delay
-  //( pin_specified*3 )and ( pin_specified*3 )+1 contains the EEPROM address where the pin's assigned name is stored.  Pin 0 will always have its name stored at EEPROM address (NUM_DIGITAL_PINS+1 )*3, so address (NUM_DIGITAL_PINS+1 )*3 will always be stored in EEPROM addresses 0 and 1; 0 = ( pin_number*3 )and 1 = (( pin_number*3 )+1 ) )]
-  // That will be the way we determine if the EEPROM is configured already or not
-  // ( pin_specified*3 )+2 is EEPROM address where the pin's desired inital state is stored
+    upper_furnace_temp_floated = ( float )( ( float )( upper_furnace_temp_shorted_times_ten ) / 10 );
+      delay( 3000 ); // The sensor needs time to initialize, if you have some code before this that make a delay, you can eliminate this delay
+      //( pin_specified*3 )and ( pin_specified*3 )+1 contains the EEPROM address where the pin's assigned name is stored.  Pin 0 will always have its name stored at EEPROM address (NUM_DIGITAL_PINS+1 )*3, so address (NUM_DIGITAL_PINS+1 )*3 will always be stored in EEPROM addresses 0 and 1; 0 = ( pin_number*3 )and 1 = (( pin_number*3 )+1 ) )]
+      // That will be the way we determine if the EEPROM is configured already or not
+      // ( pin_specified*3 )+2 is EEPROM address where the pin's desired inital state is stored
 }
 
 void check_for_serial_input( char result )
@@ -1107,8 +1118,8 @@ after_change_thermostat:
 //                Serial.print( strchr( &strFull.c_str()[ 4 ], ' ' ) );
 //                Serial.print( F( "<" ) );
 //                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                Serial.print( only_options_after_space );
-                Serial.print( F( "a, o, h, or c.  They mean auto, off, heat, and cool and optionally may be spelled out completely" ) );
+//                Serial.print( only_options_after_space );
+                Serial.print( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c.  They mean auto, off, heat, and cool and optionally may be spelled out completely" ) );
                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             }
             Serial.print( F( "Thermostat is " ) );
@@ -1146,8 +1157,8 @@ after_change_fan:
             if( strchr( &strFull.c_str()[ 3 ], ' ' ) )
 //            if( strFull.indexOf( F( " " ) ) >= 3 )
             {
-                Serial.print( only_options_after_space );
-                Serial.print( F( "a or o.  They mean auto and on and optionally may be spelled out completely" ) );
+//                Serial.print( only_options_after_space );
+                Serial.print( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a or o.  They mean auto and on and optionally may be spelled out completely" ) );
                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             }
             Serial.print( F( "Fan is " ) );
@@ -1206,6 +1217,8 @@ after_change_fan:
 //           Serial.print( strFull );
            Serial.print( F( " pers address " ) );
            Serial.print( logging_address );
+           Serial.print( F( " shows " ) );
+           Serial.print( ( bool )EEPROM.read( logging_address ) );
            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
@@ -1475,8 +1488,7 @@ after_change_fan:
           {
              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
              Serial.print( strFull );
-             Serial.print( F( ": not a valid command, remember they are " ) );
-             Serial.print( case_sensitive );
+             Serial.print( F( ": not a valid command, remember they are cAsE sEnSiTiVe" ) );
              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
           }
