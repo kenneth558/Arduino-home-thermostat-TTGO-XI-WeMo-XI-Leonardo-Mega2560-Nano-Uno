@@ -1724,7 +1724,7 @@ afterSendAlert:;
     {
         timeOfLastSensorTimeoutError++;
         Serial.print( F( "time_stamp_this " ) );
-        if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );
+        if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );//These ALERT prefixes get added after consecutive 100 timeout fails
         Serial.print( F( "Temperature sensor TIMEOUT error" ) );
 //        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 //        Serial.print( F( "Time out error" ) ); 
