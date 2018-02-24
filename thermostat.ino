@@ -45,6 +45,7 @@ u8 secondary_temp_sensor_address = 8;
 #ifndef __LGT8FX8E__
     u16 EEPROMlength = EEPROM.length();
 #else
+    #define LED_BUILTIN 12
     u16 EEPROMlength = 1024;
 #endif
 #ifndef SERIAL_PORT_HARDWARE
@@ -565,12 +566,6 @@ void setup()
 {
   Serial.begin( _baud_rate_ );
 Serial.setTimeout( 10 );
-//  Serial.println( F( "idDHTLib Example program" ) );
-//  Serial.print( F( "LIB version: " ) );
-//  Serial.println( IDDHTLIB_VERSION );
-//  Serial.println( F( "---------------" ) );
-//  pinMode( LED_BUILTIN, OUTPUT );
-//  digitalWrite( LED_BUILTIN, LOW );    
 pinMode( power_cycle_pin, OUTPUT );
 digitalWrite( power_cycle_pin, LOW );
 pinMode( furnace_pin, OUTPUT );
@@ -587,7 +582,6 @@ tattoo = EEPROM.read( 0 );
 tattoo += ( u16 )( EEPROM.read( 1 ) << 8 );
 #endif
 //tattoo |= EEPROM.read( 0 ); //Location 0 should contain 
-//MAKE THE FOLLOWING INTO A STANDALONE ROUTINE INSTEAD OF EXPLICIT HERE because they can also be needed if end user wants to reset to factory defaults
 if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
 {
     while ( !Serial ); // wait for serial port to connect. Needed for Leonardo's native USB
@@ -618,13 +612,7 @@ upper_furnace_temp_floated = ( float )( ( float )( upper_furnace_temp_shorted_ti
   // That will be the way we determine if the EEPROM is configured already or not
   // ( pin_specified*3 )+2 is EEPROM address where the pin's desired inital state is stored
 }
-// This wrapper is in charge of calling 
-// mus be defined like this for the lib work
-/*
-void dhtLib_wrapper(){
-  DHTLib.dht11Callback(); // Change dht11Callback()for a dht22Callback()if you have a DHT22 sensor
-}
-*/
+
 void check_for_serial_input( char result )
 {
     if( Serial.available() > 0 )
@@ -645,13 +633,14 @@ void check_for_serial_input( char result )
         hit = strstr( strFull.c_str(), "pin set" );
         if( hit )
         {
-            strncpy( hit, "set pin", 6 ); 
+            strncpy( hit, "set pin", 7 ); 
         }  
 //        strFull.replace( F( "set pin to" ), F( "set pin" ) );
         hit = strstr( strFull.c_str(), "set pin to" );
         if( hit )
         {
-            memmove( hit + 7 , hit + 10, sizeof( hit + 10 ) );
+            memmove( hit + 7, hit + 10, strlen( hit + 10 ) );
+//            hit[ strstr( strFull.c_str(), "put" ] = 0x0;
         }
 //        strFull.replace( F( "view" ), F( "vi" ) );
         hit = strstr( strFull.c_str(), "view" );
@@ -1214,7 +1203,9 @@ after_change_fan:
            Serial.print( F( "Talkback for logging is turned o" ) );
            if( logging ) Serial.print( F( "n" ) );
            else  Serial.print( F( "ff" ) );
-           Serial.print( strFull );
+//           Serial.print( strFull );
+           Serial.print( F( " pers address " ) );
+           Serial.print( logging_address );
            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
            strFull = "";
         }
