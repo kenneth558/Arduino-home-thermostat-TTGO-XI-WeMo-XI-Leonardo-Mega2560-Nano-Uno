@@ -4,6 +4,12 @@
 #else
     short unsigned _baud_rate_ = 19200;//In production environment the XI tends to power up at baud 19200 so we can't risk setting baud to anything but that
 #endif
+#ifndef u8
+    #define u8 uint8_t
+#endif
+#ifndef u16
+    #define u16 uint16_t
+#endif
 /*
 ...TODO: Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
 ...TODO: alert when back pressure within furnace indicates to change filter
