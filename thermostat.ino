@@ -1101,7 +1101,7 @@ void check_for_serial_input( char result )
                             {
                               Serial.print( F( "time_stamp_this Pin " ) );
                              Serial.print( pin_specified );
-                             Serial.print( F( " primary temperature sensor connection " ) );
+                             Serial.print( F( " primary temperature sensor connection" ) );
                             }
                             else
                             {
