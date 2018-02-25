@@ -136,6 +136,14 @@ const PROGMEM u8 factory_setting_secondary_temp_sensor_pin = 8;
 const PROGMEM float minutes_furnace_should_be_effective_after = 5.5; //Can be decimal this way
 const PROGMEM unsigned long loop_cycles_to_skip_between_alert_outputs = 5 * 60 * 30;//estimating 5 loops per second, 60 seconds per minute, 30 minutes per alert
 
+void illegal_attempt_SERIAL_PORT_HARDWARE()
+{
+    Serial.print( F( "time_stamp_this Sorry, but pin " ) );
+    Serial.print( SERIAL_PORT_HARDWARE );
+    Serial.print( F( " is dedicated to receive communications from the host" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+}
+
 boolean IsValidPinNumber( const char* str )
 {
 //            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
@@ -871,7 +879,9 @@ void check_for_serial_input( char result )
                {
                   if( pin_specified == primary_temp_sensor_pin )
                   {
-                    Serial.print( F( " connected to temperature sensor ( pin " ) );
+                     Serial.print( F( "Pin " ) );
+                     Serial.print( pin_specified );
+                    Serial.print( F( " connected to temperature sensor" ) );
                   }
                   else
                   {
@@ -1009,14 +1019,7 @@ void check_for_serial_input( char result )
                          Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                       }
                    }
-                   else
-                   {
-        illegal_attempt_SERIAL_PORT_HARDWARE:; 
-                      Serial.print( F( "time_stamp_this Sorry, but pin " ) );
-                      Serial.print( SERIAL_PORT_HARDWARE );
-                      Serial.print( F( " is dedicated to receive communications from the host" ) );
-                      Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                   }
+                   else illegal_attempt_SERIAL_PORT_HARDWARE(); 
                }
            }
            strFull = "";
@@ -1061,7 +1064,7 @@ void check_for_serial_input( char result )
                              }
                           }
                     }
-                    else goto illegal_attempt_SERIAL_PORT_HARDWARE;
+                    else illegal_attempt_SERIAL_PORT_HARDWARE();
                }
            }
            strFull = "";
@@ -1096,20 +1099,22 @@ void check_for_serial_input( char result )
                          {
                             if( pin_specified == primary_temp_sensor_pin )
                             {
-                              Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
+                              Serial.print( F( "time_stamp_this Pin " ) );
+                             Serial.print( pin_specified );
+                             Serial.print( F( " primary temperature sensor connection " ) );
                             }
                             else
                             {
                                Serial.print( F( "time_stamp_this Pin " ) );
+                                Serial.print( pin_specified );
                             }
-                            Serial.print( pin_specified );
                             Serial.print( F( " now set to input" ) );
                             if( pinState == HIGH ) Serial.print( F( " with pullup because something was/is forcing that line high. DANGER WILL ROBINSON! That pin voltage isn't right" ) );
                             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                          }
                       }
                    }
-                   else goto illegal_attempt_SERIAL_PORT_HARDWARE;
+                   else illegal_attempt_SERIAL_PORT_HARDWARE();
                }
            }
            strFull = "";
@@ -1150,7 +1155,11 @@ after_change_thermostat:
 //                Serial.print( F( "<" ) );
 //                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 //                Serial.print( only_options_after_space );
-                Serial.print( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c.  They mean auto, off, heat, and cool and optionally may be spelled out completely" ) );
+#ifndef __LGT8FX8E__
+                Serial.print( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c.  They mean auto, off, heat, and cool and may be fully spelled out" ) );
+#else
+                Serial.print( F( "The only valid characters allowed after that space are the options lower case a, o, h, or c (auto, off, heat, and cool. May be fully spelled out" ) );
+#endif
                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             }
             Serial.print( F( "Thermostat is " ) );
