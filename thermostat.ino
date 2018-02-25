@@ -867,36 +867,38 @@ void check_for_serial_input( char result )
            *number_specified_str_end = 0;
            if( IsValidPinNumber( strFull.c_str() ) )
            {
-              if( pin_specified == primary_temp_sensor_pin )
-              {
-                Serial.print( F( " connected to temperature sensor ( pin " ) );
-              }
-              else
-              {
-                 Serial.print( F( "Pin " ) );
-                 Serial.print( pin_specified );
-                 Serial.print( F( " (name functionality coming in a future sketch version)" ) );
-/*
-                 char data = EEPROM.read( pin_specified*3 );
-                 char data2 = EEPROM.read(( pin_specified*3 )+1 );
-                 if( data < EEPROMlength - 1 )
-                 {
-                     Serial.print( F( " is named " ) );
-                     Serial.print();
-                 }
-*/
-                 if( isanoutput( pin_specified, false ) )
-                 {
-                     Serial.print( F( " is an output having a digital " ) );
-                 }
-                 else
-                 {
-                     Serial.print( F( " is an input that reads a digital " ) );
-                 }
-              }
-              Serial.print( digitalRead( pin_specified ) );
-              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-
+               for( ; pin_specified < NUM_DIGITAL_PINS; pin_specified++ )
+               {
+                  if( pin_specified == primary_temp_sensor_pin )
+                  {
+                    Serial.print( F( " connected to temperature sensor ( pin " ) );
+                  }
+                  else
+                  {
+                     Serial.print( F( "Pin " ) );
+                     Serial.print( pin_specified );
+                     Serial.print( F( " (name functionality coming in a future sketch version)" ) );
+    /*
+                     char data = EEPROM.read( pin_specified*3 );
+                     char data2 = EEPROM.read(( pin_specified*3 )+1 );
+                     if( data < EEPROMlength - 1 )
+                     {
+                         Serial.print( F( " is named " ) );
+                         Serial.print();
+                     }
+    */
+                     if( isanoutput( pin_specified, false ) )
+                     {
+                         Serial.print( F( " is an output having a digital " ) );
+                     }
+                     else
+                     {
+                         Serial.print( F( " is an input that reads a digital " ) );
+                     }
+                  }
+                  Serial.print( digitalRead( pin_specified ) );
+                  Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+               }
            }
            strFull = "";
         }
@@ -906,34 +908,37 @@ void check_for_serial_input( char result )
            *number_specified_str_end = 0;
            if( IsValidPinNumber( strFull.c_str() ) )
            {
-              if( isanoutput( pin_specified, true ) )
-              {
-                 digitalWrite( pin_specified, HIGH );
-                 if( logging )
-                 {
-                    if( pin_specified == primary_temp_sensor_pin )
-                    {
-                      Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
-                    }
-                    else
-                    {
-                       Serial.print( F( "time_stamp_this Pin " ) );
-                    }
-                    Serial.print( pin_specified );
-                    Serial.print( F( " set to high level" ) );
-                    int pinState = digitalRead( pin_specified );
-                    if( pinState == LOW ) Serial.print( F( " but is reading back a 0 because something was/is forcing that line low. DANGER WILL ROBINSON! That pin voltage isn't right" ) );
-                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                 }
-              }
-              else
-              {
-                 if( logging )
-                 {
-                    Serial.print( F( "time_stamp_this Sorry, unable to control that pin because it hasn't been made into an output, yet" ) );
-                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                 }
-              }
+               for( ; pin_specified < NUM_DIGITAL_PINS; pin_specified++ )
+               {
+                  if( isanoutput( pin_specified, true ) )
+                  {
+                     digitalWrite( pin_specified, HIGH );
+                     if( logging )
+                     {
+                        if( pin_specified == primary_temp_sensor_pin )
+                        {
+                          Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
+                        }
+                        else
+                        {
+                           Serial.print( F( "time_stamp_this Pin " ) );
+                        }
+                        Serial.print( pin_specified );
+                        Serial.print( F( " set to high level" ) );
+                        int pinState = digitalRead( pin_specified );
+                        if( pinState == LOW ) Serial.print( F( " but is reading back a 0 because something was/is forcing that line low. DANGER WILL ROBINSON! That pin voltage isn't right" ) );
+                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                     }
+                  }
+                  else
+                  {
+                     if( logging )
+                     {
+                        Serial.print( F( "time_stamp_this Sorry, unable to control that pin because it hasn't been made into an output, yet" ) );
+                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                     }
+                  }
+               }
            }
            strFull = "";
         }
@@ -943,34 +948,37 @@ void check_for_serial_input( char result )
            *number_specified_str_end = 0;
            if( IsValidPinNumber( strFull.c_str() ) )
            {
-              if( isanoutput( pin_specified, true ) )
-              {
-                 digitalWrite( pin_specified, LOW );
-                 if( logging )
-                 {
-                    if( pin_specified == primary_temp_sensor_pin )
-                    {
-                      Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
-                    }
-                    else
-                    {
-                       Serial.print( F( "time_stamp_this Pin " ) );
-                    }
-                    Serial.print( pin_specified );
-                    Serial.print( F( " set to low level" ) );
-                    int pinState = digitalRead( pin_specified );
-                    if( pinState == HIGH ) Serial.print( F( ". DANGER WILL ROBINSON! That pin voltage isn't right.  Something off the board was/is forcing that line high and conflicting with the low voltage that the board is trying to put on it" ) );
-                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                 }
-              }
-              else
-              {
-                 if( logging )
-                 {
-                    Serial.print( F( "time_stamp_this Sorry, unable to control that pin because it hasn't been made into an output, yet" ) );
-                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                 }
-              }
+               for( ; pin_specified < NUM_DIGITAL_PINS; pin_specified++ )
+               {
+                  if( isanoutput( pin_specified, true ) )
+                  {
+                     digitalWrite( pin_specified, LOW );
+                     if( logging )
+                     {
+                        if( pin_specified == primary_temp_sensor_pin )
+                        {
+                          Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
+                        }
+                        else
+                        {
+                           Serial.print( F( "time_stamp_this Pin " ) );
+                        }
+                        Serial.print( pin_specified );
+                        Serial.print( F( " set to low level" ) );
+                        int pinState = digitalRead( pin_specified );
+                        if( pinState == HIGH ) Serial.print( F( ". DANGER WILL ROBINSON! That pin voltage isn't right.  Something off the board was/is forcing that line high and conflicting with the low voltage that the board is trying to put on it" ) );
+                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                     }
+                  }
+                  else
+                  {
+                     if( logging )
+                     {
+                        Serial.print( F( "time_stamp_this Sorry, unable to control that pin because it hasn't been made into an output, yet" ) );
+                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                     }
+                  }
+               }
            }
            strFull = "";
         }
@@ -978,32 +986,38 @@ void check_for_serial_input( char result )
         {
            number_specified_str_end = strchr( strFull.c_str(), ' ' );
            *number_specified_str_end = 0;
-           if( IsValidPinNumber( strFull.c_str() ) && pin_specified != SERIAL_PORT_HARDWARE )
+           if( IsValidPinNumber( strFull.c_str() ) )
            {
-              pinMode( pin_specified, OUTPUT );
-              if( logging )
-              {
-                    if( pin_specified == primary_temp_sensor_pin )
+               for( ; pin_specified < NUM_DIGITAL_PINS; pin_specified++ )
+               {
+                    if( pin_specified != SERIAL_PORT_HARDWARE )
                     {
-                      Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
-                    }
-                    else
-                    {
-                       Serial.print( F( "time_stamp_this Pin " ) );
-                    }
-                 Serial.print( pin_specified );
-                 Serial.print( F( " now set to output and has a digital " ) );
-                 Serial.print( digitalRead( pin_specified ) );
-                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-              }
-           }
-           else
-           {
-illegal_attempt_SERIAL_PORT_HARDWARE:; 
-              Serial.print( F( "time_stamp_this Sorry, but pin " ) );
-              Serial.print( SERIAL_PORT_HARDWARE );
-              Serial.print( F( " is dedicated to receive communications from the host" ) );
-              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                      pinMode( pin_specified, OUTPUT );
+                      if( logging )
+                      {
+                            if( pin_specified == primary_temp_sensor_pin )
+                            {
+                              Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
+                            }
+                            else
+                            {
+                               Serial.print( F( "time_stamp_this Pin " ) );
+                            }
+                         Serial.print( pin_specified );
+                         Serial.print( F( " now set to output and has a digital " ) );
+                         Serial.print( digitalRead( pin_specified ) );
+                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                      }
+                   }
+                   else
+                   {
+        illegal_attempt_SERIAL_PORT_HARDWARE:; 
+                      Serial.print( F( "time_stamp_this Sorry, but pin " ) );
+                      Serial.print( SERIAL_PORT_HARDWARE );
+                      Serial.print( F( " is dedicated to receive communications from the host" ) );
+                      Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                   }
+               }
            }
            strFull = "";
         }
@@ -1011,81 +1025,93 @@ illegal_attempt_SERIAL_PORT_HARDWARE:;
         {
            number_specified_str_end = strchr( strFull.c_str(), ' ' );
            *number_specified_str_end = 0;
-           if( IsValidPinNumber( strFull.c_str() ) && pin_specified != SERIAL_PORT_HARDWARE )
+           if( IsValidPinNumber( strFull.c_str() ) )
            {
-              if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin )
-              {
-                 if( logging )
-                 {
-                   Serial.print( F( "Sorry, unable to allow that pin to be made an input. It is dedicated as output only for " ) );
-                   if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
-                   if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
-                   if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
-                   Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                 }
-              }
-              else
-              {
-                 pinMode( pin_specified, INPUT_PULLUP );
-                 if( logging )
-                 {
-                    if( pin_specified == primary_temp_sensor_pin )
+               for( ; pin_specified < NUM_DIGITAL_PINS; pin_specified++ )
+               {
+                    if( pin_specified != SERIAL_PORT_HARDWARE )
                     {
-                      Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
+                          if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin )
+                          {
+                             if( logging )
+                             {
+                               Serial.print( F( "Sorry, unable to allow that pin to be made an input. It is dedicated as output only for " ) );
+                               if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
+                               if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
+                               if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
+                               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                             }
+                          }
+                          else
+                          {
+                             pinMode( pin_specified, INPUT_PULLUP );
+                             if( logging )
+                             {
+                                if( pin_specified == primary_temp_sensor_pin )
+                                {
+                                  Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
+                                }
+                                else
+                                {
+                                   Serial.print( F( "time_stamp_this Pin " ) );
+                                }
+                                Serial.print( pin_specified );
+                                Serial.print( F( " now set to input with pullup" ) );
+                                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                             }
+                          }
                     }
-                    else
-                    {
-                       Serial.print( F( "time_stamp_this Pin " ) );
-                    }
-                    Serial.print( pin_specified );
-                    Serial.print( F( " now set to input with pullup" ) );
-                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                 }
-              }
+                    else goto illegal_attempt_SERIAL_PORT_HARDWARE;
+               }
            }
-           else goto illegal_attempt_SERIAL_PORT_HARDWARE;
            strFull = "";
         }
         else if( strstr( strFull.c_str(), "set pin input" ) )
         {
            number_specified_str_end = strchr( strFull.c_str(), ' ' );
            *number_specified_str_end = 0;
-           if( IsValidPinNumber( strFull.c_str() ) && pin_specified != SERIAL_PORT_HARDWARE )
+           if( IsValidPinNumber( strFull.c_str() ) )
            {
-              if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin )
-              {
-                Serial.print( F( "Sorry, unable to allow that pin to be made an input. You've dedicated output only for " ) );
-//                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
-                else if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
-                else if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-              }
-              else
-              {
-                 pinMode( pin_specified, OUTPUT );
-                 digitalWrite( pin_specified, LOW );
-                 int pinState = Serial.print( digitalRead( pin_specified ) );
-                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                 pinMode( pin_specified, INPUT );
-                 if( logging )
-                 {
-                    if( pin_specified == primary_temp_sensor_pin )
+               for( ; pin_specified < NUM_DIGITAL_PINS; pin_specified++ )
+               {
+                    if( pin_specified != SERIAL_PORT_HARDWARE )
                     {
-                      Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
-                    }
-                    else
-                    {
-                       Serial.print( F( "time_stamp_this Pin " ) );
-                    }
-                    Serial.print( pin_specified );
-                    Serial.print( F( " now set to input" ) );
-                    if( pinState == HIGH ) Serial.print( F( " with pullup because something was/is forcing that line high. DANGER WILL ROBINSON! That pin voltage isn't right" ) );
-                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                 }
-              }
+                      if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin )
+                      {
+                        Serial.print( F( "Sorry, unable to allow that pin to be made an input. You've dedicated output only for " ) );
+        //                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                        if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
+                        else if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
+                        else if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
+                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                      }
+                      else
+                      {
+                         pinMode( pin_specified, OUTPUT );
+                         digitalWrite( pin_specified, LOW );
+                         int pinState = Serial.print( digitalRead( pin_specified ) );
+                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                         pinMode( pin_specified, INPUT );
+                         if( logging )
+                         {
+                            if( pin_specified == primary_temp_sensor_pin )
+                            {
+                              Serial.print( F( "time_stamp_this Temperature sensor connection, pin " ) );
+                            }
+                            else
+                            {
+                               Serial.print( F( "time_stamp_this Pin " ) );
+                            }
+                            Serial.print( pin_specified );
+                            Serial.print( F( " now set to input" ) );
+                            if( pinState == HIGH ) Serial.print( F( " with pullup because something was/is forcing that line high. DANGER WILL ROBINSON! That pin voltage isn't right" ) );
+                            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                         }
+                      }
+                   }
+                   else goto illegal_attempt_SERIAL_PORT_HARDWARE;
+               }
            }
-           else goto illegal_attempt_SERIAL_PORT_HARDWARE;
            strFull = "";
         }
         else if( strstr( strFull.c_str(), "ther a" ) || strstr( strFull.c_str(), "ther o" ) || strstr( strFull.c_str(), "ther h" ) || strstr( strFull.c_str(), "ther c" ) )
@@ -1163,7 +1189,11 @@ after_change_fan:
 //            if( strFull.indexOf( F( " " ) ) >= 3 )
             {
 //                Serial.print( only_options_after_space );
+#ifndef __LGT8FX8E__
                 Serial.print( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a or o.  They mean auto and on and optionally may be spelled out completely" ) );
+#else
+                Serial.print( F( "The only valid characters allowed after that space are the options lower case a or o (auto/on or may be spelled out)" ) );
+#endif
                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             }
             Serial.print( F( "Fan is " ) );
