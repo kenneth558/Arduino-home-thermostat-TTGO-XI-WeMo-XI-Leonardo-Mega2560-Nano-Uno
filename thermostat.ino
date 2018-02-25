@@ -1092,8 +1092,8 @@ void check_for_serial_input( char result )
                       {
                          pinMode( pin_specified, OUTPUT );
                          digitalWrite( pin_specified, LOW );
-                         int pinState = Serial.print( digitalRead( pin_specified ) );
-                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                         int pinState = digitalRead( pin_specified );
+//                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                          pinMode( pin_specified, INPUT );
                          if( logging )
                          {
