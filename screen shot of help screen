@@ -1,8 +1,4 @@
-.
-A way to save talkback into a file in Ubuntu and Mint Linux is: (except change "TIME_STAMP_THIS" to lower case, not shown)
-    nohup stty -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 19200 -echo;while true;do cat $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z "$line" ]];then echo "$line"|sed 's/^TIME_STAMP_THIS/'"$(date )"'/g';fi;done;done >> /log_directory/arduino.log 2>/dev/null &
-.
-time_stamp_this Newly powered on:
+..
 Version: 0.0.0043
 Operating mode (heating/cooling/auto/off) = a
 Fan mode = a
@@ -38,7 +34,7 @@ power cycle (or cycle power)
 ch[ange] pers[istent memory] <address> <value>
 ch[ange] pers[istent memory] <StartingAddress> "<character string>["[ 0]] (store character string as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])
 vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>]
-vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)(not available with WeMo XI due to lack of memory space)
+vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)(not available with this board due to lack of memory space)
 reset (factory defaults: pure, simple and absolute)
 test alert (sends an alert message to host for testing purposes)
 dht pin <pin number> (retrieves DHT device reading, a period with due care in place of pin number for all pins)
