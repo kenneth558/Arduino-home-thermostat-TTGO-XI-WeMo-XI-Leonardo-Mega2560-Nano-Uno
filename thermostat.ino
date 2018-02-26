@@ -3,6 +3,8 @@
     short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 #else
     short unsigned _baud_rate_ = 19200;//In production environment the XI tends to power up at baud 19200 so we can't risk setting baud to anything but that
+    #define LED_BUILTIN 12
+    #define NUM_DIGITAL_PINS 13
 #endif
 #ifndef u8
     #define u8 uint8_t
@@ -54,9 +56,6 @@ u8 secondary_temp_sensor_address = 8;
 #ifndef __LGT8FX8E__
     u16 EEPROMlength = EEPROM.length();
 #else
-    #ifndef LED_BUILTIN
-        #define LED_BUILTIN 12
-    #endif
     u16 EEPROMlength = 1024;
 #endif
 #ifndef SERIAL_PORT_HARDWARE
