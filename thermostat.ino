@@ -2,7 +2,7 @@
 #ifndef __LGT8FX8E__
     short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 #else
-    short unsigned _baud_rate_ = 19200;//The XI tends to revert to baud 19200 after power outages so we can't risk setting baud to anything but that
+    short unsigned _baud_rate_ = 19200;//The XI tends to revert to baud 19200 after programming or need that rate prior to programming so we can't risk setting baud to anything but that
     #define LED_BUILTIN 12
     #define NUM_DIGITAL_PINS 14
 #endif
