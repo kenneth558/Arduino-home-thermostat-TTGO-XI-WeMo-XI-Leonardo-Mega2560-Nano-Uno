@@ -128,6 +128,39 @@ const PROGMEM float factory_setting_upper_cool_temp_floated = 22.5;
 const PROGMEM u8 factory_setting_secondary_temp_sensor_pin = 8;
 const PROGMEM float minutes_furnace_should_be_effective_after = 5.5; //Can be decimal this way
 const PROGMEM unsigned long loop_cycles_to_skip_between_alert_outputs = 5 * 60 * 30;//estimating 5 loops per second, 60 seconds per minute, 30 minutes per alert
+bool furnace_state = false;
+bool cool_state = false;
+
+void refusedNo_exclamation() //putting this in a function for just 2 calls saves 64 bytes due to short memory in WeMo/TTGO XI
+{
+     if( logging )
+     {
+        Serial.print( F( "Without appending a '!' pin " ) );
+        Serial.print( pin_specified );
+        Serial.print( F( "is reserved" ) );
+        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+     }
+}
+
+bool refuseInput()
+{
+    if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin )
+    {
+         if( logging )
+         {
+                Serial.print( F( "Sorry, pin " ) );
+                Serial.print( pin_specified );
+                Serial.print( F( "is dedicated as output only for " ) );
+                if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
+                if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
+                if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
+                if( pin_specified == cool_pin ) Serial.print( F( "the A/C." ) );
+                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+         }
+         return true;
+    }
+    return false;
+}
 
 bool pin_print_and_not_sensor( bool setting )
 {
@@ -369,11 +402,11 @@ u8 outdoor_temp_sensor2_address = 11;
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "power cycle (or cycle power)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "ch[ange] pers[istent memory] <address> <value>" ) );
+    Serial.print( F( "ch[ange] pers[istent memory] <address> <value> (changes EEPROM, see source code for addresses of data)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "ch[ange] pers[istent memory] <StartingAddress> \"<character string>[\"[ 0]] (store character string as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])" ) );
+    Serial.print( F( "ch[ange] pers[istent memory] <StartingAddress> \"<character string>[\"[ 0]] (store character string in EEPROM as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>]" ) );
+    Serial.print( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>] (views EEPROM)" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 #ifndef __LGT8FX8E__
     Serial.print( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );//Wemo XI does not have enough memory for this
@@ -642,6 +675,8 @@ void setup()
     digitalWrite( power_cycle_pin, LOW );
     pinMode( furnace_pin, OUTPUT );
     digitalWrite( furnace_pin, LOW );
+    pinMode( cool_pin, OUTPUT );
+    digitalWrite( cool_pin, LOW );
     pinMode( furnace_fan_pin, OUTPUT );
     if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
     else digitalWrite( furnace_fan_pin, LOW );
@@ -902,7 +937,6 @@ void check_for_serial_input( char result )
                Serial.print( upper_furnace_lower_cool_temp_floated, 1 );
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Temp cool is set to start: " ) );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( upper_cool_temp_floated, 1 );
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Furnace: " ) );
@@ -1000,18 +1034,34 @@ void check_for_serial_input( char result )
                {
                   if( isanoutput( pin_specified, true ) )
                   {
-                     digitalWrite( pin_specified, HIGH );
-                     if( logging )
-                     {
-                        if( pin_print_and_not_sensor( true ) )
+                        if( ( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) && strFull[ i + 1 ] != '!' && strFull[ i + 2 ] != '!' )
+                            refusedNo_exclamation();
+                        else 
                         {
-                            Serial.print( F( "logic 1" ) );
-                            int pinState = digitalRead( pin_specified );
-                            if( pinState == LOW ) Serial.print( F( ". Pin appears shorted to logic 0 level !" ) );
-                         }
-                        else Serial.print( pin_specified );
-                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                     }
+                             digitalWrite( pin_specified, HIGH );
+                            if( pin_specified == furnace_fan_pin )
+                            {
+                                   fan_mode = 'o';
+#ifndef __LGT8FX8E__
+                                   EEPROM.update( fan_mode_address, 'o' );
+#else
+                                   EEPROM.write( fan_mode_address, 'o' );
+#endif
+                            }
+                            else if( pin_specified == furnace_pin ) furnace_state = true;
+                            else if( pin_specified == cool_pin ) cool_state = true;
+                             if( logging )
+                             {
+                                if( pin_print_and_not_sensor( true ) && !( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) )
+                                {
+                                    Serial.print( F( "logic 1" ) );
+                                    int pinState = digitalRead( pin_specified );
+                                    if( pinState == LOW ) Serial.print( F( ". Pin appears shorted to logic 0 level !" ) );
+                                 }
+                                else Serial.print( pin_specified );
+                                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                             }
+                        }
                   }
                   else
                   {
@@ -1038,18 +1088,34 @@ void check_for_serial_input( char result )
                {
                   if( isanoutput( pin_specified, true ) )
                   {
-                     digitalWrite( pin_specified, LOW );
-                     if( logging )
-                     {
-                        if( pin_print_and_not_sensor( true ) )
+                        if( ( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) && strFull[ i + 1 ] != '!' && strFull[ i + 2 ] != '!' )
+                            refusedNo_exclamation();
+                        else 
                         {
-                            Serial.print( F( "logic 0" ) );
-                            int pinState = digitalRead( pin_specified );
-                            if( pinState == HIGH ) Serial.print( F( ". Pin appears shorted to logic 1 level!" ) );
+                            digitalWrite( pin_specified, LOW );
+                            if( pin_specified == furnace_fan_pin )
+                            {
+                                   fan_mode = 'a';
+#ifndef __LGT8FX8E__
+                                   EEPROM.update( fan_mode_address, 'a' );
+#else
+                                   EEPROM.write( fan_mode_address, 'a' );
+#endif
+                            }
+                            else if( pin_specified == furnace_pin ) furnace_state = false;
+                            else if( pin_specified == cool_pin ) cool_state = false;
+                             if( logging )
+                             {
+                                if( pin_print_and_not_sensor( true ) && !( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) )
+                                {
+                                    Serial.print( F( "logic 0" ) );
+                                    int pinState = digitalRead( pin_specified );
+                                    if( pinState == HIGH ) Serial.print( F( ". Pin appears shorted to logic 1 level!" ) );
+                                }
+                                else Serial.print( pin_specified );
+                                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                             }
                         }
-                        else Serial.print( pin_specified );
-                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                     }
                   }
                   else
                   {
@@ -1072,24 +1138,32 @@ void check_for_serial_input( char result )
             while( strFull[ i ] == ' ' && strlen( strFull ) > i ) i++;
             if( IsValidPinNumber( &strFull[ i ] ) )
            {
-                Serial.print( F( "Logic level will also be made low" ) );                 //This is debateable
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );    //This is debateable
+//                Serial.print( F( "Logic level of unreserved pins will also be made low" ) );                 //This is debateable
+//                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );    //This is debateable
                for( ; pin_specified < NUM_DIGITAL_PINS; pin_specified++ )
                {
                     if( pin_specified != SERIAL_PORT_HARDWARE )
                     {
-                      pinMode( pin_specified, OUTPUT );
-                      digitalWrite( pin_specified, LOW );                                 //This is debateable
-                      if( logging )
-                      {
-                        if( pin_print_and_not_sensor( true ) )
+                        if( ( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) && strFull[ i + 1 ] != '!' && strFull[ i + 2 ] != '!' )
                         {
-                             Serial.print( F( "output & logic " ) );
-                             Serial.print( digitalRead( pin_specified ) );
+                            ;
                         }
-                        else Serial.print( pin_specified );
-                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                      }
+                        else
+                        {
+                              pinMode( pin_specified, OUTPUT );
+                              if( strFull[ i + 1 ] == '+' || ( strFull[ i + 1 ] == '!'  && strFull[ i + 2 ] == '+' ) ) digitalWrite( pin_specified, HIGH );
+                              else if( strFull[ i + 1 ] == '-' || ( strFull[ i + 1 ] == '!'  && strFull[ i + 2 ] == '-' ) ) digitalWrite( pin_specified, LOW );
+                        }
+                        if( logging )
+                        {
+                            if( pin_print_and_not_sensor( true ) )
+                            {
+                                 Serial.print( F( "output & logic " ) );
+                                 Serial.print( digitalRead( pin_specified ) );
+                            }
+                            else Serial.print( pin_specified );
+                            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                        }
                    }
                    else illegal_attempt_SERIAL_PORT_HARDWARE(); 
                     if( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) break;
@@ -1109,19 +1183,7 @@ void check_for_serial_input( char result )
                {
                     if( pin_specified != SERIAL_PORT_HARDWARE )
                     {
-                          if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin )
-                          {
-                             if( logging )
-                             {
-                               Serial.print( F( "Sorry, pin is dedicated as output only for " ) );
-                               if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
-                               if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
-                               if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
-                               if( pin_specified == cool_pin ) Serial.print( F( "the A/C." ) );
-                               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                             }
-                          }
-                          else
+                          if( !refuseInput() )
                           {
                              pinMode( pin_specified, INPUT_PULLUP );
                              if( logging )
@@ -1150,28 +1212,19 @@ void check_for_serial_input( char result )
                {
                     if( pin_specified != SERIAL_PORT_HARDWARE )
                     {
-                      if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin )
-                      {
-                        Serial.print( F( "Sorry, unable to allow that pin to be made an input. You've dedicated output only for " ) );
-        //                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                        if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
-                        else if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
-                        else if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
-                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                      }
-                      else
+                          if( !refuseInput() )
                       {
                          pinMode( pin_specified, OUTPUT );
                          digitalWrite( pin_specified, LOW );
 //                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                          pinMode( pin_specified, INPUT );
+                        int pinState = digitalRead( pin_specified );
                          if( logging )
                          {
                                 if( pin_print_and_not_sensor( true ) )
                                 {
                                     Serial.print( F( "input" ) );
-                                    int pinState = digitalRead( pin_specified );
-                                    if( pinState == HIGH ) Serial.print( F( " with pullup because pin appears shorted to logic 1 level !" ) );
+                                    if( pinState == HIGH ) Serial.print( F( "apparently with pullup because pin shows logic 1 level !" ) );
                                 }
                                 else Serial.print( pin_specified );
                                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
@@ -1193,7 +1246,10 @@ void check_for_serial_input( char result )
            else if( strFull[ charat ] == 'o' ) 
            {
                 Serial.print( F( "off" ) );
-                digitalWrite( furnace_pin, LOW );//Need to do the same for A/C pin here, when known
+                digitalWrite( furnace_pin, LOW );
+                furnace_state = false;
+                digitalWrite( cool_pin, LOW );
+                cool_state = false;
            }
            else if( strFull[ charat ] == 'h' ) Serial.print( F( "heat" ) );
            else if( strFull[ charat ] == 'c' ) Serial.print( F( "cool" ) );
@@ -1238,10 +1294,9 @@ after_change_thermostat:
         else if( strstr( strFull, "fan a" ) || strstr( strFull, "fan o" ) )
         {
            Serial.print( F( "Fan being set to " ) );
-           int charat = charat = strstr( strFull, "fan " ) - strFull + 4;
+           int charat = strstr( strFull, "fan " ) - strFull + 4;
            if( strFull[ charat ] == 'a' ) Serial.print( F( "auto" ) );
-           else if( strFull[ charat ] == 'o' ) Serial.print( F( "on" ) );
-           else { Serial.print( F( "<fault>. No change made" ) ); goto after_change_fan; } //Making extra sure that no invalid mode gets saved
+           else Serial.print( F( "on" ) );
            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 //change_fan:
            fan_mode = strFull[ charat ];
@@ -1611,7 +1666,6 @@ after_change_fan:
 u8 last_three_temps_index = 0;
 float old_getCelsius_temp = 0;
 float oldtemp = 0;
-u8 furnace_state = 0;
 unsigned long timeOfLastSensorTimeoutError = 0;
 
 void loop()
@@ -1679,7 +1733,7 @@ delay( 100 );
         float newtemp = ( float )( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )/ 3 );
         if( last_three_temps[ 0 ] != -100 && last_three_temps[ 1 ] != -101 && last_three_temps[ 2 ] != -102 )
         {
-             if( furnace_state == 1 && furnace_started_temp_x_3 < last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )
+             if( furnace_state && furnace_started_temp_x_3 < last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )
              {
                   check_furnace_effectiveness_time = millis() + ( minutes_furnace_should_be_effective_after * 60000 );  //Will this become invalid if furnace temp setting gets adjusted?  TODO:  Account for that conditioin
                   if( check_furnace_effectiveness_time < minutes_furnace_should_be_effective_after * 60000 )
@@ -1708,138 +1762,152 @@ delay( 100 );
         }
         oldtemp = newtemp;
         last_three_temps_index = ++last_three_temps_index % 3;
-           if( furnace_state == 0 && ( thermostat == 'h' || thermostat == 'a' ) && last_three_temps[ 0 ] != -100 && last_three_temps[ 1 ] != -101 && last_three_temps[ 2 ] != -102 )
+           if( ( thermostat == 'h' || thermostat == 'a' || thermostat == 'c' ) && last_three_temps[ 0 ] != -100 && last_three_temps[ 1 ] != -101 && last_three_temps[ 2 ] != -102 )
            {
-    //            Serial.print( F( "Furnace is off?: " ) );
-    //            Serial.println( furnace_state );
-              if( last_three_temps[ 0 ] < lower_furnace_temp_floated && last_three_temps[ 1 ] < lower_furnace_temp_floated && last_three_temps[ 2 ] < lower_furnace_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp_floated )
-              {
-    //      Serial.println( F( "Turning furnace on" ) );
-                  digitalWrite( furnace_pin, HIGH ); 
-                  digitalWrite( furnace_fan_pin, HIGH );
-                  furnace_state = 1;
-                  timer_alert_furnace_sent = 0;
-                  if( logging )
+//                 if( !furnace_state )
+        //            Serial.print( F( "Furnace is off?: " ) );
+        //            Serial.println( furnace_state );
+                  if( last_three_temps[ 0 ] < lower_furnace_temp_floated && last_three_temps[ 1 ] < lower_furnace_temp_floated && last_three_temps[ 2 ] < lower_furnace_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp_floated )
                   {
-                        Serial.print( F( "time_stamp_this Furnace and furnace fan on (pins " ) );
-                        Serial.print( furnace_pin );
-                        Serial.print( F( " and " ) );
-                        Serial.print( furnace_fan_pin );
-                        Serial.print( F( ")" ) );
-                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                  }
-                  check_furnace_effectiveness_time = millis() + ( minutes_furnace_should_be_effective_after * 60000 );  //Will this become invalid if furnace temp setting gets adjusted?  TODO:  Account for that conditioin
-                  if( check_furnace_effectiveness_time < minutes_furnace_should_be_effective_after * 60000 )
-                  {
-                        millis_overflowed = true;
-                  }
-                  else
-                  {
-                        millis_overflowed = false;
-                  }
-                  furnace_started_temp_x_3 = last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ];
-              }
-           }
-           else if( furnace_state == 1 && ( thermostat == 'h' || thermostat == 'a' ) )
-           {
-//            Serial.print( F( "Furnace is on?: " ) );
-//            Serial.println( furnace_state );
-               if( last_three_temps[ 0 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 1 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 2 ] > upper_furnace_lower_cool_temp_floated )
-               {
-                    //      Serial.println( F( "Turning furnace off" ) );
-                    digitalWrite( furnace_pin, LOW );
-                    digitalWrite( furnace_fan_pin, LOW );
-                      furnace_state = 0;
+        //      Serial.println( F( "Turning furnace on" ) );
+                      digitalWrite( furnace_pin, HIGH ); 
+    //                  digitalWrite( furnace_fan_pin, HIGH );
+                      furnace_state = true;
                       timer_alert_furnace_sent = 0;
-                    //               if( fan_mode == 'a' ) digitalWrite( furnace_fan_pin, LOW ); 
-                    if( logging )
-                    {
-                        Serial.print( F( "time_stamp_this Furnace" ) );
-                        if( fan_mode == 'a' ) Serial.print( F( " and furnace fan" ) );
-                        Serial.print( F( " off (pin" ) );
-                        if( fan_mode == 'a' ) Serial.print( F( "s" ) );
-                        Serial.print( F( " " ) );
-                        Serial.print( furnace_pin );
-                        if( fan_mode == 'a' )
-                        {
+                      if( logging )
+                      {
+                            Serial.print( F( "time_stamp_this Furnace and furnace fan on (pins " ) );
+                            Serial.print( furnace_pin );
                             Serial.print( F( " and " ) );
                             Serial.print( furnace_fan_pin );
-                        }
-                        Serial.print( F( ")" ) );
-                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                    }
+                            Serial.print( F( ")" ) );
+                            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                      }
+                      check_furnace_effectiveness_time = millis() + ( minutes_furnace_should_be_effective_after * 60000 );  //Will this become invalid if furnace temp setting gets adjusted?  TODO:  Account for that conditioin
+                      if( check_furnace_effectiveness_time < minutes_furnace_should_be_effective_after * 60000 )
+                      {
+                            millis_overflowed = true;
+                      }
+                      else
+                      {
+                            millis_overflowed = false;
+                      }
+                      furnace_started_temp_x_3 = last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ];
+                  }
                }
-               else if( !timer_alert_furnace_sent && furnace_started_temp_x_3 > last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )
+               else if( furnace_state && ( thermostat == 'h' || thermostat == 'a' ) )
                {
-                    if( !millis_overflowed )
-                        if( millis() > check_furnace_effectiveness_time || millis() < check_furnace_effectiveness_time - minutes_furnace_should_be_effective_after * 60000 )
+    //            Serial.print( F( "Furnace is on?: " ) );
+    //            Serial.println( furnace_state );
+                   if( last_three_temps[ 0 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 1 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 2 ] > upper_furnace_lower_cool_temp_floated )
+                   {
+                        //      Serial.println( F( "Turning furnace off" ) );
+                        digitalWrite( furnace_pin, LOW );
+    //                    digitalWrite( furnace_fan_pin, LOW );
+                          furnace_state = false;
+                          timer_alert_furnace_sent = 0;
+                        //               if( fan_mode == 'a' ) digitalWrite( furnace_fan_pin, LOW ); 
+                        if( logging )
                         {
-                              goto sendAlert;
+                            Serial.print( F( "time_stamp_this Furnace" ) );
+                            if( fan_mode == 'a' ) Serial.print( F( " and furnace fan" ) );
+                            Serial.print( F( " off (pin" ) );
+                            if( fan_mode == 'a' ) Serial.print( F( "s" ) );
+                            Serial.print( F( " " ) );
+                            Serial.print( furnace_pin );
+                            if( fan_mode == 'a' )
+                            {
+                                Serial.print( F( " and " ) );
+                                Serial.print( furnace_fan_pin );
+                            }
+                            Serial.print( F( ")" ) );
+                            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                         }
-                    else if( millis() > check_furnace_effectiveness_time && millis() < check_furnace_effectiveness_time )
-                    {
-                         goto sendAlert;
-                    }
-                    goto afterSendAlert;
-sendAlert:;
-//                    // check_furnace_effectiveness_time is set when the furnace is ON'd (turned on)
-                    //The following is output regardless of logging mode                                                         //  to millis() + ( minutes_furnace_should_be_effective_after * 60000 )
-                        Serial.print( F( "time_stamp_this ALERT Furnace not heating after allowing " ) );                          //  which is a millis() value to alert at if no heating happened yet
-                        Serial.print( ( u8 )( minutes_furnace_should_be_effective_after + ( ( millis() - check_furnace_effectiveness_time ) / 60000 ) ) ); //minutes_furnace_should_be_effective_after is a const of a number of minutes
-                        Serial.print( F( " minutes" ) );
-                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                        timer_alert_furnace_sent = loop_cycles_to_skip_between_alert_outputs;
-                        if( !timer_alert_furnace_sent )
-                            timer_alert_furnace_sent = 1;
-/*                    send an alert output if furnace not working: temperature dropping even though furnace got turned on.  the way to determine this is to have a flag of whether the alert output is already sent;
- *                     That flag will unconditionally get reset in the following situations: thermostat setting gets changed, upper_furnace_lower_cool_temp_floated or lower_furnace_temp_floated gets changed, room temperature rises while furnace is on, 
- */
-afterSendAlert:;
+                   }
+                   else if( !timer_alert_furnace_sent && furnace_started_temp_x_3 > last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )
+                   {
+                        if( !millis_overflowed )
+                            if( millis() > check_furnace_effectiveness_time || millis() < check_furnace_effectiveness_time - minutes_furnace_should_be_effective_after * 60000 )
+                            {
+                                  goto sendAlert;
+                            }
+                        else if( millis() > check_furnace_effectiveness_time && millis() < check_furnace_effectiveness_time )
+                        {
+                             goto sendAlert;
+                        }
+                        goto afterSendAlert;
+    sendAlert:;
+    //                    // check_furnace_effectiveness_time is set when the furnace is ON'd (turned on)
+                        //The following is output regardless of logging mode                                                         //  to millis() + ( minutes_furnace_should_be_effective_after * 60000 )
+                            Serial.print( F( "time_stamp_this ALERT Furnace not heating after allowing " ) );                          //  which is a millis() value to alert at if no heating happened yet
+                            Serial.print( ( u8 )( minutes_furnace_should_be_effective_after + ( ( millis() - check_furnace_effectiveness_time ) / 60000 ) ) ); //minutes_furnace_should_be_effective_after is a const of a number of minutes
+                            Serial.print( F( " minutes" ) );
+                            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                            timer_alert_furnace_sent = loop_cycles_to_skip_between_alert_outputs;
+                            if( !timer_alert_furnace_sent )
+                                timer_alert_furnace_sent = 1;
+    /*                    send an alert output if furnace not working: temperature dropping even though furnace got turned on.  the way to determine this is to have a flag of whether the alert output is already sent;
+     *                     That flag will unconditionally get reset in the following situations: thermostat setting gets changed, upper_furnace_lower_cool_temp_floated or lower_furnace_temp_floated gets changed, room temperature rises while furnace is on, 
+     */
+    afterSendAlert:;
+                   }
+                   else if( timer_alert_furnace_sent )
+                   {
+                        timer_alert_furnace_sent--;
+                   }
                }
-               else if( timer_alert_furnace_sent )
-               {
-                    timer_alert_furnace_sent--;
-               }
-           }
-/*
-       else if( furnace_state == 1 && ( thermostat == 'h' || thermostat == 'a' ) )
-       {
-            Serial.print( F( "Furnace is on?: " ) );
-            Serial.println( furnace_state );
-           if( last_three_temps[ 0 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 1 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 2 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp_floated )
+    /*
+           else if( furnace_state == 1 && ( thermostat == 'h' || thermostat == 'a' ) )
            {
-//      Serial.println( F( "Turning furnace off" ) );
-               digitalWrite( furnace_pin, LOW );
-               if( fan_mode == 'a' ) digitalWrite( furnace_fan_pin, LOW );
-              if( logging )
-              {
-                Serial.print( F( "time_stamp_this Furnace" ) );
-                if( fan_mode == 'a' ) Serial.print( F( " and furnace fan" ) );
-                Serial.print( F( " off ( pin" ) );
-                if( fan_mode == 'a' ) Serial.print( F( "s" ) );
-                Serial.print( F( " " ) );
-                Serial.print( furnace_pin );
-                if( fan_mode == 'a' )
-                {
-                    Serial.print( F( " and " ) );
-                Serial.print( furnace_fan_pin );
-                }
-                Serial.println( F( " )" ) );
-              }
-           }
-*/       
-    }
-    else
+                Serial.print( F( "Furnace is on?: " ) );
+                Serial.println( furnace_state );
+               if( last_three_temps[ 0 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 1 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 2 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp_floated )
+               {
+    //      Serial.println( F( "Turning furnace off" ) );
+                   digitalWrite( furnace_pin, LOW );
+                   if( fan_mode == 'a' ) digitalWrite( furnace_fan_pin, LOW );
+                  if( logging )
+                  {
+                    Serial.print( F( "time_stamp_this Furnace" ) );
+                    if( fan_mode == 'a' ) Serial.print( F( " and furnace fan" ) );
+                    Serial.print( F( " off ( pin" ) );
+                    if( fan_mode == 'a' ) Serial.print( F( "s" ) );
+                    Serial.print( F( " " ) );
+                    Serial.print( furnace_pin );
+                    if( fan_mode == 'a' )
+                    {
+                        Serial.print( F( " and " ) );
+                    Serial.print( furnace_fan_pin );
+                    }
+                    Serial.println( F( " )" ) );
+                  }
+               }
+    */       
+        }
+        else
+        {
+            timeOfLastSensorTimeoutError++;
+            Serial.print( F( "time_stamp_this " ) );
+            if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );//These ALERT prefixes get added after consecutive 100 timeout fails
+            Serial.print( F( "Temperature sensor TIMEOUT error" ) );
+    //        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    //        Serial.print( F( "Time out error" ) ); 
+            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        }
+
+    if( furnace_state != digitalRead( furnace_pin ) || cool_state != digitalRead( cool_pin ) )
     {
-        timeOfLastSensorTimeoutError++;
         Serial.print( F( "time_stamp_this " ) );
         if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );//These ALERT prefixes get added after consecutive 100 timeout fails
-        Serial.print( F( "Temperature sensor TIMEOUT error" ) );
-//        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//        Serial.print( F( "Time out error" ) ); 
+        if( furnace_state != digitalRead( furnace_pin ) ) Serial.print( F( "Furnace " ) );
+        else Serial.print( F( "A/C " ) );
+        Serial.print( F( "pin of thermostat shorted" ) );
         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     }
-
+    else if( cool_state != digitalRead( cool_pin ) )
+    {
+        
+    }
      
 
 
