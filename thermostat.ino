@@ -4,7 +4,7 @@
 #else
     short unsigned _baud_rate_ = 19200;//In production environment the XI tends to power up at baud 19200 so we can't risk setting baud to anything but that
     #define LED_BUILTIN 12
-    #define NUM_DIGITAL_PINS 13
+    #define NUM_DIGITAL_PINS 14
 #endif
 #ifndef u8
     #define u8 uint8_t
