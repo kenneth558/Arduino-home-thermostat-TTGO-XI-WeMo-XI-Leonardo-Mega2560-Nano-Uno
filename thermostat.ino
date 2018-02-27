@@ -900,7 +900,9 @@ void check_for_serial_input( char result )
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Temp heat/cool is set to stop: " ) );
                Serial.print( upper_furnace_lower_cool_temp_floated, 1 );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Temp cool is set to start: " ) );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( upper_cool_temp_floated, 1 );
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Furnace: " ) );
@@ -908,6 +910,7 @@ void check_for_serial_input( char result )
                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Furnace fan: " ) );
                Serial.print( digitalRead( furnace_fan_pin ) );
+               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                Serial.print( F( "Cool: " ) );
                Serial.print( digitalRead( cool_pin ) );
            }
