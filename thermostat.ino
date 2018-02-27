@@ -4,7 +4,7 @@
 #else
     short unsigned _baud_rate_ = 19200;//The XI tends to revert to baud 19200 after power outages so we can't risk setting baud to anything but that
     #define LED_BUILTIN 12
-    #define NUM_DIGITAL_PINS 13
+    #define NUM_DIGITAL_PINS 14
 #endif
 /*
 ...TODO: Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
