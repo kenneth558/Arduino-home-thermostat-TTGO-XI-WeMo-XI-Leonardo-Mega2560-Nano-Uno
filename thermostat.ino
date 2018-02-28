@@ -1,21 +1,24 @@
 /************************************************************************************************************************
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0044
  *      Author:  Kenneth L. Anderson
- *      
+ *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
+ *      Date:  02/27/18
  * 
  * 
+ * TODO:  labels to pins 
+ *        auto thermostat functionality using outdoor sensors
+ *        A/C control (the elements for this are already implemented, it just needs to be worked into the main loop()
+ *        Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
+ *        alert when back pressure within furnace indicates to change filter
+ *        damper operation with multiple temp sensors
  * 
  * 
- * 
- * 
- * 
- * 
- * 
+ *        https://github.com/wemos/Arduino_XI  for the IDE support for TTGO XI/WeMo XI
  * 
  * 
  * 
  *************************************************************************************************************************/
-#define VERSION "0.0.0044"//;//TODO:  add labels to pins *****WORKING ON converting to remove all string objects due to wemo libraries not being fully string compatible, no auto thermostat functionality yet no outdoor sensors either
+#define VERSION "0.0.0044"
 #ifndef __LGT8FX8E__
     short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 #else
@@ -23,12 +26,7 @@
     #define LED_BUILTIN 12
     #define NUM_DIGITAL_PINS 14
 #endif
-/*
-...TODO: Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
-...TODO: alert when back pressure within furnace indicates to change filter
-...TODO: damper operation with multiple temp sensors
-https://github.com/wemos/Arduino_XI 
-*/
+
 //All temps are shorts until displayed
 bool mswindows = false;  //Used for line-end on serial outputs.  Make true to print line ends as MS Windows needs  
 #include <EEPROM.h>
