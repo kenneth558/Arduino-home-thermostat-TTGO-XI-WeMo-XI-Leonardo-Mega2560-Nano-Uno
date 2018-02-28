@@ -1229,7 +1229,7 @@ void check_for_serial_input( char result )
                                 if( pin_print_and_not_sensor( true ) )
                                 {
                                     Serial.print( F( "input" ) );
-                                    if( pinState == HIGH ) Serial.print( F( "apparently with pullup because pin shows logic 1 level !" ) );
+                                    if( pinState == HIGH ) Serial.print( F( " apparently with pullup because pin shows logic 1 level !" ) );
                                 }
                                 else
                                 {
