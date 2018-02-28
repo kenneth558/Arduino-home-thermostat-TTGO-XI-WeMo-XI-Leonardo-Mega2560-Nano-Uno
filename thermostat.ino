@@ -137,9 +137,25 @@ void refusedNo_exclamation() //putting this in a function for just 2 calls saves
      {
         Serial.print( F( "Without appending a '!' pin " ) );
         Serial.print( pin_specified );
-        Serial.print( F( "is reserved" ) );
+        Serial.print( F( " is reserved" ) );
         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
      }
+}
+
+void IfReservedPinForce( bool level )
+{
+    if( pin_specified == furnace_fan_pin )
+    {
+        if( (bool )level ) fan_mode = 'a'; //high; low = 'a'
+        else fan_mode = 'o'; //high; low = 'a'
+#ifndef __LGT8FX8E__
+           EEPROM.update( fan_mode_address, fan_mode ); //high; low = 'a'
+#else
+           EEPROM.write( fan_mode_address, fan_mode ); //high; low = 'a'
+#endif
+    }
+    else if( pin_specified == furnace_pin ) furnace_state = ( bool ) level; //high = true; low = false
+    else if( pin_specified == cool_pin ) cool_state = ( bool ) level; //high; = true low = false
 }
 
 bool refuseInput()
@@ -150,7 +166,7 @@ bool refuseInput()
          {
                 Serial.print( F( "Sorry, pin " ) );
                 Serial.print( pin_specified );
-                Serial.print( F( "is dedicated as output only for " ) );
+                Serial.print( F( " is dedicated as output only for " ) );
                 if( pin_specified == power_cycle_pin ) Serial.print( F( "cycling the power to the host system." ) );
                 if( pin_specified == furnace_fan_pin ) Serial.print( F( "the furnace blower fan." ) );
                 if( pin_specified == furnace_pin ) Serial.print( F( "the furnace." ) );
@@ -164,18 +180,19 @@ bool refuseInput()
 
 bool pin_print_and_not_sensor( bool setting )
 {
-    if( setting ) Serial.print( F( "time_stamp_this " ) );
     if( pin_specified == primary_temp_sensor_pin || pin_specified == secondary_temp_sensor_pin )
     {
-        if( pin_specified == primary_temp_sensor_pin ) Serial.print( F( "1" ) );
-        else Serial.print( F( "2" ) );
-        Serial.print( F( "° temperature sensor, pin " ) );
-        if( pin_specified == primary_temp_sensor_pin || pin_specified == secondary_temp_sensor_pin ) return( false );
+        if( pin_specified == primary_temp_sensor_pin ) Serial.print( F( "Prim" ) );
+        else Serial.print( F( "Second" ) );
+        Serial.print( F( "ary temperature sensor, pin " ) );
+        return( false );
     }
-    else Serial.print( F( "Pin " ) );
+    if( setting ) Serial.print( F( "time_stamp_this " ) );//only do if returning true
+    Serial.print( F( "Pin " ) );
     Serial.print( pin_specified );
     if( setting ) Serial.print( F( " now set to " ) );
 }
+
 void illegal_attempt_SERIAL_PORT_HARDWARE()
 {
     Serial.print( F( "time_stamp_this Sorry, pin " ) );
@@ -186,48 +203,22 @@ void illegal_attempt_SERIAL_PORT_HARDWARE()
 
 boolean IsValidPinNumber( const char* str )
 {
-//            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//            Serial.print( F( ":" ) );
     u8 i = 0;
     while( str[ i ] == 32 ) i++;
-//            Serial.print( str[ i ] );//
-//            Serial.print( F( ":" ) );
-//            Serial.print( i );//
-//           Serial.print( F( ":" ) );
-//            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    if( str[ i ] == '.' && str[ i + 1 ] == 0 )
+    if( str[ i ] == '.' && ( str[ i + 1 ] == 0 || str[ i + 1 ] == 32 || ( ( str[ i + 1 ] == '+' || str[ i + 1 ] == '-' ) && ( str[ i + 2 ] == 0 || str[ i + 2 ] == 32 ) ) || ( str[ i + 1 ] == '!' && ( str[ i + 2 ] == 0 || str[ i + 2 ] == 32 ) ) ||  ( ( str[ i + 1 ] == '+' || str[ i + 1 ] == '-' ) && str[ i + 2 ] == '!' && ( str[ i + 3 ] == 0 || str[ i + 3 ] == 32 ) ) ) )
     {
         pin_specified = 0;
         return true;
     }
     u8 j = i;
     while( isdigit( str[ j ] ) ) j++;
-//    str[ j ] = 0;//calling code needs to ensure there is room for this!
     if( j == i )
     {
         Serial.print( F( "Command must begin or end with a pin number as specified in help screen" ) );
-//        Serial.print( str[ i ] );
-//        Serial.print( str[ j ] );
-//        Serial.print( ( u8 )str[ j ] );
-//        Serial.print( i );
-//        Serial.print( j );
-//            Serial.print( F( ">" ) );
-//            Serial.print( ( u8 )str[i] );
-//            Serial.print( str[i] );
-//            Serial.print( F( "," ) );
-//            Serial.print( i );
             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         return false;
     }
-/* */
-//    Serial.print( F( "Pin=" ) );
-//Serial.print( str[ i ] );
     pin_specified = ( u8 )atoi( str );
-//Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-//    Serial.print( F( " in char, but " ) );
-//    Serial.print( F( "numeric Pin=" ) );
-//Serial.print( pin_specified );
-//Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     if( pin_specified < 0 || pin_specified >= NUM_DIGITAL_PINS )
     {
         Serial.print( F( "Pin number must be 0 through " ) );
@@ -752,8 +743,15 @@ void check_for_serial_input( char result )
         {
             strncpy( hit, "set pin", 7 ); 
         }  
+        hit = strstr( strFull, "pins read" );
+        if( !hit ) hit = strstr( strFull, "read pins" );
+        if( hit )
+        {
+            strncpy( hit, ". read pin", 11 ); 
+        }  
 //        strFull.replace( F( "set pin to" ), F( "set pin" ) );
         hit = strstr( strFull, "set pin to" );
+        if( !hit ) hit = strstr( strFull, "pin set to" );
         if( hit )
         {
             memmove( hit + 7, hit + 10, strlen( hit + 9 ) );
@@ -955,6 +953,7 @@ void check_for_serial_input( char result )
            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
             strFull[ 0 ] = 0;
         }
+/*
         else if( strstr( strFull, "read pins" ) || strstr( strFull, "pins read" ) )
         {
 //          int desired_pin = 0;
@@ -995,10 +994,12 @@ void check_for_serial_input( char result )
                   Serial.print( bitRead(bmask, 7-i ) );
               }
 */
+/*
               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
           }
            strFull[ 0 ] = 0;
         }
+*/
         else if( strstr( strFull, "read pin" ) || strstr( strFull, "pin read" ) )
         {
            number_specified_str_end = strchr( strFull, ' ' );
@@ -1009,13 +1010,13 @@ void check_for_serial_input( char result )
            {
                for( ; pin_specified < NUM_DIGITAL_PINS; pin_specified++ )
                {
-                    if( pin_print_and_not_sensor( false ) )
+                    if( !pin_print_and_not_sensor( false ) )
                     {
-                         if( isanoutput( pin_specified, false ) ) Serial.print( F( ": output & logic " ) );
-                         else Serial.print( F( ": input & logic " ) );
-                         Serial.print( digitalRead( pin_specified ) );
+                        Serial.print( pin_specified );
                     }
-                    else Serial.print( pin_specified );
+                     if( isanoutput( pin_specified, false ) ) Serial.print( F( ": output & logic " ) );
+                     else Serial.print( F( ": input & logic " ) );
+                     Serial.print( digitalRead( pin_specified ) );
                       Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                     if( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) break;
                }
@@ -1039,17 +1040,7 @@ void check_for_serial_input( char result )
                         else 
                         {
                              digitalWrite( pin_specified, HIGH );
-                            if( pin_specified == furnace_fan_pin )
-                            {
-                                   fan_mode = 'o';
-#ifndef __LGT8FX8E__
-                                   EEPROM.update( fan_mode_address, 'o' );
-#else
-                                   EEPROM.write( fan_mode_address, 'o' );
-#endif
-                            }
-                            else if( pin_specified == furnace_pin ) furnace_state = true;
-                            else if( pin_specified == cool_pin ) cool_state = true;
+                             IfReservedPinForce( HIGH );
                              if( logging )
                              {
                                 if( pin_print_and_not_sensor( true ) && !( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) )
@@ -1058,19 +1049,23 @@ void check_for_serial_input( char result )
                                     int pinState = digitalRead( pin_specified );
                                     if( pinState == LOW ) Serial.print( F( ". Pin appears shorted to logic 0 level !" ) );
                                  }
-                                else Serial.print( pin_specified );
+                                else 
+                                {
+                                    Serial.print( pin_specified );
+                                    Serial.print( F( " skipped" ) ); //not to time stamp
+                                }
                                  Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                              }
                         }
                   }
-                  else
+/*                  else
                   {
                      if( logging )
                      {
                         Serial.print( F( "time_stamp_this Sorry, that pin hasn't been made into an output, yet" ) );
                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                      }
-                  }
+                  }*/
                     if( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) break;
                }
            }
@@ -1093,17 +1088,7 @@ void check_for_serial_input( char result )
                         else 
                         {
                             digitalWrite( pin_specified, LOW );
-                            if( pin_specified == furnace_fan_pin )
-                            {
-                                   fan_mode = 'a';
-#ifndef __LGT8FX8E__
-                                   EEPROM.update( fan_mode_address, 'a' );
-#else
-                                   EEPROM.write( fan_mode_address, 'a' );
-#endif
-                            }
-                            else if( pin_specified == furnace_pin ) furnace_state = false;
-                            else if( pin_specified == cool_pin ) cool_state = false;
+                            IfReservedPinForce( LOW );
                              if( logging )
                              {
                                 if( pin_print_and_not_sensor( true ) && !( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) )
@@ -1112,19 +1097,23 @@ void check_for_serial_input( char result )
                                     int pinState = digitalRead( pin_specified );
                                     if( pinState == HIGH ) Serial.print( F( ". Pin appears shorted to logic 1 level!" ) );
                                 }
-                                else Serial.print( pin_specified );
+                                else 
+                                {
+                                    Serial.print( pin_specified );
+                                    Serial.print( F( " skipped" ) );
+                                }
                                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                              }
                         }
                   }
-                  else
+/*                  else
                   {
                      if( logging )
                      {
                         Serial.print( F( "time_stamp_this Sorry, that pin hasn't been made into an output, yet" ) );
                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                      }
-                  }
+                  }*/
                     if( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) break;
                }
            }
@@ -1151,8 +1140,16 @@ void check_for_serial_input( char result )
                         else
                         {
                               pinMode( pin_specified, OUTPUT );
-                              if( strFull[ i + 1 ] == '+' || ( strFull[ i + 1 ] == '!'  && strFull[ i + 2 ] == '+' ) ) digitalWrite( pin_specified, HIGH );
-                              else if( strFull[ i + 1 ] == '-' || ( strFull[ i + 1 ] == '!'  && strFull[ i + 2 ] == '-' ) ) digitalWrite( pin_specified, LOW );
+                              if( strFull[ i + 1 ] == '+' || ( strFull[ i + 1 ] == '!'  && strFull[ i + 2 ] == '+' ) )
+                              {
+                                    digitalWrite( pin_specified, HIGH );
+                                    IfReservedPinForce( HIGH );
+                              }
+                              else if( strFull[ i + 1 ] == '-' || ( strFull[ i + 1 ] == '!'  && strFull[ i + 2 ] == '-' ) )
+                              {
+                                digitalWrite( pin_specified, LOW );
+                                IfReservedPinForce( LOW );
+                              }
                         }
                         if( logging )
                         {
@@ -1161,7 +1158,11 @@ void check_for_serial_input( char result )
                                  Serial.print( F( "output & logic " ) );
                                  Serial.print( digitalRead( pin_specified ) );
                             }
-                            else Serial.print( pin_specified );
+                            else 
+                            {
+                                Serial.print( pin_specified );
+                                Serial.print( F( " skipped" ) );
+                            }
                             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                         }
                    }
@@ -1189,7 +1190,11 @@ void check_for_serial_input( char result )
                              if( logging )
                              {
                                 if( pin_print_and_not_sensor( true ) ) Serial.print( F( "input with pullup" ) );
-                                else Serial.print( pin_specified );
+                                else 
+                                {
+                                    Serial.print( pin_specified );
+                                    Serial.print( F( " skipped" ) );
+                                }
                                  Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                              }
                           }
@@ -1226,7 +1231,11 @@ void check_for_serial_input( char result )
                                     Serial.print( F( "input" ) );
                                     if( pinState == HIGH ) Serial.print( F( "apparently with pullup because pin shows logic 1 level !" ) );
                                 }
-                                else Serial.print( pin_specified );
+                                else
+                                {
+                                    Serial.print( pin_specified );
+                                    Serial.print( F( " skipped" ) );
+                                }
                                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                          }
                       }
