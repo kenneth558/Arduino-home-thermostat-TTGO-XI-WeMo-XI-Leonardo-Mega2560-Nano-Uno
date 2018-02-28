@@ -1,4 +1,5 @@
-// Main loop() Under construction   02/27/18
+// Main loop() Under construction 02/27/18 to add A/C.  This version as published is heat and blower thermostat plus all
+// non-thermostat functions
 /************************************************************************************************************************
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0044
  *      Author:  Kenneth L. Anderson
