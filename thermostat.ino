@@ -301,10 +301,18 @@ void printBasicInfo()
     Serial.print( F( VERSION ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Operating mode (heating/cooling/auto/off) = " ) );
-    Serial.print( thermostat );
+    if( thermostat == 'a' )
+        Serial.print( F( "auto" ) );
+    else if( thermostat == 'o' )
+        Serial.print( F( "off" ) );
+    else if( thermostat == 'h' )
+        Serial.print( F( "heat" ) );
+    else if( thermostat == 'c' )
+        Serial.print( F( "cool" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Fan mode = " ) );
-    Serial.print( fan_mode );
+    if( fan_mode == 'a' ) Serial.print( F( "auto" ) );
+    else if( fan_mode == 'o' ) Serial.print( F( "on" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "lower_furnace_temp = " ) );
     Serial.print( lower_furnace_temp_floated, 1 );
@@ -580,7 +588,8 @@ factory_setting_upper_furnace_lower_cool_temp;
 //    Serial.print( factory_setting_thermostat_mode );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Fan mode = " ) );
-    Serial.print( factory_setting_fan_mode );
+    if( factory_setting_fan_mode == 'a' ) Serial.print( F( "auto" ) );
+    else if( factory_setting_fan_mode == 'o' ) Serial.print( F( "on" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "lower_furnace_temp = " ) );
     Serial.print( factory_setting_lower_furnace_temp_floated, 1 );
