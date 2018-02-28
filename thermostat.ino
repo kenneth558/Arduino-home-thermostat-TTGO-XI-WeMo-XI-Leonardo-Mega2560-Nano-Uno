@@ -1,6 +1,6 @@
 /************************************************************************************************************************
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0044
- *      Programmer:  Kenneth L. Anderson
+ *      Author:  Kenneth L. Anderson
  *      
  * 
  * 
