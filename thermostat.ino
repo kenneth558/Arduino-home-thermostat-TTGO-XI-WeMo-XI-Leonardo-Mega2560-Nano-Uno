@@ -1,3 +1,6 @@
+// Main loop() Under construction   02/27/18
+
+
 /************************************************************************************************************************
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0044
  *      Author:  Kenneth L. Anderson
