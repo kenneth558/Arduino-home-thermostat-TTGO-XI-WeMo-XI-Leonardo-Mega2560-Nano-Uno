@@ -1,6 +1,4 @@
 // Main loop() Under construction   02/27/18
-
-
 /************************************************************************************************************************
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0044
  *      Author:  Kenneth L. Anderson
@@ -1534,7 +1532,8 @@ else fresh_powerup = false;
         }
         oldtemp = newtemp;
         last_three_temps_index = ++last_three_temps_index % 3;
-           if( ( thermostat == 'h' || thermostat == 'a' || thermostat == 'c' ) && last_three_temps[ 0 ] != -100 && last_three_temps[ 1 ] != -101 && last_three_temps[ 2 ] != -102 )
+//           if( ( thermostat == 'h' || thermostat == 'a' || thermostat == 'c' ) && last_three_temps[ 0 ] != -100 && last_three_temps[ 1 ] != -101 && last_three_temps[ 2 ] != -102 )
+           if( !furnace_state && ( thermostat == 'h' || thermostat == 'a' ) && last_three_temps[ 0 ] != -100 && last_three_temps[ 1 ] != -101 && last_three_temps[ 2 ] != -102 )
            {
                   if( last_three_temps[ 0 ] < lower_furnace_temp_floated && last_three_temps[ 1 ] < lower_furnace_temp_floated && last_three_temps[ 2 ] < lower_furnace_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp_floated )
                   {
@@ -1543,12 +1542,10 @@ else fresh_powerup = false;
                       timer_alert_furnace_sent = 0;
                       if( logging )
                       {
-                            Serial.print( F( "time_stamp_this Furnace and furnace fan on (pins " ) );
-                            Serial.print( furnace_pin );
-                            Serial.print( F( " and " ) );
-                            Serial.print( furnace_fan_pin );
-                            Serial.print( F( ")" ) );
-                            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                        Serial.print( F( "time_stamp_this Furnace off (pin " ) );
+                        Serial.print( furnace_pin );
+                        Serial.print( F( ")" ) );
+                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                       }
                       check_furnace_effectiveness_time = millis() + ( minutes_furnace_should_be_effective_after * 60000 );  //Will this become invalid if furnace temp setting gets adjusted?  TODO:  Account for that conditioin
                       if( check_furnace_effectiveness_time < minutes_furnace_should_be_effective_after * 60000 )
@@ -1656,7 +1653,7 @@ else fresh_powerup = false;
             Serial.print( F( "Temperature sensor TIMEOUT error" ) );
             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
         }
-
+/*
     if( furnace_state != digitalRead( furnace_pin ) || cool_state != digitalRead( cool_pin ) )
     {
         Serial.print( F( "time_stamp_this " ) );
@@ -1670,6 +1667,7 @@ else fresh_powerup = false;
     {
         
     }
+*/
 check_for_serial_input( noInterrupt_result->ErrorCode );
   delay( 2000 );
 }
