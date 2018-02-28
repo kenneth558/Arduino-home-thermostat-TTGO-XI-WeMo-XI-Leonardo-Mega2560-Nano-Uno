@@ -353,6 +353,8 @@ void printBasicInfo()
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Pin numbers may otherwise be period (all pins) with +/-/! for setting and forcing reserved pins" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "Example: .-! pin set to output (results in all pins [.] being set to output with low logic level [-], even reserved pins [!])" ) );
+    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "Valid commands (cAsE sEnSiTiVe, minimal sanity checking, one per line) are:" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
     Serial.print( F( "." ) );
