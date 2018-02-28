@@ -195,9 +195,9 @@ bool pin_print_and_not_sensor( bool setting )
 
 void illegal_attempt_SERIAL_PORT_HARDWARE()
 {
-    Serial.print( F( "Sorry, pin " ) );
+    Serial.print( F( "Dedicated to receive communications from the host, pin" ) );
     Serial.print( SERIAL_PORT_HARDWARE );
-    Serial.print( F( " is dedicated to receive communications from the host" ) );
+    Serial.print( F( " skipped" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
 }
 
