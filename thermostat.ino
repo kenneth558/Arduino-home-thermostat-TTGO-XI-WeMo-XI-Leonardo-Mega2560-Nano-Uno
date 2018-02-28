@@ -1543,7 +1543,7 @@ else fresh_powerup = false;
                       timer_alert_furnace_sent = 0;
                       if( logging )
                       {
-                        Serial.print( F( "time_stamp_this Furnace off (pin " ) );
+                        Serial.print( F( "time_stamp_this Furnace on (pin " ) );
                         Serial.print( furnace_pin );
                         Serial.print( F( ")" ) );
                         Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
@@ -1564,24 +1564,13 @@ else fresh_powerup = false;
                {
                    if( last_three_temps[ 0 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 1 ] > upper_furnace_lower_cool_temp_floated && last_three_temps[ 2 ] > upper_furnace_lower_cool_temp_floated )
                    {
-                        //      Serial.println( F( "Turning furnace off" ) );
                         digitalWrite( furnace_pin, LOW );
                           furnace_state = false;
                           timer_alert_furnace_sent = 0;
-                        //               if( fan_mode == 'a' ) digitalWrite( furnace_fan_pin, LOW ); 
                         if( logging )
                         {
-                            Serial.print( F( "time_stamp_this Furnace" ) );
-                            if( fan_mode == 'a' ) Serial.print( F( " and furnace fan" ) );
-                            Serial.print( F( " off (pin" ) );
-                            if( fan_mode == 'a' ) Serial.print( F( "s" ) );
-                            Serial.print( F( " " ) );
+                            Serial.print( F( "time_stamp_this Furnace off (pin " ) );
                             Serial.print( furnace_pin );
-                            if( fan_mode == 'a' )
-                            {
-                                Serial.print( F( " and " ) );
-                                Serial.print( furnace_fan_pin );
-                            }
                             Serial.print( F( ")" ) );
                             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
                         }
