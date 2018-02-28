@@ -195,7 +195,7 @@ bool pin_print_and_not_sensor( bool setting )
 
 void illegal_attempt_SERIAL_PORT_HARDWARE()
 {
-    Serial.print( F( "time_stamp_this Sorry, pin " ) );
+    Serial.print( F( "Sorry, pin " ) );
     Serial.print( SERIAL_PORT_HARDWARE );
     Serial.print( F( " is dedicated to receive communications from the host" ) );
     Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
