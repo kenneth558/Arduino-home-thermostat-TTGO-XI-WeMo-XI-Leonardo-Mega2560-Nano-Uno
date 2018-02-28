@@ -2,7 +2,7 @@
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0045
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  02/27/18
+ *      Date:  02/28/18
  * 
  * 
  * TODO:  labels to pins 
