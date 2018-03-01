@@ -1,8 +1,10 @@
+
+
 /************************************************************************************************************************
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0045
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  02/27/18
+ *      Date:  03/01/18
  * 
  * 
  * TODO:  labels to pins 
@@ -19,6 +21,15 @@
  * 
  *************************************************************************************************************************/
 #define VERSION "0.0.0045"
+#ifndef u8
+    #define u8 uint8_t
+#endif
+#ifndef u16
+    #define u16 uint16_t
+#endif
+#include "DHTdirectRead.h"
+#include "Use_analog_pins_for_environment_adjust.h"
+#include <EEPROM.h>
 #ifndef __LGT8FX8E__
     short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 #else
@@ -27,17 +38,12 @@
     #define NUM_DIGITAL_PINS 14
 #endif
 
-//All temps are shorts until displayed
 bool mswindows = false;  //Used for line-end on serial outputs.  Make true to print line ends as MS Windows needs  
-#include <EEPROM.h>
-#ifndef u8
-    #define u8 uint8_t
+#ifdef PIN_A0
+    if( resistor_between_LED_BUILTIN_and_PIN_A0() ) mswindows = true; //In devices with sufficient memory space will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
 #endif
-#ifndef u16
-    #define u16 uint16_t
-#endif
-#include "DHTdirectRead.h"
 
+//All temps are shorts until displayed
 //Where are other indoor sensors?
 //What about utilizing PCI ISRs and how they control which pins to use?
 
@@ -93,7 +99,6 @@ float lower_cool_temp_floated;
 char thermostat;// = ( char )EEPROM.read( thermostat_address );
 char fan_mode;// = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
 
-//bool mswindows = false;  //Used for line-end on serial outputs.  FUTURE Will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
 char strFull[ ] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, \
                    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 float last_three_temps[] = { -100, -101, -102 };
