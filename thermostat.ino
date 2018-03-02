@@ -6,8 +6,6 @@
  * 
  * 
  * TODO:  labels to pins 
- *        auto thermostat functionality using outdoor sensors
- *        A/C control (the elements for this are already implemented, it just needs to be worked into the main loop()
  *        Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
  *        alert when back pressure within furnace indicates to change filter
  *        damper operation with multiple temp sensors
