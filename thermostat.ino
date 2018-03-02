@@ -2825,8 +2825,6 @@ else fresh_powerup = false;
             cool_state = false;
             check_furnace_effectiveness_time = 0;
         }
-//Just not enough memory space in the TTGO XI/WeMo XI
-#ifndef __LGT8FX8E__
         else if( thermostat == 'a' )
         {
             noInterrupt_result = ( DHTresult* )( DHTreadWhenRested( outdoor_temp_sensor1_pin ) ); 
@@ -2839,7 +2837,6 @@ else fresh_powerup = false;
                 else cool_on_loop();
             }
         }
-#endif
         else if( thermostat == 'h' ) furnace_on_loop(); //This furnace loop is all that the WeMo/TTGO XI can do as thermostat
         else if( thermostat == 'c' ) cool_on_loop();
     /*
