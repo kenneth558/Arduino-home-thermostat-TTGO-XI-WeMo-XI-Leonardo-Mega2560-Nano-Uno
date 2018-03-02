@@ -1,4 +1,5 @@
 #ifdef PIN_A0
+#define RUNTIMELINEFEEDDETECT
 unsigned short resistor_between_LED_BUILTIN_and_PIN_A0() //default purpose for this is to signify type of line-ends to send with serial communications: MS Windows-style ( resistor connects the pins ) will include a CR with the LF, while non-windows ( no resistor ) only has the LF
 { //Need to detect any device connected to this pin and add delay for it/them
     pinMode( LED_BUILTIN, OUTPUT );
