@@ -1,10 +1,8 @@
-
-
 /************************************************************************************************************************
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0045
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  03/01/18
+ *      Date:  03/02/18
  * 
  * 
  * TODO:  labels to pins 
@@ -28,7 +26,7 @@
     #define u16 uint16_t
 #endif
 #include "DHTdirectRead.h"
-#include "Use_analog_pins_for_environment_adjust.h"
+// #include "Use_analog_pins_for_environment_adjust.h" //This feature is useful to make the board detect at run-time whether a resistor connects Pin A0 to LED_BUILTIN which enables board to send MS Windows line ends instead of Linux line ends.  Uncomment and re-compile if that is what you want, but it makes the sketch larger.
 #include <EEPROM.h>
 #ifndef __LGT8FX8E__
     short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
@@ -38,8 +36,13 @@
     #define NUM_DIGITAL_PINS 14
 #endif
 
-bool mswindows = false;  //Used for line-end on serial outputs.  Make true to print line ends as MS Windows needs  
-#ifdef PIN_A0
+// #define MSWINDOWS /* uncomment this for Windows line ends always, even over-riding the Pin A0 technique.  But for run-time detection of which line end to use, leave this commented and just uncomment the line above saying #include "Use_analog_pins_for_environment_adjust.h"*/
+
+const PROGMEM char linux_line_ending = ( char )10; //This is for Linux host
+//const PROGMEM char windows_line_ending = ( char )13; //This is for MS Windows host
+
+#ifdef RUNTIMELINEFEEDDETECT
+    bool mswindows = false; //Doing with this technique consumes too much memory space //Used for line-end on serial outputs.  Make true to print line ends as MS Windows needs
     if( resistor_between_LED_BUILTIN_and_PIN_A0() ) mswindows = true; //In devices with sufficient memory space will be determined true during run time if a 1 Megohm ( value not at all critical as long as it is large enough ohms to not affect operation otherwise )resistor is connected from pin LED_BUILTIN to PIN_A0
 #endif
 
@@ -129,9 +132,24 @@ const PROGMEM u8 factory_setting_outdoor_temp_sensor1_pin = 10;
 const PROGMEM u8 factory_setting_outdoor_temp_sensor2_pin = 11;
 const PROGMEM float minutes_furnace_should_be_effective_after = 5.5; //Can be decimal this way
 const PROGMEM unsigned long loop_cycles_to_skip_between_alert_outputs = 5 * 60 * 30;//estimating 5 loops per second, 60 seconds per minute, 30 minutes per alert
+//const PROGMEM char furnaceStartLowTemp[] = "furnace start low temp";  PROGMEM casting in TTGO XI does not make a location difference but it makes address impossible to re-cast correctly.  I suspect a bug in compiler?
+//const PROGMEM char furnaceStopHighTemp[] = "furnace stop high temp";
+//const PROGMEM char coolStopLowTemp[] = "cool stop low temp";
+//const PROGMEM char coolStartHighTemp[] = "cool start high temp";
+const char furnaceStartLowTemp[] = "furnace start low temp";
+const char furnaceStopHighTemp[] = "furnace stop high temp";
+const char coolStopLowTemp[] = "cool stop low temp";
+const char coolStartHighTemp[] = "cool start high temp";
+
+
 bool furnace_state = false;
 bool cool_state = false;
 
+void printCstring( unsigned long stringToPrint )
+{
+    while( *(char *)stringToPrint != 0 )
+        Serial.print( *(char *)stringToPrint++ );
+}
 void refusedNo_exclamation() //putting this in a function for just 2 calls saves 64 bytes due to short memory in WeMo/TTGO XI
 {
      if( logging )
@@ -139,7 +157,14 @@ void refusedNo_exclamation() //putting this in a function for just 2 calls saves
         Serial.print( F( "Without appending a '!' pin " ) );
         Serial.print( pin_specified );
         Serial.print( F( " is reserved" ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( ( char )10 );
+#ifdef RUNTIMELINEFEEDDETECT 
+        if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
      }
 }
 
@@ -202,7 +227,14 @@ bool refuseInput()
                 Serial.print( F( ", pin " ) );
                 Serial.print( pin_specified );
                 Serial.print( F( " skipped" ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+        if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
          }
          return true;
     }
@@ -231,7 +263,14 @@ void illegal_attempt_SERIAL_PORT_HARDWARE()
     Serial.print( F( "Communications Rx from the host, pin " ) );
     Serial.print( SERIAL_PORT_HARDWARE );
     Serial.print( F( " skipped" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 }
 
 boolean IsValidPinNumber( const char* str )
@@ -248,7 +287,14 @@ boolean IsValidPinNumber( const char* str )
     if( j == i )
     {
         Serial.print( F( "Command must begin or end with a pin number as specified in help screen" ) );
-            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+        if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
         return false;
     }
     pin_specified = ( u8 )atoi( str );
@@ -256,7 +302,14 @@ boolean IsValidPinNumber( const char* str )
     {
         Serial.print( F( "Pin number must be 0 through " ) );
         Serial.print( NUM_DIGITAL_PINS - 1 );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+        if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
         return false;
     }
     return true;
@@ -272,7 +325,14 @@ if( reply )
     Serial.print( F( "Sorry, pin " ) );
     Serial.print( pin );
     Serial.print( F( " is not yet set to output" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 }
 return false;
 }
@@ -285,7 +345,14 @@ boolean IsValidTemp( const char* str, bool furnace )
         if( !( ( isdigit( str[ i ] ) || str[ i ] == '.' ) && !( !i && str[ 0 ] == '-' ) ) || ( strchr( str, '.' ) != strrchr( str, '.' ) ) ) //allow one and only one decimal point in str
         {
             Serial.print( F( "Command must end with a temperature in Celsius" ) );
-            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+            Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
             return false;
         }
     }
@@ -295,7 +362,15 @@ boolean IsValidTemp( const char* str, bool furnace )
 //    Serial.print( temp_specified_floated );
 //    Serial.print( F( ", decimal portion of Temperature entered:" ) );
 //    Serial.print( str );
-//    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+//    Serial.print( ( char )10 ); 
+//#ifdef RUNTIMELINEFEEDDETECT 
+//    if( mswindows ) Serial.print( ( char )13 ); 
+//#else
+//    #ifdef MSWINDOWS
+//        Serial.print( ( char )13 ); 
+//    #endif
+//#endif
+
     signed char upper_limit = 27;  //aspplicable for furnace only
     signed char lower_limit = 10;  //aspplicable for furnace only
 //    signed char lower_cool_limit = 19;  set elsewhere
@@ -305,7 +380,14 @@ boolean IsValidTemp( const char* str, bool furnace )
         Serial.print( lower_limit );
         Serial.print( F( " through " ) );
         Serial.print( upper_limit );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
         return false;
     }
     return true;
@@ -314,26 +396,68 @@ boolean IsValidTemp( const char* str, bool furnace )
 void printBasicInfo()
 {
     Serial.print( F( ".." ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     if( fresh_powerup )
     {
        Serial.print( F( "A way to save talkbacks into a file in Ubuntu and Mint Linux is: (except change \"TIME_STAMP_THIS\" to lower case, not shown so this won't get filtered in by such command)" ) );
-       Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
        Serial.print( F( "    nohup stty -F \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) " ) );
        Serial.print( _baud_rate_ );
 //The following would get time stamped inadvertently:
 //       Serial.println( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^time_stamp_this/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
 //So we have to capitalize time_stamp_this
        Serial.print( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^TIME_STAMP_THIS/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
-       Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
        Serial.print( F( "." ) );
-       Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
        Serial.print( F( "time_stamp_this New power up:" ) );
-       Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     }
     Serial.print( F( "Version: " ) );
     Serial.print( F( VERSION ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 #ifdef __LGT8FX8E__
     Serial.print( F( "Operating mode (heating/cooling/off) = " ) );
 #else
@@ -347,128 +471,440 @@ void printBasicInfo()
         Serial.print( F( "heat" ) );
     else if( thermostat == 'c' )
         Serial.print( F( "cool" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Fan mode = " ) );
     if( fan_mode == 'a' ) Serial.print( F( "auto" ) );
     else if( fan_mode == 'o' ) Serial.print( F( "on" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "lower_furnace_temp = " ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    printCstring( ( unsigned long ) &furnaceStartLowTemp );
+    Serial.print( F( " = " ) );
     Serial.print( lower_furnace_temp_floated, 1 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "upper_furnace_temp = " ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    printCstring( ( unsigned long ) &furnaceStopHighTemp );
+    Serial.print( F( " = " ) );
     Serial.print( upper_furnace_temp_floated, 1 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "lower_cool_temp = " ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    printCstring( ( unsigned long ) &coolStopLowTemp );
+    Serial.print( F( " = " ) );
     Serial.print( lower_cool_temp_floated, 1 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "upper_cool_temp = " ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    printCstring( ( unsigned long ) &coolStartHighTemp );
+    Serial.print( F( " = " ) );
     Serial.print( upper_cool_temp_floated, 1 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Talkback for logging is turned o" ) );
     if( logging ) Serial.print( F( "n" ) );
     else  Serial.print( F( "ff" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Talkback for logging temp changes is turned o" ) );
     if( logging_temp_changes ) Serial.print( F( "n" ) );
     else  Serial.print( F( "ff" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+        Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "primary_, secondary_temp_sensor_pins = " ) );
     Serial.print( primary_temp_sensor_pin );
     Serial.print( F( ", " ) );
     Serial.print( secondary_temp_sensor_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "outdoor_temp_sensor1_, _2_pins = " ) );
     Serial.print( outdoor_temp_sensor1_pin );
     Serial.print( F( ", " ) );
     Serial.print( outdoor_temp_sensor2_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "furnace_, furnace_fan, cool_pins = " ) );
     Serial.print( furnace_pin );
     Serial.print( F( ", " ) );
     Serial.print( furnace_fan_pin );
     Serial.print( F( ", " ) );
     Serial.print( cool_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "host/aux system power_cycle_pin = " ) );
     Serial.print( power_cycle_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "LED_BUILTIN pin = " ) );
     Serial.print( LED_BUILTIN );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "." ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Pin numbers may otherwise be period (all pins) with +/-/! for setting and forcing reserved pins" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Example: pin set to output .-! (results in all pins [.] being set to output with low logic level [-], even reserved pins [!])" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Valid commands (cAsE sEnSiTiVe, minimal sanity checking, one per line) are:" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "." ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "help (re-display this information)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 #ifndef __LGT8FX8E__
     Serial.print( F( "ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat)" ) );//, auto requires outdoor sensor[s] and reverts to heat if sensor[s] fail)" ) );
 #else
     Serial.print( F( "ther[mostat][ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat)" ) );//, auto requires outdoor sensor[s] and reverts to heat if sensor[s] fail)" ) );
 #endif
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "fan[ a[uto]/ o[n]] (to read or set fan)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 
-    Serial.print( F( "set lower furnace temp <°C> (to turn furnace on at this or lower temperature, always persistent)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "set upper furnace temp <°C> (to turn furnace off at this or higher temperature, always persistent)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "set lower cool temp <°C> (to turn A/C off at this or lower temperature, always persistent)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "set upper cool temp <°C> (to turn A/C on at this or higher temperature, always persistent)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( F( "furnace start low temp <°C> (to turn furnace on at this or lower temperature, always persistent)" ) );//not worth converting for some unkown odd reason
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    Serial.print( F( "furnace stop high temp <°C> (to turn furnace off at this or higher temperature, always persistent)" ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    Serial.print( F( "cool stop low temp <°C> (to turn A/C off at this or lower temperature, always persistent)" ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    Serial.print( F( "cool start high temp <°C> (to turn A/C on at this or higher temperature, always persistent)" ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 
     Serial.print( F( "talkback[ on/off] (or logging on/off)" ) );//(for the host system to log when each output pin gets set high or low, always persistent)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "talkback temp change[s[ on/off]] (or logging temp changes[ on/off])(requires normal talkback on)" ) );// - for the host system to log whenever the main room temperature changes, always persistent)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "report master room temp" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "power cycle (or cycle power)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 
     Serial.print( F( "read pin <pin number> (or ...pin read...)(obtain the name if any, setting and voltage)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "read pins (or pins read )(obtain the names, settings and voltages of ALL pins)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "read sens[or] <pin number> (retrieves sensor reading, a period with due care in place of pin number for all pins)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "set pin [to] output <pin number> (or ...pin set)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "set pin [to] input <pin number> [pers] (or ...pin set...) optional persistence FUTURE" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "set pin [to] input with pullup <pin number> [pers] (or ...pin set...) optional persistence FUTURE" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "set pin [to] low <pin number> [pers] (or ...pin set...)(only allowed to pins assigned as output) optional persistence FUTURE" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "set pin [to] high <pin number> [pers] (or ...pin set...)(only allowed to pins assigned as output) optional persistence FUTURE" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 
     Serial.print( F( "ch[ange] pers[istent memory] <address> <value> (changes EEPROM, see source code for addresses of data)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "ch[ange] pers[istent memory] <StartingAddress> \"<character string>[\"[ 0]] (store character string in EEPROM as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>] (views EEPROM)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 #ifndef __LGT8FX8E__
     Serial.print( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );//Wemo XI does not have enough memory for this
 #else
     Serial.print( F( "vi[ew] fact[ory defaults] not available with this board due to lack of memory space" ) );//Wemo XI does not have enough memory for this
 #endif
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "reset (factory defaults: pure, simple and absolute)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "test alert (sends an alert message to host for testing purposes)" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( ".." ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 }
 
 void restore_factory_defaults()
@@ -523,15 +959,16 @@ void restore_factory_defaults()
     if( factory_setting_logging_setting ) Serial.print( F( "n" ) );
     else Serial.print( F( "ff" ) );
     Serial.print( F( ", logging temp changes o" ) );
-    if( factory_setting_logging_temp_changes_setting ) Serial.print( F( "n" ) );
-    else Serial.print( F( "ff" ) );
-    Serial.print( F( ", lower furnace temp=" ) );
+    if( factory_setting_logging_temp_changes_setting ) Serial.print( F( "n, " ) );
+    else Serial.print( F( "ff, " ) );
+    printCstring( ( unsigned long ) &furnaceStartLowTemp );
+    Serial.print( F( "=" ) );
     Serial.print( factory_setting_lower_furnace_temp_floated, 1 );
-    Serial.print( F( ", upper furnace temp=" ) );
+    Serial.print( F( ", furnace stop high temp=" ) );
     Serial.print( factory_setting_upper_furnace_temp_floated, 1 );
-    Serial.print( F( ", lower cool temp=" ) );
+    Serial.print( F( ", cool stop low temp=" ) );
     Serial.print( factory_setting_lower_cool_temp_floated, 1 );
-    Serial.print( F( ", upper cool temp=" ) );
+    Serial.print( F( ", cool start high temp=" ) );
     Serial.print( factory_setting_upper_cool_temp_floated, 1 );
     Serial.print( F( ", furnace mode=" ) );
 #ifndef __LGT8FX8E__
@@ -545,7 +982,14 @@ void restore_factory_defaults()
     else if( factory_setting_thermostat_mode == 'c' )
         Serial.print( F( "cool" ) );
 
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 #ifndef __LGT8FX8E__
     EEPROM.update( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );//2 );
 #else
@@ -633,9 +1077,23 @@ void restore_factory_defaults()
 #endif
 //    EEPROM.update( 1, ( u8 )( ( ( NUM_DIGITAL_PINS + 1 ) * 3 ) >> 8 ) );//Tattoo the board
 //    EEPROM.update( EEPROMlength - 4, 114 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Done. Allowing you time to unplug the Arduino if desired." ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     //EEPROM.update( EEPROMlength - 5, 3 );//not used for now, forgot what the 3 means.  Mode or ID of some sort?
 //Location 1 should contain  MSB of the EEPROM address that contains the value of ( NUM_DIGITAL_PINS + 1 ) * 3 )
     delay( 10000 );
@@ -647,7 +1105,14 @@ void print_factory_defaults()
     Serial.print( F( "Version: " ) );
     Serial.print( F( VERSION ) );
     Serial.print( F( " Factory defaults:" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 #ifdef __LGT8FX8E__
     Serial.print( F( "Operating mode (heating/cooling/off) = " ) );
 #else
@@ -661,58 +1126,181 @@ void print_factory_defaults()
         Serial.print( F( "heat" ) );
     else if( factory_setting_thermostat_mode == 'c' )
         Serial.print( F( "cool" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Fan mode = " ) );
     if( factory_setting_fan_mode == 'a' ) Serial.print( F( "auto" ) );
     else if( factory_setting_fan_mode == 'o' ) Serial.print( F( "on" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "lower_furnace_temp = " ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    printCstring( ( unsigned long )&furnaceStartLowTemp );
+    Serial.print( F( " = " ) );
     Serial.print( factory_setting_lower_furnace_temp_floated, 1 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "upper_furnace_temp = " ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    printCstring( ( unsigned long )&furnaceStopHighTemp );
+    Serial.print( F( " = " ) );
     Serial.print( factory_setting_upper_furnace_temp_floated, 1 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "upper_cool_temp = " ) );
-    Serial.print( factory_setting_upper_cool_temp_floated, 1 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( F( "lower_cool_temp = " ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    printCstring( ( unsigned long )&coolStopLowTemp );
+    Serial.print( F( " = " ) );
     Serial.print( factory_setting_lower_cool_temp_floated, 1 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    printCstring( ( unsigned long )&coolStartHighTemp );
+    Serial.print( F( " = " ) );
+    Serial.print( factory_setting_upper_cool_temp_floated, 1 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Talkback for logging o" ) );
     if( factory_setting_logging_setting ) Serial.print( F( "n" ) );
     else   Serial.print( F( "ff" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "Talkback for logging temp changes is turned o" ) );
     if( factory_setting_logging_temp_changes_setting ) Serial.print( F( "n" ) );
     else  Serial.print( F( "ff" ) );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "primary_temp_sensor_pin = " ) );
     Serial.print( factory_setting_primary_temp_sensor_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "secondary_temp_sensor_pin = " ) );
     Serial.print( factory_setting_secondary_temp_sensor_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "outdoor_temp_sensor1_pin = " ) );
     Serial.print( factory_setting_outdoor_temp_sensor1_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "outdoor_temp_sensor_pin = " ) );
     Serial.print( factory_setting_outdoor_temp_sensor2_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "furnace_pin = " ) );
     Serial.print( factory_setting_furnace_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "furnace_fan_pin = " ) );
     Serial.print( factory_setting_furnace_fan_pin );
     Serial.print( F( "cool_pin = " ) );
     Serial.print( factory_setting_cool_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "automation system power_cycle_pin = " ) );
     Serial.print( factory_setting_power_cycle_pin );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     Serial.print( F( "LED_BUILTIN pin = " ) );
     Serial.print( LED_BUILTIN );
-    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 }
 
 void setup()
@@ -732,9 +1320,23 @@ void setup()
     if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
     {
         while ( !Serial ); // wait for serial port to connect. Needed for Leonardo's native USB
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
         Serial.print( F( "Detected first time run so initializing to factory default pin names, power-up states and thermostat assignments.  Please wait..." ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     
        restore_factory_defaults();
     }
@@ -909,11 +1511,18 @@ void check_for_serial_input( char result )
               Serial.print( power_cycle_pin );
               Serial.print( F( " = " ) );
               Serial.print( digitalRead( power_cycle_pin ) );
-              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
           }
           strFull[ 0 ] = 0;
-        }
-        else if( strstr( strFull, "set lower furnace temp" ) )
+        }//                        
+        else if( strstr( strFull, furnaceStartLowTemp ) )//change to furnace low start temp with optional numeric: furnace high stop temp, cool low stop temp, cool high start temp
         {
            if( IsValidTemp( number_specified_str, true ) )
            {
@@ -928,22 +1537,38 @@ void check_for_serial_input( char result )
                 EEPROM.write( lower_furnace_temp_address, ( u8 )temp_specified_shorted_times_ten );
                 EEPROM.write( lower_furnace_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
 #endif
-                    if( logging )
-                    {
-                        Serial.print( F( "Lower furnace temp now " ) );
-                        Serial.print( temp_specified_floated, 1 );
-                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                    }
               }
               else 
               {
-                Serial.print( F( "Upper furnace temp too low for this value. Raise that before trying this value" ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                Serial.print( furnaceStopHighTemp );
+                Serial.print( F( " too low for this value. Raise that before trying this value" ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
               }
             }
+            if( logging )
+            {
+                Serial.print( furnaceStartLowTemp );
+                Serial.print( F( " now " ) );
+                Serial.print( lower_furnace_temp_floated, 1 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+            }
             strFull[ 0 ] = 0;
-        }
-        else if( strstr( strFull, "set upper furnace temp" ) )
+        }//                        
+        else if( strstr( strFull, furnaceStopHighTemp ) )
         {
            if( IsValidTemp( number_specified_str, true ) )
            {
@@ -958,22 +1583,38 @@ void check_for_serial_input( char result )
                 EEPROM.write( upper_furnace_temp_address, ( u8 )temp_specified_shorted_times_ten );
                 EEPROM.write( upper_furnace_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
 #endif
-                    if( logging )
-                    {
-                        Serial.print( F( "Upper furnace temp now " ) );
-                        Serial.print( temp_specified_floated, 1 );
-                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                    }
               }
               else 
               {
-                Serial.print( F( "Lower furnace temp too high for this value. Lower that before trying this value" ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                Serial.print( furnaceStartLowTemp );
+                Serial.print( F( " too high for this value. Lower that before trying this value" ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
               }
            }
+            if( logging )
+            {
+                Serial.print( furnaceStopHighTemp );
+                Serial.print( F( " now " ) );
+                Serial.print( upper_furnace_temp_floated, 1 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+            }
            strFull[ 0 ] = 0;
-        }
-        else if( strstr( strFull, "set lower cool temp" ) )
+        }//                        
+        else if( strstr( strFull, coolStopLowTemp ) )
         {
            if( IsValidTemp( number_specified_str, false ) )
            {
@@ -987,22 +1628,38 @@ void check_for_serial_input( char result )
                 EEPROM.write( lower_cool_temp_address, ( u8 )temp_specified_shorted_times_ten );
                 EEPROM.write( lower_cool_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
 #endif
-                    if( logging )
-                    {
-                        Serial.print( F( "Lower cool temp now " ) );
-                        Serial.print( temp_specified_floated, 1 );
-                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                    }
               }
               else 
               {
-                Serial.print( F( "Upper cool temp too low for this value. Raise that before trying this value" ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                Serial.print( coolStartHighTemp );
+                Serial.print( F( " too low for this value. Raise that before trying this value" ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
               }
            }
+            if( logging )
+            {
+                Serial.print( coolStopLowTemp );
+                Serial.print( F( " now " ) );
+                Serial.print( lower_cool_temp_floated, 1 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+            }
            strFull[ 0 ] = 0;
-        }
-        else if( strstr( strFull, "set upper cool temp" ) )
+        }//                        
+        else if( strstr( strFull, coolStartHighTemp ) )
         {
            if( IsValidTemp( number_specified_str, false ) )
            {
@@ -1016,19 +1673,35 @@ void check_for_serial_input( char result )
                 EEPROM.write( upper_cool_temp_address, ( u8 )temp_specified_shorted_times_ten );
                 EEPROM.write( upper_cool_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
 #endif
-                    if( logging )
-                    {
-                        Serial.print( F( "Upper cool temp now " ) );
-                        Serial.print( temp_specified_floated, 1 );
-                        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-                    }
               }
               else 
               {
-                Serial.print( F( "Lower furnace temp too high for this value. Lower that before trying this value" ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+                Serial.print( coolStopLowTemp );
+                Serial.print( F( " too high for this value. Lower that before trying this value" ) );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
               }
            }
+            if( logging )
+            {
+                Serial.print( coolStartHighTemp );
+                Serial.print( F( " now " ) );
+                Serial.print( upper_cool_temp_floated, 1 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+            }
            strFull[ 0 ] = 0;
         }
         else if( strstr( strFull, "report master room temp" ) )
@@ -1037,28 +1710,84 @@ void check_for_serial_input( char result )
            {
                Serial.print( F( "Humidity (%): " ) );
                Serial.print( _HumidityPercent, 1 );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                Serial.print( F( "Temperature (°C): " ) );
                Serial.print( _TemperatureCelsius, 1 );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                Serial.print( F( "Temp heat is set to start: " ) );
                Serial.print( lower_furnace_temp_floated, 1 );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                Serial.print( F( "Temp heat is set to stop: " ) );
                Serial.print( upper_furnace_temp_floated, 1 );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                Serial.print( F( "Temp cool is set to stop: " ) );
                Serial.print( lower_cool_temp_floated, 1 );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                Serial.print( F( "Temp cool is set to start: " ) );
                Serial.print( upper_cool_temp_floated, 1 );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                Serial.print( F( "Furnace: " ) );
                Serial.print( digitalRead( furnace_pin ) );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                Serial.print( F( "Furnace fan: " ) );
                Serial.print( digitalRead( furnace_fan_pin ) );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                Serial.print( F( "Cool: " ) );
                Serial.print( digitalRead( cool_pin ) );
            }
@@ -1066,7 +1795,14 @@ void check_for_serial_input( char result )
            {
                 Serial.print( F( "Sensor didn't read" ) );
            }
-           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
             strFull[ 0 ] = 0;
         }
         else if( strstr( strFull, "read pin" ) || strstr( strFull, "pin read" ) )
@@ -1082,7 +1818,14 @@ void check_for_serial_input( char result )
                      if( isanoutput( pin_specified, false ) ) Serial.print( F( ": output & logic " ) );
                      else Serial.print( F( ": input & logic " ) );
                      Serial.print( digitalRead( pin_specified ) );
-                      Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
@@ -1115,7 +1858,14 @@ void check_for_serial_input( char result )
                                     Serial.print( pin_specified );
                                     Serial.print( F( " skipped" ) ); //not to time stamp
                                 }
-                                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                              }
                         }
                   }
@@ -1151,7 +1901,14 @@ void check_for_serial_input( char result )
                                     Serial.print( pin_specified );
                                     Serial.print( F( " skipped" ) );
                                 }
-                                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                              }
                         }
                   }
@@ -1202,7 +1959,14 @@ void check_for_serial_input( char result )
                                 Serial.print( pin_specified );
                                 Serial.print( F( " skipped" ) );
                             }
-                            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                         }
                    }
                    else illegal_attempt_SERIAL_PORT_HARDWARE(); 
@@ -1231,7 +1995,14 @@ doneWithPinOutput:;
                                     Serial.print( pin_specified );
                                     Serial.print( F( " skipped" ) );
                                 }
-                                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                              }
                           }
                     }
@@ -1267,7 +2038,14 @@ doneWithPinOutput:;
                                     Serial.print( pin_specified );
                                     Serial.print( F( " skipped" ) );
                                 }
-                                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                          }
                       }
                    }
@@ -1314,7 +2092,14 @@ showThermostatSetting:;
            else if( strFull[ charat ] == 'h' ) Serial.print( F( "heat" ) );
            else if( strFull[ charat ] == 'c' ) Serial.print( F( "cool" ) );
            else { Serial.print( F( "<fault>. No change made" ) ); goto after_change_thermostat; } //Making extra sure that no invalid mode gets saved
-           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
            thermostat = strFull[ charat ];
             timer_alert_furnace_sent = 0;           
 #ifndef __LGT8FX8E__
@@ -1334,7 +2119,14 @@ after_change_thermostat:
 #else
                 Serial.print( F( "Valid options lower case o, h, or c (off, heat, and cool)" ) );
 #endif
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
             }
             Serial.print( F( "Thermostat is " ) );
 #ifndef __LGT8FX8E__
@@ -1343,7 +2135,14 @@ after_change_thermostat:
             if( thermostat == 'o' ) Serial.print( F( "off" ) );
             else if( thermostat == 'h' ) Serial.print( F( "heat" ) );
             else if( thermostat == 'c' ) Serial.print( F( "cool" ) );
-            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
            strFull[ 0 ] = 0;
         }
         else if( strstr( strFull, "fan a" ) || strstr( strFull, "fan o" ) )
@@ -1352,7 +2151,14 @@ after_change_thermostat:
            int charat = strstr( strFull, "fan " ) - strFull + 4;
            if( strFull[ charat ] == 'a' ) Serial.print( F( "auto" ) );
            else Serial.print( F( "on" ) );
-           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
            fan_mode = strFull[ charat ];
            if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
            else digitalWrite( furnace_fan_pin, LOW );
@@ -1373,12 +2179,26 @@ after_change_fan:
 #else
                 Serial.print( F( "The only valid characters allowed after that space are the options lower case a or o (auto/on or may be spelled out)" ) );
 #endif
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
             }
             Serial.print( F( "Fan is " ) );
             if( fan_mode == 'a' ) Serial.print( F( "auto" ) );
             else if( fan_mode == 'o' ) Serial.print( F( "on" ) );
-            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
            strFull[ 0 ] = 0;
         }
         else if( strstr( strFull, "logging temp ch o" ) )
@@ -1394,7 +2214,14 @@ after_change_fan:
 #endif
            if( logging_temp_changes ) Serial.print( strFull[ charat ] );
            else  Serial.print( F( "ff" ) );
-           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
            strFull[ 0 ] = 0;
         }
         else if( strstr( strFull, "logging temp ch" ) )
@@ -1402,7 +2229,14 @@ after_change_fan:
            Serial.print( F( "Talkback for logging temp changes is turned o" ) );
            if( logging_temp_changes ) Serial.print( F( "n" ) );
            else  Serial.print( F( "ff" ) );
-           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
            strFull[ 0 ] = 0;
         }
         else if( strstr( strFull, "logging o" ) )
@@ -1418,7 +2252,14 @@ after_change_fan:
 #endif
            if( logging ) Serial.print( strFull[ charat ] );
            else  Serial.print( F( "ff" ) );
-           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
            strFull[ 0 ] = 0;
         }
         else if( strstr( strFull, "logging" ) )
@@ -1430,7 +2271,14 @@ after_change_fan:
            Serial.print( logging_address );
            Serial.print( F( " shows " ) );
            Serial.print( ( bool )EEPROM.read( logging_address ) );
-           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
            strFull[ 0 ] = 0;
         }
         else if( strstr( strFull, "vi pers" ) )
@@ -1443,7 +2291,14 @@ after_change_fan:
           {
             Serial.print( F( "Out of range.  Each address can only be 0 to " ) );
             Serial.print( EEPROMlength - 1 );
-            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
           }
           else
           {
@@ -1451,7 +2306,14 @@ after_change_fan:
              Serial.print( address_start );
              Serial.print( F( " End address: " ) );
              Serial.print( address_end );
-             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
              if( address_start > address_end )
              {
                 // swap the two addresses:
@@ -1473,7 +2335,14 @@ after_change_fan:
                Serial.print( data );
                Serial.print( F( "  " ) );
                Serial.print( ( char )EEPROM.read( address ) );
-               Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
              }
           }
            strFull[ 0 ] = 0;
@@ -1495,9 +2364,23 @@ after_change_fan:
                for( unsigned int address = address_start; address <= address_end; address++ )
                {
                 Serial.print( address_end-address );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                 Serial.print( sizeof( data_str )- ( address_end-address )- 3 );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                  if( data_str[sizeof( data_str )- ( address_end-address )] != '\"' )
                  {
                     Serial.print( F( "Address: " ) );
@@ -1513,7 +2396,14 @@ after_change_fan:
 #endif
                     Serial.print( F( " newly stored data: " ) );
                     Serial.print( EEPROM.read( address ) );
-                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                   }
                   else
                   {
@@ -1523,7 +2413,14 @@ after_change_fan:
                         {
                            Serial.print( F( "Putting a null termination at Address: " ) );
                            Serial.print( ++address );
-                           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
 #ifndef __LGT8FX8E__
                            EEPROM.update( address, 0 );
 #else
@@ -1537,7 +2434,14 @@ after_change_fan:
                 else
                 {
                 Serial.print( F( "Data string too long to fit there in EEPROM." ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                 strFull[ 0 ] = 0;
                 return;
                 }
@@ -1546,7 +2450,14 @@ after_change_fan:
               else
               {
                 Serial.print( F( "Invalid data entered" ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                 strFull[ 0 ] = 0;
 //                return false;
                 return;
@@ -1557,7 +2468,14 @@ after_change_fan:
             Serial.print( F( "Address can only be 0 to " ) );
             Serial.print( EEPROMlength - 1 );
             Serial.print( F( ", data can only be 0 to 255" ) );
-            Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
           }
           else
           {
@@ -1574,7 +2492,14 @@ after_change_fan:
 #endif
               Serial.print( F( " newly stored data: " ) );
               Serial.print( EEPROM.read( address ) );
-              Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
           }
            strFull[ 0 ] = 0;
         }
@@ -1593,7 +2518,14 @@ after_change_fan:
         else if( strstr( strFull, "test alert" ) )
         {
            Serial.print( F( "time_stamp_this ALERT test as requested" ) );
-           Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
            strFull[ 0 ] = 0;
         }
         else if( strstr( strFull, "sens read" ) || strstr( strFull, "read sens" ) )
@@ -1625,7 +2557,14 @@ after_change_fan:
                  else if( noInterrupt_result->Type == TYPE_KNOWN_DHT22 ) Serial.print( F( "KNOWN_DHT22" ) );
                  else if( noInterrupt_result->Type == TYPE_LIKELY_DHT11 ) Serial.print( F( "LIKELY_DHT11" ) );
                  else if( noInterrupt_result->Type == TYPE_LIKELY_DHT22 ) Serial.print( F( "LIKELY_DHT22" ) );
-                 Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                  if( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) break;
              }
            }
@@ -1635,11 +2574,32 @@ after_change_fan:
         {
           if( !strstr( strFull, "help" ) )
           {
-             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
              Serial.print( strFull );
              Serial.print( F( ": not a valid command, note they are cAsE sEnSiTiVe" ) );
-             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
-             Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
           }
           printBasicInfo();
           strFull[ 0 ] = 0;
@@ -1670,7 +2630,14 @@ void furnace_on_loop()
                 Serial.print( furnace_pin );
                 Serial.print( F( ")" ) );
 */
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
               }
               setFurnaceEffectivenessTime();
           }
@@ -1691,7 +2658,14 @@ void furnace_on_loop()
                     Serial.print( furnace_pin );
                     Serial.print( F( ")" ) );
 */
-                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                 }
            }
        else if( !timer_alert_furnace_sent && furnace_started_temp_x_3 > last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )
@@ -1712,7 +2686,14 @@ sendAlert:;
                 Serial.print( F( "time_stamp_this ALERT Furnace not heating after allowing " ) );                          //  which is a millis() value to alert at if no heating happened yet
                 Serial.print( ( u8 )( minutes_furnace_should_be_effective_after + ( ( millis() - check_furnace_effectiveness_time ) / 60000 ) ) ); //minutes_furnace_should_be_effective_after is a const of a number of minutes
                 Serial.print( F( " minutes" ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                 timer_alert_furnace_sent = loop_cycles_to_skip_between_alert_outputs;
                 if( !timer_alert_furnace_sent )
                     timer_alert_furnace_sent = 1;
@@ -1747,7 +2728,14 @@ void cool_on_loop()
                 Serial.print( furnace_pin );
                 Serial.print( F( ")" ) );
 */
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
               }
           }
    }
@@ -1766,7 +2754,14 @@ void cool_on_loop()
                     Serial.print( cool_pin );
                     Serial.print( F( ")" ) );
 */
-                    Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
                 }
            }
    }
@@ -1803,7 +2798,14 @@ else fresh_powerup = false;
                 if( noInterrupt_result == &DHTfunctionResultsArray[ primary_temp_sensor_pin - 1 ] ) Serial.print( F( "prim" ) );
                 else Serial.print( F( "second" ) );
                 Serial.print( F( "ary sensor" ) );
-                Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
             }
             old_getCelsius_temp = last_three_temps[ last_three_temps_index ];
         }
@@ -1874,7 +2876,14 @@ else fresh_powerup = false;
         Serial.print( F( "time_stamp_this " ) );
         if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );//These ALERT prefixes get added after consecutive 100 timeout fails
         Serial.print( F( "Temperature sensor TIMEOUT error" ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     }
 /*
     if( furnace_state != digitalRead( furnace_pin ) || cool_state != digitalRead( cool_pin ) )
@@ -1884,7 +2893,14 @@ else fresh_powerup = false;
         if( furnace_state != digitalRead( furnace_pin ) ) Serial.print( F( "Furnace " ) );
         else Serial.print( F( "A/C " ) );
         Serial.print( F( "pin of thermostat shorted" ) );
-        Serial.print( ( char )10 );if( mswindows ) Serial.print( ( char )13 );
+    Serial.print( ( char )10 ); 
+#ifdef RUNTIMELINEFEEDDETECT 
+    if( mswindows ) Serial.print( ( char )13 ); 
+#else
+    #ifdef MSWINDOWS
+        Serial.print( ( char )13 ); 
+    #endif
+#endif
     }
     else if( cool_state != digitalRead( cool_pin ) )
     {
