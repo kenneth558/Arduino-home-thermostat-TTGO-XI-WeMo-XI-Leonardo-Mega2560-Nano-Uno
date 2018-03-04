@@ -19,7 +19,6 @@ This sketch is also a wrapper to allow the host computer to read and control the
 -  Etc., etc.!  See the help screen for details.
 
 TTGO XI/WeMo XI NOTE:  This board trades flash to simulate EEPROM at a cost of 2 to 1.  This sketch assumes your compiler EEPROM command line settings are set for 1K EEPROM.  That is the minimum block size of EEPROM the board allows.  Any more EEPROM by the compiler and this sketch will not fit.  Fortunately for me, my default compiler settings were correct to this requirement, otherwise I wouldn't know how to change them back to what they are.
-    The XI boards lack sufficient flash memory space for the "auto" thermostat mode.
 
 IMPORTANT SAFETY NOTE - Proper electrical isolation by relay or opto-isolation must be observed whenever connecting to building electrical or furnace controls or other electrical equipment.
 
