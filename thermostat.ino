@@ -627,9 +627,9 @@ void restore_factory_defaults()
     EEPROM.write( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );//2 );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor2_pin );//2 );
+    EEPROM.update( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );//2 );
 #else
-    EEPROM.write( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor2_pin );//2 );
+    EEPROM.write( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );//2 );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.put( 0, ( NUM_DIGITAL_PINS + 1 ) * 3 );//Tattoo the board
