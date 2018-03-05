@@ -1779,6 +1779,9 @@ else fresh_powerup = false;
         if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );//These ALERT prefixes get added after consecutive 100 timeout fails
         Serial.println( F( "Temperature sensor TIMEOUT error" ) );
     }
-    check_for_serial_input( noInterrupt_result->ErrorCode );
-    delay( 2000 );
+    for( u8 i = 0; i < 4; i++ )
+    {
+        check_for_serial_input( noInterrupt_result->ErrorCode );
+        delay( 500 );
+    }
 }
