@@ -13,7 +13,7 @@
  * 
  *        https://github.com/wemos/Arduino_XI  for the IDE support for TTGO XI/WeMo XI
  * 
- * 
+ *      Standard furnace nomenclature can be somewhat disoriting
  * 
  *************************************************************************************************************************/
 #define VERSION "0.0.0045"
@@ -41,8 +41,8 @@
 //  The following are addresses in EEPROM of values that need to be persistent across power outages.
 //The first two address locations in EEPROM store a tatoo used to ensure EEPROM contents are valid for this sketch
 u8 primary_temp_sensor_address = 2;
-u8 furnace_pin_address = 3;
-u8 furnace_fan_pin_address = 4;
+u8 heat_pin_address = 3;
+u8 furnace_blower_pin_address = 4;
 u8 power_cycle_address = 5;
 u8 thermostat_mode_address = 6;
 u8 fan_mode_address = 7;
@@ -51,6 +51,7 @@ u8 cool_pin_address = 9;
 u8 outdoor_temp_sensor1_address = 10;
 u8 outdoor_temp_sensor2_address = 11;
 
+//Commonly available TTGO XI/WeMo XI EEPROM library has only .read() and .write() methods.
 #ifndef __LGT8FX8E__
     u16 EEPROMlength = EEPROM.length();
 #else
@@ -59,10 +60,21 @@ u8 outdoor_temp_sensor2_address = 11;
 #ifndef SERIAL_PORT_HARDWARE
     u8 SERIAL_PORT_HARDWARE = 0;
 #endif
+
+#define NO_BOUNDS_CHECK 0
+#define HEAT_TEMP_BOUNDS_CHECK 1
+#define COOL_TEMP_BOUNDS_CHECK 2
+
+#define HEAT_UPPER_BOUNDS 27
+#define HEAT_LOWER_BOUNDS 10
+#define COOL_UPPER_BOUNDS 32
+#define COOL_LOWER_BOUNDS 15
+#define NO_TEMP_ENTERED 2
+
 unsigned int logging_address = EEPROMlength - sizeof( boolean );
-unsigned int upper_furnace_temp_address = logging_address - sizeof( short );//EEPROMlength - 2;
-unsigned int lower_furnace_temp_address = upper_furnace_temp_address - sizeof( short );//EEPROMlength - 3;
-unsigned int logging_temp_changes_address = lower_furnace_temp_address - sizeof( boolean );//EEPROMlength - 4;
+unsigned int upper_heat_temp_address = logging_address - sizeof( short );//EEPROMlength - 2;
+unsigned int lower_heat_temp_address = upper_heat_temp_address - sizeof( short );//EEPROMlength - 3;
+unsigned int logging_temp_changes_address = lower_heat_temp_address - sizeof( boolean );//EEPROMlength - 4;
 unsigned int upper_cool_temp_address = logging_temp_changes_address - sizeof( short );
 unsigned int lower_cool_temp_address = upper_cool_temp_address - sizeof( short );
 
@@ -70,20 +82,20 @@ unsigned int lower_cool_temp_address = upper_cool_temp_address - sizeof( short )
 //in case of boards that have more than 24 pins ( three virtual 8-bit ports )
 //int number_of_ports_that_present_pins = EEPROM.read( EEPROMlength - 5 );  // may never need this
 
-// main temperature sensor, furnace, auxiliary furnace device, system power cycle, porch light, dining room coffee outlet
+// main temperature sensor, heat, auxiliary heat device, system power cycle, porch light, dining room coffee outlet
 //  The following values need to be stored persistent through power outages.  Sadly, the __LGT8FX8E__ will not read EEPROM until the setup() loop starts executing, so these values get set there for all boards for simplicity
 u8 primary_temp_sensor_pin;// = EEPROM.read( primary_temp_sensor_address ); 
 u8 secondary_temp_sensor_pin;// = EEPROM.read( secondary_temp_sensor_address ); 
-u8 furnace_pin;// = EEPROM.read( furnace_pin_address );
+u8 heat_pin;// = EEPROM.read( heat_pin_address );
 u8 cool_pin;// = EEPROM.read( cool_pin_address );
-u8 furnace_fan_pin;// = EEPROM.read( furnace_fan_pin_address );
+u8 furnace_blower_pin;// = EEPROM.read( furnace_blower_pin_address );
 u8 power_cycle_pin;// = EEPROM.read( power_cycle_address );
 u8 outdoor_temp_sensor1_pin;
 u8 outdoor_temp_sensor2_pin;
 boolean logging;// = ( boolean )EEPROM.read( logging_address );
 boolean logging_temp_changes;// = ( boolean )EEPROM.read( logging_temp_changes_address );
-float lower_furnace_temp_floated;//filled in setup
-float upper_furnace_temp_floated;
+float lower_heat_temp_floated;//filled in setup
+float upper_heat_temp_floated;
 float upper_cool_temp_floated;
 float lower_cool_temp_floated;
 char thermostat_mode;// = ( char )EEPROM.read( thermostat_mode_address );
@@ -92,36 +104,32 @@ char fan_mode;// = ( char )EEPROM.read( fan_mode_address );//a';//Can be either 
 char strFull[ ] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, \
                    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 float last_three_temps[] = { -100, -101, -102 };
-float furnace_started_temp_x_3 = last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ];
+float heat_started_temp_x_3 = last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ];
 u8 pin_specified;
 float temp_specified_floated;
 boolean fresh_powerup = true;
 long unsigned timer_alert_furnace_sent = 0;
 const u8 factory_setting_primary_temp_sensor_pin PROGMEM = 2;
-const u8 PROGMEM factory_setting_furnace_pin PROGMEM = 3;
-const u8 PROGMEM factory_setting_furnace_fan_pin PROGMEM = 4;
+const u8 PROGMEM factory_setting_heat_pin PROGMEM = 3;
+const u8 PROGMEM factory_setting_furnace_blower_pin PROGMEM = 4;
 const u8 PROGMEM factory_setting_power_cycle_pin PROGMEM = 5;
 const u8 PROGMEM factory_setting_cool_pin PROGMEM = 9;
 const bool PROGMEM factory_setting_logging_setting PROGMEM = true;
 const bool PROGMEM factory_setting_logging_temp_changes_setting PROGMEM = true;
-#ifndef __LGT8FX8E__
 const char PROGMEM factory_setting_thermostat_mode PROGMEM = 'a';
-#else
-const char PROGMEM factory_setting_thermostat_mode PROGMEM = 'h';
-#endif
 const char factory_setting_fan_mode PROGMEM = 'a';
-const float factory_setting_lower_furnace_temp_floated PROGMEM = 21.3;
-const float factory_setting_upper_furnace_temp_floated PROGMEM = 22.4;
-const float factory_setting_lower_cool_temp_floated PROGMEM = 22.4;
-const float factory_setting_upper_cool_temp_floated PROGMEM = 22.7;
+const float factory_setting_lower_heat_temp_floated PROGMEM = 22.4;
+const float factory_setting_upper_heat_temp_floated PROGMEM = 23;
+const float factory_setting_lower_cool_temp_floated PROGMEM = 21.5;
+const float factory_setting_upper_cool_temp_floated PROGMEM = 22.1;
 const u8 factory_setting_secondary_temp_sensor_pin PROGMEM = 8;
 const u8 factory_setting_outdoor_temp_sensor1_pin PROGMEM = 10;
 const u8 factory_setting_outdoor_temp_sensor2_pin PROGMEM = 11;
 const float minutes_furnace_should_be_effective_after PROGMEM = 5.5; //Can be decimal this way
 const unsigned long loop_cycles_to_skip_between_alert_outputs PROGMEM = 5 * 60 * 30;//estimating 5 loops per second, 60 seconds per minute, 30 minutes per alert
 
-const char str_furnaceStartLowTemp[] PROGMEM = "furnace start low temp";
-const char str_furnaceStopHighTemp[] PROGMEM = "furnace stop high temp";
+const char str_heatStartLowTemp[] PROGMEM = "heat start low temp";
+const char str_heatStopHighTemp[] PROGMEM = "heat stop high temp";
 const char str_coolStopLowTemp[] PROGMEM = "cool stop low temp";
 const char str_coolStartHighTemp[] PROGMEM = "cool start high temp";
 const char str_talkback[] PROGMEM = "talkback";
@@ -139,6 +147,9 @@ const char str_persistent_memory[] PROGMEM = "persistent memory";
 const char str_changes[] PROGMEM = "changes";
 const char str_change[] PROGMEM = "change";
 const char str_thermostat[] PROGMEM = "thermostat";
+//FUTURE const char str_heat_temps[] PROGMEM = "heat temps";
+//FUTURE const char str_cool_temps[] PROGMEM = "cool temps";
+//FUTURE const char str_all_temps[] PROGMEM = "all temps";
 const char str_fan_auto[] PROGMEM = "fan auto";
 const char str_fan_on[] PROGMEM = "fan on";
 const char str_factory[] PROGMEM = "factory";
@@ -178,10 +189,17 @@ const char str_sens_read[] PROGMEM = "sens read";
 const char str_read_sens[] PROGMEM = "read sens";
 const char str_help[] PROGMEM = "help";
 char *string_to_match;
-bool furnace_state = false;
+bool heat_state = false;
 bool cool_state = false;
-long unsigned check_furnace_effectiveness_time = 0;
-bool millis_overflowed = false;
+long unsigned check_furnace_effectiveness_time;
+//bool millis_overflowed = false;
+
+#ifdef __LGT8FX8E__
+void EEPROMupdate ( unsigned long address, u8 val )
+{
+    if( EEPROM.read( address ) != val ) EEPROM.write( address, val );
+}
+#endif
 
 void printThermoModeWord( char setting_char, bool newline )
 {
@@ -196,7 +214,7 @@ void printThermoModeWord( char setting_char, bool newline )
         setting = str_cool;
 //    else return false;
 //    setting = str_auto;
-    Serial.print( (const __FlashStringHelper *)setting );
+    Serial.print( ( const __FlashStringHelper * )setting );
     if( newline ) Serial.println();
 }
 
@@ -211,7 +229,7 @@ void printThermoModeWord( long unsigned var_with_setting, bool newline )
     else if( thermostat_mode == 'c' )
         var_with_setting = ( long unsigned )str_cool;
 //    else return false;
-    Serial.print( (const __FlashStringHelper *)var_with_setting );
+    Serial.print( ( const __FlashStringHelper * )var_with_setting );
     if( newline ) Serial.println();
 }
 
@@ -227,56 +245,43 @@ void refusedNo_exclamation() //putting this in a function for just 2 calls saves
 
 void setFurnaceEffectivenessTime()
 {
-    check_furnace_effectiveness_time = millis() + ( minutes_furnace_should_be_effective_after * 60000 );  //Will this become invalid if furnace temp setting gets adjusted?  TODO:  Account for that condition
-    if( !check_furnace_effectiveness_time ) check_furnace_effectiveness_time = 1;
-    if( check_furnace_effectiveness_time < minutes_furnace_should_be_effective_after * 60000 )
-    {
-        millis_overflowed = true;
-    }
-    else
-    {
-        millis_overflowed = false;
-    }
-    furnace_started_temp_x_3 = last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ];
+    check_furnace_effectiveness_time = millis();//Will this become invalid if heat temp setting gets adjusted?  TODO:  Account for that condition
+    heat_started_temp_x_3 = last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ];
 }
 
 void IfReservedPinGettingForced( bool level )
 {
-    if( pin_specified == furnace_fan_pin )
+    if( pin_specified == furnace_blower_pin )
     {
         if( (bool )level ) fan_mode = 'a'; //high; low = 'a'
         else fan_mode = 'o'; //high; low = 'a'
 #ifndef __LGT8FX8E__
            EEPROM.update( fan_mode_address, fan_mode ); //high; low = 'a'
 #else
-           EEPROM.write( fan_mode_address, fan_mode ); //high; low = 'a'
+            EEPROMupdate( fan_mode_address, fan_mode );
 #endif
     }
-    else if( pin_specified == furnace_pin )
+    else if( pin_specified == heat_pin )
     {
         timer_alert_furnace_sent = 0;
-        if( !level )
-        {
-            check_furnace_effectiveness_time = 0;
-        }
-        else
+        if( level )
         {
             setFurnaceEffectivenessTime();
         }
-        furnace_state = ( bool ) level; //high = true; low = false
+        heat_state = ( bool ) level; //high = true; low = false
     }
     else if( pin_specified == cool_pin ) cool_state = ( bool ) level; //high; = true low = false
 }
 
 bool refuseInput()
 {
-    if( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin )
+    if( pin_specified == power_cycle_pin || pin_specified == furnace_blower_pin || pin_specified == heat_pin || pin_specified == cool_pin )
     {
          if( logging )
          {
                 if( pin_specified == power_cycle_pin ) Serial.print( F( "Power cycling the to the host system" ) );
-                if( pin_specified == furnace_fan_pin ) Serial.print( F( "Furnace blower fan" ) );
-                if( pin_specified == furnace_pin ) Serial.print( F( "Furnace" ) );
+                if( pin_specified == furnace_blower_pin ) Serial.print( F( "Furnace blower fan" ) );
+                if( pin_specified == heat_pin ) Serial.print( F( "Furnace" ) );
                 if( pin_specified == cool_pin ) Serial.print( F( "A/C" ) );
                 Serial.print( F( ", pin " ) );
                 Serial.print( pin_specified );
@@ -351,36 +356,36 @@ if( reply )
 return false;
 }
 
-boolean IsValidTemp( const char* str, bool furnace )
+u8 IsValidTemp( const char* str, u8 boundsCheck )
 {
 //    for( unsigned int i = 0; i < str->length(); i++ )
     for( unsigned int i = 0; i < strlen( str ); i++ )
     {
-        if( !( ( isdigit( str[ i ] ) || str[ i ] == '.' ) && !( !i && str[ 0 ] == '-' ) ) || ( strchr( str, '.' ) != strrchr( str, '.' ) ) ) //allow one and only one decimal point in str
+        if( !i && str[ 0 ] == '-' );
+        else if( !( isdigit( str[ i ] ) || str[ i ] == '.' ) || ( strchr( str, '.' ) != strrchr( str, '.' ) ) ) //allow one and only one decimal point in str
         {
-            Serial.println( F( "Command must end with a temperature in Celsius" ) );
-            return false;
+            Serial.println( F( "Command must end with a Celsius value" ) );
+            return NO_TEMP_ENTERED;
         }
     }
     temp_specified_floated = ( float )atoi( str );
     if( strchr( str, '.' ) ){ str = strchr( str, '.' ) + 1; temp_specified_floated += ( ( float )atoi( str ) ) / 10; };
-//    Serial.print( F( "Temperature entered:" ) );
-//    Serial.print( temp_specified_floated );
-//    Serial.print( F( ", decimal portion of Temperature entered:" ) );
-//    Serial.println( str );
 
-    signed char upper_limit = 27;  //aspplicable for furnace only
-    signed char lower_limit = 10;  //aspplicable for furnace only
-//    signed char lower_cool_limit = 19;  set elsewhere
-    if( furnace && ( temp_specified_floated < lower_limit || temp_specified_floated > upper_limit ) )//This check should be called for the rooms where it matters
+    if( ( boundsCheck == HEAT_TEMP_BOUNDS_CHECK && ( temp_specified_floated < HEAT_LOWER_BOUNDS || temp_specified_floated > HEAT_UPPER_BOUNDS ) ) || ( boundsCheck == COOL_TEMP_BOUNDS_CHECK && ( temp_specified_floated < COOL_LOWER_BOUNDS || temp_specified_floated > COOL_UPPER_BOUNDS ) ) )//This check should be called for the rooms where it matters
     {
-        Serial.print( F( "Temperature must be Celsius " ) );
-        Serial.print( lower_limit );
-        Serial.print( F( " through " ) );
-        Serial.println( upper_limit );
-        return false;
+        Serial.print( F( "Temperature entered would exceed safety limits" ) );
+//        Serial.print( lower_limit );
+//        Serial.print( F( " through " ) );
+//        Serial.println( upper_limit );
+        return ( u8 )false;
     }
-    return true;
+/*
+    else if()
+    {
+        
+    }
+*/
+    return ( u8 )true;
 }
 
 void printBasicInfo()
@@ -405,16 +410,16 @@ void printBasicInfo()
     Serial.print( F( "Fan mode=" ) );
     if( fan_mode == 'a' ) Serial.println( F( "auto" ) );
     else if( fan_mode == 'o' ) Serial.println( F( "on" ) );
-    Serial.print( (const __FlashStringHelper *)str_furnaceStartLowTemp );
+    Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
     Serial.print( '=' );
-    Serial.println( lower_furnace_temp_floated, 1 );
-    Serial.print( (const __FlashStringHelper *)str_furnaceStopHighTemp );
+    Serial.println( lower_heat_temp_floated, 1 );
+    Serial.print( ( const __FlashStringHelper * )str_heatStopHighTemp );
     Serial.print( '=' );
-    Serial.println( upper_furnace_temp_floated, 1 );
-    Serial.print( (const __FlashStringHelper *)str_coolStopLowTemp );
+    Serial.println( upper_heat_temp_floated, 1 );
+    Serial.print( ( const __FlashStringHelper * )str_coolStopLowTemp );
     Serial.print( '=' );
     Serial.println( lower_cool_temp_floated, 1 );
-    Serial.print( (const __FlashStringHelper *)str_coolStartHighTemp );
+    Serial.print( ( const __FlashStringHelper * )str_coolStartHighTemp );
     Serial.print( '=' );
     Serial.println( upper_cool_temp_floated, 1 );
     Serial.print( F( "Talkback for logging is turned o" ) );
@@ -431,10 +436,10 @@ void printBasicInfo()
     Serial.print( outdoor_temp_sensor1_pin );
     Serial.print( F( ", " ) );
     Serial.println( outdoor_temp_sensor2_pin );
-    Serial.print( F( "furnace_, furnace_fan, cool_pins=" ) );
-    Serial.print( furnace_pin );
+    Serial.print( F( "heat_, furnace_blower_, cool_pins=" ) );
+    Serial.print( heat_pin );
     Serial.print( F( ", " ) );
-    Serial.print( furnace_fan_pin );
+    Serial.print( furnace_blower_pin );
     Serial.print( F( ", " ) );
     Serial.println( cool_pin );
     Serial.print( F( "host/aux system power_cycle_pin=" ) );
@@ -449,14 +454,19 @@ void printBasicInfo()
     Serial.println( F( "help (re-display this information)" ) );
     Serial.println( F( "ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat mode)" ) );//, auto requires outdoor sensor[s] and reverts to heat if sensor[s] fail)" ) );
     Serial.println( F( "fan[ a[uto]/ o[n]] (to read or set fan)" ) );
-    Serial.println( F( "furnace start low temp <°C> (to turn furnace on at this or lower temperature, always persistent)" ) );//not worth converting for some unkown odd reason
-    Serial.println( F( "furnace stop high temp <°C> (to turn furnace off at this or higher temperature, always persistent)" ) );
+    Serial.println( F( "heat start low temp <°C> (to turn heat on at this or lower temperature, always persistent)" ) );//not worth converting for some unkown odd reason
+    Serial.println( F( "heat stop high temp <°C> (to turn heat off at this or higher temperature, always persistent)" ) );
+//FUTURE     Serial.println( F( "heat temps <°C> (adjust both heat settings up or down)" ) );
+    
     Serial.println( F( "cool stop low temp <°C> (to turn A/C off at this or lower temperature, always persistent)" ) );
     Serial.println( F( "cool start high temp <°C> (to turn A/C on at this or higher temperature, always persistent)" ) );
+//FUTURE     Serial.println( F( "cool temps <°C> (adjust both A/C settings up or down)" ) );
+
+//FUTURE     Serial.println( F( "all temps <°C> (adjust all heat and cool settings up or down)" ) );
 
     Serial.println( F( "talkback[ on/off] (or logging on/off)" ) );//(for the host system to log when each output pin gets set high or low, always persistent)" ) );
     Serial.println( F( "talkback temp change[s[ on/off]] (or logging temp changes[ on/off])(requires normal talkback on)" ) );// - for the host system to log whenever the main room temperature changes, always persistent)" ) );
-    Serial.println( (const __FlashStringHelper *)str_report_master_room_temp );
+    Serial.println( ( const __FlashStringHelper * )str_report_master_room_temp );
     Serial.println( F( "power cycle (or cycle power)" ) );
 
     Serial.println( F( "read pin <pin number> (or ...pin read...)(obtain the name if any, setting and voltage)" ) );
@@ -481,8 +491,8 @@ void restore_factory_defaults()
 {
 /* no EEPROM updates allowed while in interrupts */
     primary_temp_sensor_pin = factory_setting_primary_temp_sensor_pin;
-    furnace_pin = factory_setting_furnace_pin;
-    furnace_fan_pin = factory_setting_furnace_fan_pin;
+    heat_pin = factory_setting_heat_pin;
+    furnace_blower_pin = factory_setting_furnace_blower_pin;
     cool_pin = factory_setting_cool_pin;
     power_cycle_pin = factory_setting_power_cycle_pin;
     logging = factory_setting_logging_setting;
@@ -494,16 +504,16 @@ void restore_factory_defaults()
     timer_alert_furnace_sent = 0;
     fan_mode = factory_setting_fan_mode;
     
-    lower_furnace_temp_floated = factory_setting_lower_furnace_temp_floated;
-    upper_furnace_temp_floated = factory_setting_upper_furnace_temp_floated;
+    lower_heat_temp_floated = factory_setting_lower_heat_temp_floated;
+    upper_heat_temp_floated = factory_setting_upper_heat_temp_floated;
     upper_cool_temp_floated = factory_setting_upper_cool_temp_floated;    
     lower_cool_temp_floated = factory_setting_lower_cool_temp_floated;    
-    if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
-    else digitalWrite( furnace_fan_pin, LOW );
+    if( fan_mode == 'o' ) digitalWrite( furnace_blower_pin, HIGH );
+    else digitalWrite( furnace_blower_pin, LOW );
     if( thermostat_mode == 'o' || thermostat_mode == 'c' )
     {
-        digitalWrite( furnace_pin, LOW );
-        furnace_state = false;
+        digitalWrite( heat_pin, LOW );
+        heat_state = false;
     }
     if( thermostat_mode == 'h' || thermostat_mode == 'o' ) 
     {
@@ -514,10 +524,10 @@ void restore_factory_defaults()
     Serial.print( factory_setting_primary_temp_sensor_pin );
     Serial.print( F( ", secondary sensor on pin " ) );
     Serial.print( factory_setting_secondary_temp_sensor_pin );
-    Serial.print( F( ", furnace controlled by pin " ) );
-    Serial.print( factory_setting_furnace_pin );
-    Serial.print( F( ", furnace fan controlled by pin " ) );
-    Serial.print( factory_setting_furnace_fan_pin );
+    Serial.print( F( ", heat controlled by pin " ) );
+    Serial.print( factory_setting_heat_pin );
+    Serial.print( F( ", furnace blower controlled by pin " ) );
+    Serial.print( factory_setting_furnace_blower_pin );
     Serial.print( F( ", cool controlled by pin " ) );
     Serial.print( factory_setting_cool_pin );
     Serial.print( F( ", outdoor sensor 1 on pin " ) );
@@ -532,16 +542,16 @@ void restore_factory_defaults()
     Serial.print( F( ", logging temp changes o" ) );
     if( factory_setting_logging_temp_changes_setting ) Serial.print( F( "n, " ) );
     else Serial.print( F( "ff, " ) );
-    Serial.print( (const __FlashStringHelper *)str_furnaceStartLowTemp );
+    Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
     Serial.print( '=' );
-    Serial.print( factory_setting_lower_furnace_temp_floated, 1 );
-    Serial.print( F( ", furnace stop high temp=" ) );
-    Serial.print( factory_setting_upper_furnace_temp_floated, 1 );
+    Serial.print( factory_setting_lower_heat_temp_floated, 1 );
+    Serial.print( F( ", heat stop high temp=" ) );
+    Serial.print( factory_setting_upper_heat_temp_floated, 1 );
     Serial.print( F( ", cool stop low temp=" ) );
     Serial.print( factory_setting_lower_cool_temp_floated, 1 );
     Serial.print( F( ", cool start high temp=" ) );
     Serial.print( factory_setting_upper_cool_temp_floated, 1 );
-    Serial.print( F( ", furnace mode=" ) );
+    Serial.print( F( ", heat mode=" ) );
     printThermoModeWord( factory_setting_thermostat_mode, true );
     Serial.print( F( ", fan mode=" ) );
     Serial.print( factory_setting_fan_mode );
@@ -559,87 +569,87 @@ void restore_factory_defaults()
 #ifndef __LGT8FX8E__
     EEPROM.update( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );//2 );
 #else
-    EEPROM.write( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );//2 );
+    EEPROMupdate( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( furnace_pin_address, factory_setting_furnace_pin );//3 );
+    EEPROM.update( heat_pin_address, factory_setting_heat_pin );//3 );
 #else
-    EEPROM.write( furnace_pin_address, factory_setting_furnace_pin );//3 );
+    EEPROMupdate( heat_pin_address, factory_setting_heat_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( furnace_fan_pin_address, factory_setting_furnace_fan_pin );//4 );
+    EEPROM.update( furnace_blower_pin_address, factory_setting_furnace_blower_pin );//4 );
 #else
-    EEPROM.write( furnace_fan_pin_address, factory_setting_furnace_fan_pin );//4 );
+    EEPROMupdate( furnace_blower_pin_address, factory_setting_furnace_blower_pin );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( power_cycle_address, factory_setting_power_cycle_pin );//5);
 #else
-    EEPROM.write( power_cycle_address, factory_setting_power_cycle_pin );//5);
+    EEPROMupdate( power_cycle_address, factory_setting_power_cycle_pin );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( logging_address, factory_setting_logging_setting );//( uint8_t )true );
 #else
-    EEPROM.write( logging_address, factory_setting_logging_setting );//( uint8_t )true );
+    EEPROMupdate( logging_address, factory_setting_logging_setting );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );//( uint8_t )true );
 #else
-    EEPROM.write( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );//( uint8_t )true );
+    EEPROMupdate( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( thermostat_mode_address, factory_setting_thermostat_mode );//'a' );
 #else
-    EEPROM.write( thermostat_mode_address, factory_setting_thermostat_mode );//'a' );
+    EEPROMupdate( thermostat_mode_address, factory_setting_thermostat_mode );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( fan_mode_address, factory_setting_fan_mode );//'a' );
 #else
-    EEPROM.write( fan_mode_address, factory_setting_fan_mode );//'a' );
+    EEPROMupdate( fan_mode_address, factory_setting_fan_mode );
 #endif
 //These two must be put's because their data types are longer than one.  Data types of length one can be either updates or puts.
-    short factory_setting_lower_furnace_temp_shorted_times_ten = ( short )( factory_setting_lower_furnace_temp_floated * 10 );
-    short factory_setting_upper_furnace_temp_shorted_times_ten = ( short )( factory_setting_upper_furnace_temp_floated * 10 );
+    short factory_setting_lower_heat_temp_shorted_times_ten = ( short )( factory_setting_lower_heat_temp_floated * 10 );
+    short factory_setting_upper_heat_temp_shorted_times_ten = ( short )( factory_setting_upper_heat_temp_floated * 10 );
     short factory_setting_lower_cool_temp_shorted_times_ten = ( short )( factory_setting_lower_cool_temp_floated * 10 );
     short factory_setting_upper_cool_temp_shorted_times_ten = ( short )( factory_setting_upper_cool_temp_floated * 10 );
 #ifndef __LGT8FX8E__
-    EEPROM.put( lower_furnace_temp_address, factory_setting_lower_furnace_temp_shorted_times_ten );//21 );
+    EEPROM.put( lower_heat_temp_address, factory_setting_lower_heat_temp_shorted_times_ten );//21 );
 #else
-    EEPROM.write( lower_furnace_temp_address, ( u8 )factory_setting_lower_furnace_temp_shorted_times_ten );
-    EEPROM.write( lower_furnace_temp_address + 1, ( u8 )( factory_setting_lower_furnace_temp_shorted_times_ten >> 8 ) );
+    EEPROMupdate( lower_heat_temp_address, ( u8 )factory_setting_lower_heat_temp_shorted_times_ten );
+    EEPROMupdate( lower_heat_temp_address + 1, ( u8 )( factory_setting_lower_heat_temp_shorted_times_ten >> 8 ) );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.put( upper_furnace_temp_address, factory_setting_upper_furnace_temp_shorted_times_ten );//21 );
+    EEPROM.put( upper_heat_temp_address, factory_setting_upper_heat_temp_shorted_times_ten );//21 );
 #else
-    EEPROM.write( upper_furnace_temp_address, ( u8 )factory_setting_upper_furnace_temp_shorted_times_ten );
-    EEPROM.write( upper_furnace_temp_address + 1, ( u8 )( factory_setting_upper_furnace_temp_shorted_times_ten >> 8 ) );
+    EEPROMupdate( upper_heat_temp_address, ( u8 )factory_setting_upper_heat_temp_shorted_times_ten );
+    EEPROMupdate( upper_heat_temp_address + 1, ( u8 )( factory_setting_upper_heat_temp_shorted_times_ten >> 8 ) );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.put( lower_cool_temp_address, factory_setting_lower_cool_temp_shorted_times_ten );//21 );
 #else
-    EEPROM.write( lower_cool_temp_address, ( u8 )factory_setting_lower_cool_temp_shorted_times_ten );
-    EEPROM.write( lower_cool_temp_address + 1, ( u8 )( factory_setting_lower_cool_temp_shorted_times_ten >> 8 ) );
+    EEPROMupdate( lower_cool_temp_address, ( u8 )factory_setting_lower_cool_temp_shorted_times_ten );
+    EEPROMupdate( lower_cool_temp_address + 1, ( u8 )( factory_setting_lower_cool_temp_shorted_times_ten >> 8 ) );
 #endif
 
 #ifndef __LGT8FX8E__
     EEPROM.update( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );//2 );
 #else
-    EEPROM.write( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );//2 );
+    EEPROMupdate( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );//2 );
 #else
-    EEPROM.write( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );//2 );
+    EEPROMupdate( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );//2 );
 #else
-    EEPROM.write( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );//2 );
+    EEPROMupdate( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.put( 0, ( NUM_DIGITAL_PINS + 1 ) * 3 );//Tattoo the board
 #else
-    EEPROM.write( 0, ( u8 )( ( NUM_DIGITAL_PINS + 1 ) * 3 ) );
-    EEPROM.write( 1, ( u8 )( ( ( NUM_DIGITAL_PINS + 1 ) * 3 ) >> 8 ) );
+    EEPROMupdate( 0, ( u8 )( ( NUM_DIGITAL_PINS + 1 ) * 3 ) );
+    EEPROMupdate( 1, ( u8 )( ( ( NUM_DIGITAL_PINS + 1 ) * 3 ) >> 8 ) );
 #endif
     Serial.println( F( "Done. Allowing you time to unplug the Arduino if desired." ) );
     delay( 10000 );
@@ -666,12 +676,12 @@ void print_factory_defaults()
     Serial.print( F( "Fan mode=" ) );
     if( factory_setting_fan_mode == 'a' ) Serial.println( F( "auto" ) );
     else if( factory_setting_fan_mode == 'o' ) Serial.println( F( "on" ) );
-    Serial.print( ( const __FlashStringHelper * )str_furnaceStartLowTemp );
+    Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
     Serial.print( '=' );
-    Serial.println( factory_setting_lower_furnace_temp_floated, 1 );
-    Serial.print( ( const __FlashStringHelper * )str_furnaceStopHighTemp );
+    Serial.println( factory_setting_lower_heat_temp_floated, 1 );
+    Serial.print( ( const __FlashStringHelper * )str_heatStopHighTemp );
     Serial.print( '=' );
-    Serial.println( factory_setting_upper_furnace_temp_floated, 1 );
+    Serial.println( factory_setting_upper_heat_temp_floated, 1 );
     Serial.print( ( const __FlashStringHelper * )str_coolStopLowTemp );
     Serial.print( '=' );
     Serial.println( factory_setting_lower_cool_temp_floated, 1 );
@@ -693,10 +703,10 @@ void print_factory_defaults()
     Serial.println( factory_setting_outdoor_temp_sensor1_pin );
     Serial.print( F( "outdoor_temp_sensor_pin=" ) );
     Serial.println( factory_setting_outdoor_temp_sensor2_pin );
-    Serial.print( F( "furnace_pin=" ) );
-    Serial.println( factory_setting_furnace_pin );
-    Serial.print( F( "furnace_fan_pin=" ) );
-    Serial.println( factory_setting_furnace_fan_pin );
+    Serial.print( F( "heat_pin=" ) );
+    Serial.println( factory_setting_heat_pin );
+    Serial.print( F( "furnace_blower_pin=" ) );
+    Serial.println( factory_setting_furnace_blower_pin );
     Serial.print( F( "cool_pin=" ) );
     Serial.println( factory_setting_cool_pin );
     Serial.print( F( "automation system power_cycle_pin=" ) );
@@ -730,9 +740,9 @@ void setup()
     secondary_temp_sensor_pin = EEPROM.read( secondary_temp_sensor_address );
     outdoor_temp_sensor1_pin = EEPROM.read( outdoor_temp_sensor1_address );
     outdoor_temp_sensor2_pin = EEPROM.read( outdoor_temp_sensor2_address );
-    furnace_pin = EEPROM.read( furnace_pin_address );
+    heat_pin = EEPROM.read( heat_pin_address );
     cool_pin = EEPROM.read( cool_pin_address );
-    furnace_fan_pin = EEPROM.read( furnace_fan_pin_address );
+    furnace_blower_pin = EEPROM.read( furnace_blower_pin_address );
     power_cycle_pin = EEPROM.read( power_cycle_address );
     logging = ( boolean )EEPROM.read( logging_address );
     logging_temp_changes = ( boolean )EEPROM.read( logging_temp_changes_address );
@@ -740,31 +750,31 @@ void setup()
     fan_mode = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
     pinMode( power_cycle_pin, OUTPUT );
     digitalWrite( power_cycle_pin, LOW );
-    pinMode( furnace_pin, OUTPUT );
-    digitalWrite( furnace_pin, LOW );
+    pinMode( heat_pin, OUTPUT );
+    digitalWrite( heat_pin, LOW );
     pinMode( cool_pin, OUTPUT );
     digitalWrite( cool_pin, LOW );
-    pinMode( furnace_fan_pin, OUTPUT );
-    if( fan_mode == 'o' ) digitalWrite( furnace_fan_pin, HIGH );
-    else digitalWrite( furnace_fan_pin, LOW );
-    short lower_furnace_temp_shorted_times_ten = 0;
-    short upper_furnace_temp_shorted_times_ten = 0;
+    pinMode( furnace_blower_pin, OUTPUT );
+    if( fan_mode == 'o' ) digitalWrite( furnace_blower_pin, HIGH );
+    else digitalWrite( furnace_blower_pin, LOW );
+    short lower_heat_temp_shorted_times_ten = 0;
+    short upper_heat_temp_shorted_times_ten = 0;
     short upper_cool_temp_shorted_times_ten = 0;
     short lower_cool_temp_shorted_times_ten = 0;
 #ifndef __LGT8FX8E__
-    EEPROM.get( lower_furnace_temp_address, lower_furnace_temp_shorted_times_ten );
+    EEPROM.get( lower_heat_temp_address, lower_heat_temp_shorted_times_ten );
 #else
-    lower_furnace_temp_shorted_times_ten = EEPROM.read( lower_furnace_temp_address );
-    lower_furnace_temp_shorted_times_ten += ( u16 )( EEPROM.read( lower_furnace_temp_address + 1 ) << 8 );
+    lower_heat_temp_shorted_times_ten = EEPROM.read( lower_heat_temp_address );
+    lower_heat_temp_shorted_times_ten += ( u16 )( EEPROM.read( lower_heat_temp_address + 1 ) << 8 );
 #endif
-    lower_furnace_temp_floated = ( float )( ( float )( lower_furnace_temp_shorted_times_ten ) / 10 );
+    lower_heat_temp_floated = ( float )( ( float )( lower_heat_temp_shorted_times_ten ) / 10 );
 #ifndef __LGT8FX8E__
-    EEPROM.get( upper_furnace_temp_address, upper_furnace_temp_shorted_times_ten );
+    EEPROM.get( upper_heat_temp_address, upper_heat_temp_shorted_times_ten );
 #else
-    upper_furnace_temp_shorted_times_ten = EEPROM.read( upper_furnace_temp_address );
-    upper_furnace_temp_shorted_times_ten += ( u16 )( EEPROM.read( upper_furnace_temp_address + 1 ) << 8 );
+    upper_heat_temp_shorted_times_ten = EEPROM.read( upper_heat_temp_address );
+    upper_heat_temp_shorted_times_ten += ( u16 )( EEPROM.read( upper_heat_temp_address + 1 ) << 8 );
 #endif
-    upper_furnace_temp_floated = ( float )( ( float )( upper_furnace_temp_shorted_times_ten ) / 10 );
+    upper_heat_temp_floated = ( float )( ( float )( upper_heat_temp_shorted_times_ten ) / 10 );
       delay( 3000 ); // The sensor needs time to initialize, if you have some code before this that make a delay, you can eliminate this delay
       //( pin_specified*3 )and ( pin_specified*3 )+1 contains the EEPROM address where the pin's assigned name is stored.  Pin 0 will always have its name stored at EEPROM address (NUM_DIGITAL_PINS+1 )*3, so address (NUM_DIGITAL_PINS+1 )*3 will always be stored in EEPROM addresses 0 and 1; 0 = ( pin_number*3 )and 1 = (( pin_number*3 )+1 ) )]
       // That will be the way we determine if the EEPROM is configured already or not
@@ -903,69 +913,78 @@ void check_for_serial_input( char result )
           }
           strFull[ 0 ] = 0;
         }
-        else if( strstr_P( strFull, str_furnaceStartLowTemp ) )//change to furnace low start temp with optional numeric: furnace high stop temp, cool low stop temp, cool high start temp
+/* //FUTURE 
+        else if( strstr_P( strFull, str_cool_temps ) )
         {
-           if( IsValidTemp( number_specified_str, true ) )
+           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK ) != NO_TEMP_ENTERED && ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK ));//&& !(  ) );
            {
-              if( temp_specified_floated <= upper_furnace_temp_floated )
+           }
+            strFull[ 0 ] = 0;
+        }
+*/
+        else if( strstr_P( strFull, str_heatStartLowTemp ) )//change to heat low start temp with optional numeric: heat high stop temp, cool low stop temp, cool high start temp
+        {
+           if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK ) )
+           {
+              if( temp_specified_floated <= upper_heat_temp_floated )
               {
-                lower_furnace_temp_floated = temp_specified_floated;
+                lower_heat_temp_floated = temp_specified_floated;
                 timer_alert_furnace_sent = 0;
                 short temp_specified_shorted_times_ten = ( short )( temp_specified_floated * 10 );
 #ifndef __LGT8FX8E__
-                EEPROM.put( lower_furnace_temp_address, temp_specified_shorted_times_ten );
+                EEPROM.put( lower_heat_temp_address, temp_specified_shorted_times_ten );
 #else
-                EEPROM.write( lower_furnace_temp_address, ( u8 )temp_specified_shorted_times_ten );
-                EEPROM.write( lower_furnace_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
+                EEPROMupdate( lower_heat_temp_address, ( u8 )temp_specified_shorted_times_ten );
+                EEPROMupdate( lower_heat_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
 #endif
               }
               else 
               {
-                Serial.print( (const __FlashStringHelper *)str_furnaceStopHighTemp );
+                Serial.print( ( const __FlashStringHelper * )str_heatStopHighTemp );
                 Serial.println( F( " too low for this value. Raise that before trying this value" ) );
               }
             }
             if( logging )
             {
-                Serial.print( (const __FlashStringHelper *)str_furnaceStartLowTemp );
+                Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
                 Serial.print( F( " now " ) );
-                Serial.println( lower_furnace_temp_floated, 1 );
+                Serial.println( lower_heat_temp_floated, 1 );
             }
             strFull[ 0 ] = 0;
         }
-        else if( strstr_P( strFull, str_furnaceStopHighTemp ) )
+        else if( strstr_P( strFull, str_heatStopHighTemp ) )
         {
-           if( IsValidTemp( number_specified_str, true ) )
+           if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK ) )
            {
-              if( temp_specified_floated >= lower_furnace_temp_floated )
+              if( temp_specified_floated >= lower_heat_temp_floated )
               {
-                upper_furnace_temp_floated = temp_specified_floated;
+                upper_heat_temp_floated = temp_specified_floated;
                 timer_alert_furnace_sent = 0;
                 short temp_specified_shorted_times_ten = ( short )( temp_specified_floated * 10 );
 #ifndef __LGT8FX8E__
-                EEPROM.put( upper_furnace_temp_address, temp_specified_shorted_times_ten );
+                EEPROM.put( upper_heat_temp_address, temp_specified_shorted_times_ten );
 #else
-                EEPROM.write( upper_furnace_temp_address, ( u8 )temp_specified_shorted_times_ten );
-                EEPROM.write( upper_furnace_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
+                EEPROMupdate( upper_heat_temp_address, ( u8 )temp_specified_shorted_times_ten );
+                EEPROMupdate( upper_heat_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
 #endif
               }
               else 
               {
-                Serial.print( (const __FlashStringHelper *)str_furnaceStartLowTemp );
+                Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
                 Serial.println( F( " too high for this value. Lower that before trying this value" ) );
               }
            }
             if( logging )
             {
-                Serial.print( (const __FlashStringHelper *)str_furnaceStopHighTemp );
+                Serial.print( ( const __FlashStringHelper * )str_heatStopHighTemp );
                 Serial.print( F( " now " ) );
-                Serial.println( upper_furnace_temp_floated, 1 );
+                Serial.println( upper_heat_temp_floated, 1 );
             }
            strFull[ 0 ] = 0;
         }
         else if( strstr_P( strFull, str_coolStopLowTemp ) )
         {
-           if( IsValidTemp( number_specified_str, false ) )
+           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK ) )
            {
               if( temp_specified_floated <= upper_cool_temp_floated )
               {
@@ -974,19 +993,19 @@ void check_for_serial_input( char result )
 #ifndef __LGT8FX8E__
                 EEPROM.put( lower_cool_temp_address, temp_specified_shorted_times_ten );
 #else
-                EEPROM.write( lower_cool_temp_address, ( u8 )temp_specified_shorted_times_ten );
-                EEPROM.write( lower_cool_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
+                EEPROMupdate( lower_cool_temp_address, ( u8 )temp_specified_shorted_times_ten );
+                EEPROMupdate( lower_cool_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
 #endif
               }
               else 
               {
-                Serial.print( (const __FlashStringHelper *)str_coolStartHighTemp );
+                Serial.print( ( const __FlashStringHelper * )str_coolStartHighTemp );
                 Serial.println( F( " too low for this value. Raise that before trying this value" ) );
               }
            }
             if( logging )
             {
-                Serial.print( (const __FlashStringHelper *)str_coolStopLowTemp );
+                Serial.print( ( const __FlashStringHelper * )str_coolStopLowTemp );
                 Serial.print( F( " now " ) );
                 Serial.println( lower_cool_temp_floated, 1 );
             }
@@ -994,7 +1013,7 @@ void check_for_serial_input( char result )
         }
         else if( strstr_P( strFull, str_coolStartHighTemp ) )
         {
-           if( IsValidTemp( number_specified_str, false ) )
+           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK ) )
            {
               if( temp_specified_floated >= lower_cool_temp_floated )
               {
@@ -1003,19 +1022,19 @@ void check_for_serial_input( char result )
 #ifndef __LGT8FX8E__
                 EEPROM.put( upper_cool_temp_address, temp_specified_shorted_times_ten );
 #else
-                EEPROM.write( upper_cool_temp_address, ( u8 )temp_specified_shorted_times_ten );
-                EEPROM.write( upper_cool_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
+                EEPROMupdate( upper_cool_temp_address, ( u8 )temp_specified_shorted_times_ten );
+                EEPROMupdate( upper_cool_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
 #endif
               }
               else 
               {
-                Serial.print( (const __FlashStringHelper *)str_coolStopLowTemp );
+                Serial.print( ( const __FlashStringHelper * )str_coolStopLowTemp );
                 Serial.println( F( " too high for this value. Lower that before trying this value" ) );
               }
            }
             if( logging )
             {
-                Serial.print( (const __FlashStringHelper *)str_coolStartHighTemp );
+                Serial.print( ( const __FlashStringHelper * )str_coolStartHighTemp );
                 Serial.print( F( " now " ) );
                 Serial.println( upper_cool_temp_floated, 1 );
             }
@@ -1030,17 +1049,17 @@ void check_for_serial_input( char result )
                Serial.print( F( "Temperature (°C): " ) );
                Serial.println( _TemperatureCelsius, 1 );
                Serial.print( F( "Tempperature heat is set to start: " ) );
-               Serial.println( lower_furnace_temp_floated, 1 );
+               Serial.println( lower_heat_temp_floated, 1 );
                Serial.print( F( "Temperature heat is set to stop: " ) );
-               Serial.println( upper_furnace_temp_floated, 1 );
+               Serial.println( upper_heat_temp_floated, 1 );
                Serial.print( F( "Temperature cool is set to stop: " ) );
                Serial.println( lower_cool_temp_floated, 1 );
                Serial.print( F( "Temperature cool is set to start: " ) );
                Serial.println( upper_cool_temp_floated, 1 );
                Serial.print( F( "Furnace: " ) );
-               Serial.println( digitalRead( furnace_pin ) );
+               Serial.println( digitalRead( heat_pin ) );
                Serial.print( F( "Furnace fan: " ) );
-               Serial.println( digitalRead( furnace_fan_pin ) );
+               Serial.println( digitalRead( furnace_blower_pin ) );
                Serial.print( F( "Cool: " ) );
                Serial.println( digitalRead( cool_pin ) );
            }
@@ -1076,7 +1095,7 @@ void check_for_serial_input( char result )
                {
                   if( isanoutput( pin_specified, true ) )
                   {
-                        if( ( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) && number_specified_str[ strlen( number_specified_str ) - 1 ] != '!' )
+                        if( ( pin_specified == power_cycle_pin || pin_specified == furnace_blower_pin || pin_specified == heat_pin || pin_specified == cool_pin ) && number_specified_str[ strlen( number_specified_str ) - 1 ] != '!' )
                             refusedNo_exclamation();
                         else 
                         {
@@ -1084,7 +1103,7 @@ void check_for_serial_input( char result )
                              IfReservedPinGettingForced( HIGH );
                              if( logging )
                              {
-                                if( pin_print_and_not_sensor( true ) ) // && !( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) )
+                                if( pin_print_and_not_sensor( true ) ) // && !( pin_specified == power_cycle_pin || pin_specified == furnace_blower_pin || pin_specified == heat_pin || pin_specified == cool_pin ) )
                                 {
                                     Serial.print( F( "logic 1" ) );
                                     u8 pinState = digitalRead( pin_specified );
@@ -1112,7 +1131,7 @@ void check_for_serial_input( char result )
                {
                   if( isanoutput( pin_specified, true ) )
                   {
-                        if( ( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) && number_specified_str[ strlen( number_specified_str ) - 1 ] != '!' )
+                        if( ( pin_specified == power_cycle_pin || pin_specified == furnace_blower_pin || pin_specified == heat_pin || pin_specified == cool_pin ) && number_specified_str[ strlen( number_specified_str ) - 1 ] != '!' )
                             refusedNo_exclamation();
                         else 
                         {
@@ -1120,7 +1139,7 @@ void check_for_serial_input( char result )
                             IfReservedPinGettingForced( LOW );
                              if( logging )
                              {
-                                if( pin_print_and_not_sensor( true ) ) // && !( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) )
+                                if( pin_print_and_not_sensor( true ) ) // && !( pin_specified == power_cycle_pin || pin_specified == furnace_blower_pin || pin_specified == heat_pin || pin_specified == cool_pin ) )
                                 {
                                     Serial.print( F( "logic 0" ) );
                                     u8 pinState = digitalRead( pin_specified );
@@ -1148,7 +1167,7 @@ void check_for_serial_input( char result )
                {
                     if( pin_specified != SERIAL_PORT_HARDWARE )
                     {
-                        if( ( pin_specified == power_cycle_pin || pin_specified == furnace_fan_pin || pin_specified == furnace_pin || pin_specified == cool_pin ) && number_specified_str[ strlen( number_specified_str ) - 1 ] != '!' )
+                        if( ( pin_specified == power_cycle_pin || pin_specified == furnace_blower_pin || pin_specified == heat_pin || pin_specified == cool_pin ) && number_specified_str[ strlen( number_specified_str ) - 1 ] != '!' )
                         {
                             if( logging )
                             {
@@ -1290,10 +1309,9 @@ doneWithPinOutput:;
           if( thermostat_mode == strFull[ 5 ] );
            if( thermostat_mode == 'o' ) 
            {
-                digitalWrite( furnace_pin, LOW );
-                furnace_state = false;
+                digitalWrite( heat_pin, LOW );
+                heat_state = false;
                 timer_alert_furnace_sent = 0;
-                check_furnace_effectiveness_time = 0;
                 digitalWrite( cool_pin, LOW );
                 cool_state = false;
            }
@@ -1301,7 +1319,7 @@ doneWithPinOutput:;
 #ifndef __LGT8FX8E__
            EEPROM.update( thermostat_mode_address, strFull[ 5 ] );
 #else
-           EEPROM.write( thermostat_mode_address, strFull[ 5 ] );
+           EEPROMupdate( thermostat_mode_address, strFull[ 5 ] );
 #endif
             goto after_change_thermostat;
 badTherMode:;
@@ -1319,17 +1337,17 @@ after_change_thermostat:
            if( fan_mode == 'o' )
             {
                 Serial.println( F( "on" ) );
-                digitalWrite( furnace_fan_pin, HIGH );
+                digitalWrite( furnace_blower_pin, HIGH );
             }
            else
            {
                 Serial.println( F( "auto" ) );
-                digitalWrite( furnace_fan_pin, LOW );
+                digitalWrite( furnace_blower_pin, LOW );
            }
 #ifndef __LGT8FX8E__
            EEPROM.update( fan_mode_address, fan_mode );
 #else
-           EEPROM.write( fan_mode_address, fan_mode );
+           EEPROMupdate( fan_mode_address, fan_mode );
 #endif
 after_change_fan:
            strFull[ 0 ] = 0;
@@ -1358,7 +1376,7 @@ after_change_fan:
 #ifndef __LGT8FX8E__
            EEPROM.update( logging_temp_changes_address, ( uint8_t )logging_temp_changes );
 #else
-           EEPROM.write( logging_temp_changes_address, ( uint8_t )logging_temp_changes );
+           EEPROMupdate( logging_temp_changes_address, ( uint8_t )logging_temp_changes );
 #endif
            if( logging_temp_changes ) Serial.println( strFull[ charat ] );
            else  Serial.println( F( "ff" ) );
@@ -1380,7 +1398,7 @@ after_change_fan:
 #ifndef __LGT8FX8E__
            EEPROM.update( logging_address, ( uint8_t )logging );
 #else
-           EEPROM.write( logging_address, ( uint8_t )logging );
+           EEPROMupdate( logging_address, ( uint8_t )logging );
 #endif
            if( logging ) Serial.println( strFull[ charat ] );
            else  Serial.println( F( "ff" ) );
@@ -1468,7 +1486,7 @@ after_change_fan:
 #ifndef __LGT8FX8E__
               EEPROM.update( address, data );
 #else
-              EEPROM.write( address, data );
+              EEPROMupdate( address, data );
 #endif
                     Serial.print( F( " newly stored data: " ) );
                     Serial.println( EEPROM.read( address ) );
@@ -1484,7 +1502,7 @@ after_change_fan:
 #ifndef __LGT8FX8E__
                            EEPROM.update( address, 0 );
 #else
-                          EEPROM.write( address, 0 );
+                          EEPROMupdate( address, 0 );
 #endif
                         }
                     }
@@ -1523,7 +1541,7 @@ after_change_fan:
 #ifndef __LGT8FX8E__
               EEPROM.update( address, data );
 #else
-              EEPROM.write( address, data );
+              EEPROMupdate( address, data );
 #endif
               Serial.print( F( " newly stored data: " ) );
               Serial.println( EEPROM.read( address ) );
@@ -1605,15 +1623,15 @@ float oldtemp = 0;
 unsigned long timeOfLastSensorTimeoutError = 0;
 float temp_minimus;
 
-void furnace_on_loop()
+void heat_on_loop()
 {
-   if( !furnace_state )
+   if( !heat_state )
    {
-          if( last_three_temps[ 0 ] < lower_furnace_temp_floated && last_three_temps[ 1 ] < lower_furnace_temp_floated && last_three_temps[ 2 ] < lower_furnace_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_furnace_temp_floated )
+          if( last_three_temps[ 0 ] < lower_heat_temp_floated && last_three_temps[ 1 ] < lower_heat_temp_floated && last_three_temps[ 2 ] < lower_heat_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_heat_temp_floated )
           {
-                digitalWrite( furnace_pin, HIGH ); 
+                digitalWrite( heat_pin, HIGH ); 
 //                digitalWrite( cool_pin, LOW );
-              furnace_state = true;
+              heat_state = true;
 //              cool_state = false;
               timer_alert_furnace_sent = 0;
               if( logging )
@@ -1621,50 +1639,34 @@ void furnace_on_loop()
                 Serial.println( F( "time_stamp_this Furnace on" ) );
               }
               setFurnaceEffectivenessTime();
-              temp_minimus = min( last_three_temps[ 0 ], last_three_temps[ 1 ] );//Be sure to set this when furnace is manually operated by pin manipulation or any other means also
+              temp_minimus = min( last_three_temps[ 0 ], last_three_temps[ 1 ] );//Be sure to set this when heat is manually operated by pin manipulation or any other means also
               temp_minimus = min( temp_minimus, last_three_temps[ 2 ] );
           }
    }
    else
    {
-           if( last_three_temps[ 0 ] > upper_furnace_temp_floated && last_three_temps[ 1 ] > upper_furnace_temp_floated && last_three_temps[ 2 ] > upper_furnace_temp_floated )
-           {
-                digitalWrite( furnace_pin, LOW );
-                  furnace_state = false;
-                  timer_alert_furnace_sent = 0;
-                  check_furnace_effectiveness_time = 0;
-                if( logging )
-                {
-                    Serial.println( F( "time_stamp_this Furnace off" ) );
-                }
-           }
-       else if( !timer_alert_furnace_sent && furnace_started_temp_x_3 > last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )
+       if( last_three_temps[ 0 ] > upper_heat_temp_floated && last_three_temps[ 1 ] > upper_heat_temp_floated && last_three_temps[ 2 ] > upper_heat_temp_floated )
        {
-            if( !millis_overflowed )
-                if( millis() > check_furnace_effectiveness_time || millis() < check_furnace_effectiveness_time - minutes_furnace_should_be_effective_after * 60000 )
-                {
-                      goto sendAlert;
-                }
-            else if( millis() > check_furnace_effectiveness_time && millis() < check_furnace_effectiveness_time )
+            digitalWrite( heat_pin, LOW );
+              heat_state = false;
+              timer_alert_furnace_sent = 0;
+            if( logging )
             {
-                 goto sendAlert;
+                Serial.println( F( "time_stamp_this Furnace off" ) );
             }
-            goto afterSendAlert;
-sendAlert:;
-//                    // check_furnace_effectiveness_time is set when the furnace is ON'd (turned on)
-            //The following is output regardless of logging mode                                                         //  to millis() + ( minutes_furnace_should_be_effective_after * 60000 )
-                Serial.print( F( "time_stamp_this ALERT Furnace not heating enough after allowing " ) );                          //  which is a millis() value to alert at if no heating happened yet
-                Serial.print( ( u8 )( minutes_furnace_should_be_effective_after + ( ( millis() - check_furnace_effectiveness_time ) / 60000 ) ) ); //minutes_furnace_should_be_effective_after is a const of a number of minutes
-                Serial.println( F( " minutes" ) );
-                timer_alert_furnace_sent = loop_cycles_to_skip_between_alert_outputs;
-                if( !timer_alert_furnace_sent )
-                    timer_alert_furnace_sent = 1;
-/*                    send an alert output if furnace not working: temperature dropping even though furnace got turned on.  the way to determine this is to have a flag of whether the alert output is already sent;
-*                     That flag will unconditionally get reset in the following situations: thermostat_mode setting gets changed, upper_furnace_temp_floated or lower_furnace_temp_floated gets changed, room temperature rises while furnace is on, 
-*/
-afterSendAlert:;
        }
-       else if( timer_alert_furnace_sent && ( oldtemp - temp_minimus > 2 ) )//enough temperature rise (2C) from temperature minimus which means furnace is assumed working so we say no alert sent
+       else if( ( !timer_alert_furnace_sent && heat_started_temp_x_3 > last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] ) && ( millis() - check_furnace_effectiveness_time > minutes_furnace_should_be_effective_after * 60000 ) )
+       {
+//                    // check_furnace_effectiveness_time is set when the heat is ON'd (turned on)
+        Serial.print( F( "time_stamp_this ALERT Furnace not heating enough after allowing " ) );                          
+        Serial.print( ( u8 )( ( millis() - check_furnace_effectiveness_time ) / 60000 ) ); //GRANTED, THIS TIME IS NOT PERFECT PER THE VARIABLE NOMENCLATURE, SINCE THERE IS A BIT MORE OR LESS THAN 1000 ARDUINO MILLIS IN A SECOND
+        Serial.println( F( " minutes" ) );
+        timer_alert_furnace_sent = loop_cycles_to_skip_between_alert_outputs;
+/*                    send an alert output if furnace not working: temperature dropping even though heat got turned on.  the way to determine this is to have a flag of whether the alert output is already sent;
+*                     That flag will unconditionally get reset in the following situations: thermostat_mode setting gets changed, upper_heat_temp_floated or lower_heat_temp_floated gets changed, room temperature rises while heat is on, 
+*/
+       }
+       else if( timer_alert_furnace_sent && ( oldtemp - temp_minimus > 2 ) )//enough temperature rise (2C) from temperature minimus which means furnace is assumed working so we say forget that alert was sent
        {
             timer_alert_furnace_sent = 0;
        }
@@ -1673,6 +1675,7 @@ afterSendAlert:;
             timer_alert_furnace_sent--;
        }
    }
+
 }
 
 void cool_on_loop()
@@ -1681,9 +1684,9 @@ void cool_on_loop()
    {
           if( last_three_temps[ 0 ] > upper_cool_temp_floated && last_three_temps[ 1 ] > upper_cool_temp_floated && last_three_temps[ 2 ] > upper_cool_temp_floated )
           {
-//                digitalWrite( furnace_pin, LOW ); 
+//                digitalWrite( heat_pin, LOW ); 
                 digitalWrite( cool_pin, HIGH );
-//              furnace_state = false;
+//              heat_state = false;
               cool_state = true;
 //              timer_alert_furnace_sent = 0;
               if( logging )
@@ -1696,7 +1699,7 @@ void cool_on_loop()
    {
            if( last_three_temps[ 0 ] < lower_cool_temp_floated && last_three_temps[ 1 ] < lower_cool_temp_floated && last_three_temps[ 2 ] < lower_cool_temp_floated )
            {
-//                digitalWrite( furnace_pin, LOW );
+//                digitalWrite( heat_pin, LOW );
                 digitalWrite( cool_pin, LOW );
                   cool_state = false;
                 if( logging )
@@ -1740,9 +1743,9 @@ else fresh_powerup = false;
                 Serial.println( F( "ary sensor" ) );
             }
             old_getCelsius_temp = last_three_temps[ last_three_temps_index ];
-            if( furnace_state && !timer_alert_furnace_sent && newtemp < oldtemp ) //store temp at every small drop when furnace is calling && !timer_alert_furnace_sent
+            if( heat_state && !timer_alert_furnace_sent && newtemp < oldtemp ) //store temp at every small drop when heat is calling && !timer_alert_furnace_sent
             {
-                  temp_minimus = min( temp_minimus, last_three_temps[ 0 ] ); //Be sure to set this when furnace is manually operated by pin manipulation or any other means also
+                  temp_minimus = min( temp_minimus, last_three_temps[ 0 ] ); //Be sure to set this when heat is manually operated by pin manipulation or any other means also
                   temp_minimus = min( temp_minimus, last_three_temps[ 1 ] );
                   temp_minimus = min( temp_minimus, last_three_temps[ 2 ] );
             }
@@ -1754,12 +1757,11 @@ else fresh_powerup = false;
             ;  //don't do any thermostat function until temps start coming in.  Debatable b/c logically we could do shutoff/reset duties in here instead, but setup() loop did it for us
         else if( thermostat_mode == 'o' )//thermostat_mode == off
         {
-            digitalWrite( furnace_pin, LOW ); 
+            digitalWrite( heat_pin, LOW ); 
             digitalWrite( cool_pin, LOW );
-            furnace_state = false;
+            heat_state = false;
             timer_alert_furnace_sent = 0;
             cool_state = false;
-            check_furnace_effectiveness_time = 0;
         }
         else if( thermostat_mode == 'a' )
         {
@@ -1769,11 +1771,11 @@ else fresh_powerup = false;
             {
                 if( noInterrupt_result->TemperatureCelsius & 0x8000 ) O_TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
                 else O_TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-                if( O_TemperatureCelsius <= _TemperatureCelsius ) furnace_on_loop();//get outdoor temp, use second sensor if first fails, get indoor temp same way, if indoor < outdoor cool_on_loop();
+                if( O_TemperatureCelsius <= _TemperatureCelsius ) heat_on_loop();//get outdoor temp, use second sensor if first fails, get indoor temp same way, if indoor < outdoor cool_on_loop();
                 else cool_on_loop();
             }
         }
-        else if( thermostat_mode == 'h' ) furnace_on_loop(); //This furnace loop is all that the WeMo/TTGO XI can do as thermostat
+        else if( thermostat_mode == 'h' ) heat_on_loop(); //This heat loop is all that the WeMo/TTGO XI can do as thermostat
         else if( thermostat_mode == 'c' ) cool_on_loop();
     }
     else
