@@ -1,6 +1,6 @@
 ..
 A way to save talkbacks into a file in Ubuntu and Mint Linux is: (except change "TIME_STAMP_THIS" to lower case, not shown so this won't get filtered in by such command)
-    nohup stty -F igcr $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 19200 -echo;while true;do cat $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z "$line" ]];then echo "$line"|sed 's/^TIME_STAMP_THIS/'"$(date )"'/g';fi;done;done >> /log_directory/arduino.log 2>/dev/null &
+    nohup stty igncr -F $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 19200/57600 -echo;while true;do cat $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z "$line" ]];then echo "$line"|sed 's/^TIME_STAMP_THIS/'"$(date )"'/g';fi;done;done >> /log_directory/arduino.log 2>/dev/null &
 .
 time_stamp_this New power up:
 Version: 0.0.0045
