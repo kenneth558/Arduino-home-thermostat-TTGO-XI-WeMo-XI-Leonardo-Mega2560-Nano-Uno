@@ -36,6 +36,9 @@ home_dir="$( cd -P "$( dirname "$0" )" && pwd )"
 calc(){ awk "BEGIN { print $*}"; }
 none_of_the_above="false"
 tempsettings=$(stty -F igcr $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 5 tail -fn0 $home_dir/thermostat.log)
+showsettings()
+{
+}
 if [ $1. == "+1." ]; then
 #     tempsettings=$(stty -F igcr $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 3 tail -fn0 $home_dir/thermostat.log)
      ltempsetting="${tempsettings##*'Temp heat is set to start: '}"
@@ -44,8 +47,12 @@ if [ $1. == "+1." ]; then
      uctempsetting="${tempsettings##*'Temp cool is set to start: '}"
      ltempsetting="$(calc ${ltempsetting%%[[:cntrl:]]*}+1)"
      utempsetting="$(calc ${utempsetting%%[[:cntrl:]]*}+1)"
-     echo "New Thermostat setting $ltempsetting °C (~$(calc $ltempsetting*9/5+32)°F)"
-     echo "New Furnace shutoff at $utempsetting °C (~$(calc $utempsetting*9/5+32)°F)"
+     lctempsetting="$(calc ${lctempsetting%%[[:cntrl:]]*}+1)"
+     uctempsetting="$(calc ${uctempsetting%%[[:cntrl:]]*}+1)"
+     echo "New heat on at $ltempsetting °C (~$(calc $ltempsetting*9/5+32)°F)"
+     echo "New heat off at $utempsetting °C (~$(calc $utempsetting*9/5+32)°F)"
+     echo "New cool off at $ltempsetting °C (~$(calc $lctempsetting*9/5+32)°F)"
+     echo "New cool on at $utempsetting °C (~$(calc $uctempsetting*9/5+32)°F)"
      sleep 1
      stty -F igcr $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "$utempsetting set upper furnace temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)
      sleep 1
@@ -135,21 +142,32 @@ else
      none_of_the_above="true"
 fi
 if [[ $none_of_the_above == "false" ]];then tempsettings=$(stty -F igcr $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) 57600 -echo;echo "report master room temp" > $(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1);timeout -s 2 5 tail -fn0 $home_dir/thermostat.log);fi
+ltempsetting="${tempsettings##*'Temp heat is set to start: '}"
+utempsetting="${tempsettings##*'Temp heat is set to stop: '}"
+lctempsetting="${tempsettings##*'Temp cool is set to stop: '}"
+uctempsetting="${tempsettings##*'Temp cool is set to start: '}"
+echo "Heat on at $ltempsetting °C (~$(calc $ltempsetting*9/5+32)°F)"
+echo "Heat off at $utempsetting °C (~$(calc $utempsetting*9/5+32)°F)"
+echo "Cool off at $lctempsetting °C (~$(calc $lctempsetting*9/5+32)°F)"
+echo "Cool on at $uctempsetting °C (~$(calc $uctempsetting*9/5+32)°F)"
+
 ctempsetting="${tempsettings##*'Temperature (°C): '}"
 ctempsetting="${ctempsetting%%[[:cntrl:]]*}"
-ltempsetting="${tempsettings##*'Temperature furnace is set to start: '}"
-if [ ${#ltempsetting} == 0 ]; then ltempsetting="${tempsettings##*'Temp heat is set to start: '}"; fi
+ltempsetting="${tempsettings##*'Temp heat is set to start: '}"
 utempsetting="${tempsettings##*'Temperature furnace is set to stop: '}"
-if [ ${#utempsetting} == 0 ]; then
-    utempsetting="${tempsettings##*'Temp heat/cool is set to stop: '}"
-    uctempsetting="${tempsettings##*'Temp cool is set to start: '}"
-fi
+lctempsetting="${tempsettings##*'Temp cool is set to stopt: '}"
+uctempsetting="${tempsettings##*'Temp cool is set to start: '}"
+
 ltempsetting="$(calc ${ltempsetting%%[[:cntrl:]]*})"
 utempsetting="$(calc ${utempsetting%%[[:cntrl:]]*})"
+lctempsetting="$(calc ${lctempsetting%%[[:cntrl:]]*})"
+uctempsetting="$(calc ${uctempsetting%%[[:cntrl:]]*})"
 echo "tempsettings = $tempsettings"
 echo -n "$ctempsetting °C (~";echo -n "$(calc $ctempsetting*9/5+32)";echo "°F)"
-echo -n "Thermostat setting $ltempsetting °C (~";echo -n "$(calc $ltempsetting*9/5+32)";echo "°F)"
-echo -n "Furnace shutoff at $utempsetting °C (~";echo -n "$(calc $utempsetting*9/5+32)";echo "°F)"
+echo -n "Heat on $ltempsetting °C (~";echo -n "$(calc $ltempsetting*9/5+32)";echo "°F)"
+echo -n "Heat off at $utempsetting °C (~";echo -n "$(calc $utempsetting*9/5+32)";echo "°F)"
+echo -n "Cool off at $lctempsetting °C (~";echo -n "$(calc $lctempsetting*9/5+32)";echo "°F)"
+echo -n "Cool on $uctempsetting °C (~";echo -n "$(calc $uctempsetting*9/5+32)";echo "°F)"
 
 
 
