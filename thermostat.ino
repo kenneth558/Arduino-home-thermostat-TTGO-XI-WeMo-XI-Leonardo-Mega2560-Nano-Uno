@@ -692,7 +692,7 @@ void print_factory_defaults()
     Serial.print( F( "furnace_pin=" ) );
     Serial.println( factory_setting_furnace_pin );
     Serial.print( F( "furnace_fan_pin=" ) );
-    Serial.print( factory_setting_furnace_fan_pin );
+    Serial.println( factory_setting_furnace_fan_pin );
     Serial.print( F( "cool_pin=" ) );
     Serial.println( factory_setting_cool_pin );
     Serial.print( F( "automation system power_cycle_pin=" ) );
