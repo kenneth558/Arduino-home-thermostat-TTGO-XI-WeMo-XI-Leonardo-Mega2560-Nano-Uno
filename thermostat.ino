@@ -542,6 +542,9 @@ void restore_factory_defaults()
     Serial.print( factory_setting_upper_cool_temp_floated, 1 );
     Serial.print( F( ", furnace mode=" ) );
     printThermoModeWord( factory_setting_thermostat_mode, true );
+    Serial.print( F( ", fan mode=" ) );
+    Serial.print( factory_setting_fan_mode );
+    
 /*
     if( factory_setting_thermostat_mode == 'a' )
         Serial.println( F( "auto" ) );
