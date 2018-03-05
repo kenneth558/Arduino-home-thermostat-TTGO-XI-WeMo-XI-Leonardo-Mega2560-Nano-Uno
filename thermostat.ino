@@ -389,7 +389,7 @@ void printBasicInfo()
     if( fresh_powerup )
     {
        Serial.println( F( "A way to save talkbacks into a file in Ubuntu and Mint Linux is: (except change \"TIME_STAMP_THIS\" to lower case, not shown so this won't get filtered in by such command)" ) );
-       Serial.print( F( "    nohup stty -F igcr \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) " ) );
+       Serial.print( F( "    nohup stty igncr -F \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) " ) );
        Serial.print( _baud_rate_ );
 //The following would get time stamped inadvertently:
 //       Serial.println( F( " -echo;while true;do cat \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1)|while IFS= read -r line;do if ! [[ -z \"\$line\" ]];then echo \"\$line\"|sed \'s/\^time_stamp_this/\'\"\$(date )\"\'/g\';fi;done;done >> /log_directory/arduino.log 2>/dev/null &" ) );
