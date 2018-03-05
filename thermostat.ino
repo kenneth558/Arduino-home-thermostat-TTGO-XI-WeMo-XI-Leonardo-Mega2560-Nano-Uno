@@ -2,7 +2,7 @@
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0045
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  03/04/18
+ *      Date:  03/05/18
  * 
  * 
  * TODO:  labels to pins 
@@ -13,7 +13,8 @@
  * 
  *        https://github.com/wemos/Arduino_XI  for the IDE support for TTGO XI/WeMo XI
  * 
- *      Standard furnace nomenclature can be somewhat disoriting
+ *      Standard furnace nomenclature can be somewhat disorienting: blower is the term for fan when the furnace unit is being referenced by part for a furnace workman,
+ *                                                                  fan is the term for same part but for the thermostat operator person
  * 
  *************************************************************************************************************************/
 #define VERSION "0.0.0045"
