@@ -630,6 +630,12 @@ void restore_factory_defaults()
     EEPROMupdate( lower_cool_temp_address, ( u8 )factory_setting_lower_cool_temp_shorted_times_ten );
     EEPROMupdate( lower_cool_temp_address + 1, ( u8 )( factory_setting_lower_cool_temp_shorted_times_ten >> 8 ) );
 #endif
+#ifndef __LGT8FX8E__
+    EEPROM.put( upper_cool_temp_address, factory_setting_upper_cool_temp_shorted_times_ten );//21 );
+#else
+    EEPROMupdate( upper_cool_temp_address, ( u8 )factory_setting_upper_cool_temp_shorted_times_ten );
+    EEPROMupdate( upper_cool_temp_address + 1, ( u8 )( factory_setting_upper_cool_temp_shorted_times_ten >> 8 ) );
+#endif
 
 #ifndef __LGT8FX8E__
     EEPROM.update( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );//2 );
