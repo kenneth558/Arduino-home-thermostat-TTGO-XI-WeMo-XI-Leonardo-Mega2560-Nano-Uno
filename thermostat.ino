@@ -483,6 +483,7 @@ void restore_factory_defaults()
     primary_temp_sensor_pin = factory_setting_primary_temp_sensor_pin;
     furnace_pin = factory_setting_furnace_pin;
     furnace_fan_pin = factory_setting_furnace_fan_pin;
+    cool_pin = factory_setting_cool_pin;
     power_cycle_pin = factory_setting_power_cycle_pin;
     logging = factory_setting_logging_setting;
     logging_temp_changes = factory_setting_logging_temp_changes_setting;
