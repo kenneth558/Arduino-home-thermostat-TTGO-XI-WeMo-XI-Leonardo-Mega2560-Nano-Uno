@@ -1457,8 +1457,12 @@ after_change_fan:
                if( data < 100 ) Serial.print( F( " " ) );
                if( data < 10 ) Serial.print( F( " " ) );
                Serial.print( data );
-               Serial.print( F( "  " ) );
-               Serial.println( ( char )EEPROM.read( address ) );
+               if( data > 31 && data < 255 )
+               {
+                   Serial.print( F( "  " ) );
+                   Serial.print( ( char )data );
+               }
+               Serial.println();
              }
           }
            strFull[ 0 ] = 0;
