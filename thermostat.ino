@@ -193,7 +193,6 @@ char *string_to_match;
 bool heat_state = false;
 bool cool_state = false;
 long unsigned check_furnace_effectiveness_time;
-//bool millis_overflowed = false;
 
 #ifdef __LGT8FX8E__
 void EEPROMupdate ( unsigned long address, u8 val )
