@@ -1415,10 +1415,6 @@ after_change_fan:
            Serial.print( F( "Talkback for logging is turned o" ) );
            if( logging ) Serial.print( F( "n" ) );
            else  Serial.print( F( "ff" ) );
-           Serial.print( F( " pers address " ) );
-           Serial.print( logging_address );
-           Serial.print( F( " shows " ) );
-           Serial.println( ( bool )EEPROM.read( logging_address ) );
            strFull[ 0 ] = 0;
         }
         else if( strstr_P( strFull, str_vi_pers ) )
