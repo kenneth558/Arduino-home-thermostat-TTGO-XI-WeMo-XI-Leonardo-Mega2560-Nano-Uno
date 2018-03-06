@@ -1376,7 +1376,7 @@ after_change_fan:
         else if( strstr_P( strFull, str_logging_temp_ch_o ) )
         {
            Serial.print( F( "Talkback for logging temp changes being turned o" ) );
-           u8 charat = ( u8 )( strrchr( strFull, ' ' ) + 1 - strFull );
+           u8 charat = ( u8 )( strrchr( strFull, ' ' ) + 2 - strFull );
            if( strFull[ charat ] == 'n' ) logging_temp_changes = true;
            else logging_temp_changes = false;
 #ifndef __LGT8FX8E__
@@ -1398,7 +1398,7 @@ after_change_fan:
         else if( strstr_P( strFull, str_logging_o ) )
         {
            Serial.print( F( "Talkback for logging being turned o" ) );
-           u8 charat = ( u8 )( strrchr( strFull, ' ' ) + 1 - strFull );
+           u8 charat = ( u8 )( strrchr( strFull, ' ' ) + 2 - strFull );
            if( strFull[ charat ] == 'n' ) logging = true;
            else logging = false;
 #ifndef __LGT8FX8E__
