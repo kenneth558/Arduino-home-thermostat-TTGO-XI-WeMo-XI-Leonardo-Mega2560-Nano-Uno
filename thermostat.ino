@@ -1441,8 +1441,8 @@ after_change_fan:
         else if( strstr_P( strFull, str_logging ) )
         {
            Serial.print( F( "Talkback for logging is turned o" ) );
-           if( logging ) Serial.print( F( "n" ) );
-           else  Serial.print( F( "ff" ) );
+           if( logging ) Serial.println( F( "n" ) );
+           else  Serial.println( F( "ff" ) );
            strFull[ 0 ] = 0;
         }//25918
         else if( strstr_P( strFull, str_vi_pers ) )
