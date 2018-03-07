@@ -2,7 +2,7 @@
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0045
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  03/05/18
+ *      Date:  03/07/18
  * 
  * 
  * TODO:  labels to pins 
@@ -129,17 +129,10 @@ const u8 factory_setting_outdoor_temp_sensor2_pin PROGMEM = 11;
 const float minutes_furnace_should_be_effective_after PROGMEM = 5.5; //Can be decimal this way
 const unsigned long loop_cycles_to_skip_between_alert_outputs PROGMEM = 5 * 60 * 30;//estimating 5 loops per second, 60 seconds per minute, 30 minutes per alert
 
-const char str_heatStartLowTemp[] PROGMEM = "heat start low temp";
-const char str_heatStopHighTemp[] PROGMEM = "heat stop high temp";
-const char str_coolStopLowTemp[] PROGMEM = "cool stop low temp";
-const char str_coolStartHighTemp[] PROGMEM = "cool start high temp";
 const char str_talkback[] PROGMEM = "talkback";
-const char str_logging[] PROGMEM = "logging";
 const char str_pin_set[] PROGMEM = "pin set";
-const char str_set_pin[] PROGMEM = "set pin";
 const char str_pins_read[] PROGMEM = "pins read";
 const char str_read_pins[] PROGMEM = "read pins";
-const char str_read_pin_dot[] PROGMEM = "read pin .";
 const char str_set_pin_to[] PROGMEM = "set pin to";
 const char str_pin_set_to[] PROGMEM = "pin set to";
 const char str_view[] PROGMEM = "view";
@@ -148,17 +141,28 @@ const char str_persistent_memory[] PROGMEM = "persistent memory";
 const char str_changes[] PROGMEM = "changes";
 const char str_change[] PROGMEM = "change";
 const char str_thermostat[] PROGMEM = "thermostat";
-//FUTURE const char str_heat_temps[] PROGMEM = "heat temps";
-//FUTURE const char str_cool_temps[] PROGMEM = "cool temps";
-//FUTURE const char str_all_temps[] PROGMEM = "all temps";
 const char str_fan_auto[] PROGMEM = "fan auto";
 const char str_fan_on[] PROGMEM = "fan on";
 const char str_factory[] PROGMEM = "factory";
-const char str_power_cycle[] PROGMEM = "power cycle";
 const char str_cycle_power[] PROGMEM = "cycle power";
-const char str_report_master_room_temp[] PROGMEM = "report master room temp";
-const char str_read_pin[] PROGMEM = "read pin";
 const char str_pin_read[] PROGMEM = "pin read";
+
+const char str_auto[] PROGMEM = "auto";
+const char str_off[] PROGMEM = "off";
+
+const char str_heat[] PROGMEM = "heat";
+const char str_cool[] PROGMEM = "cool";
+const char str_ther_[] PROGMEM = "ther ";
+
+//FUTURE const char str_heat_temps[] PROGMEM = "heat temps";
+//FUTURE const char str_cool_temps[] PROGMEM = "cool temps";
+//FUTURE const char str_all_temps[] PROGMEM = "all temps";
+const char str_power_cycle[] PROGMEM = "power cycle";
+const char str_read_pin[] PROGMEM = "read pin";
+const char str_read_pin_dot[] PROGMEM = "read pin .";
+const char str_set_pin[] PROGMEM = "set pin";
+const char str_logging[] PROGMEM = "logging";
+const char str_report_master_room_temp[] PROGMEM = "report master room temp";
 const char str_set_pin_high[] PROGMEM = "set pin high";
 const char str_set_pin_low[] PROGMEM = "set pin low";
 const char str_set_pin_output[] PROGMEM = "set pin output";
@@ -168,11 +172,10 @@ const char str_ther_a[] PROGMEM = "ther a";
 const char str_ther_o[] PROGMEM = "ther o";
 const char str_ther_h[] PROGMEM = "ther h";
 const char str_ther_c[] PROGMEM = "ther c";
-const char str_auto[] PROGMEM = "auto";
-const char str_off[] PROGMEM = "off";
-const char str_heat[] PROGMEM = "heat";
-const char str_cool[] PROGMEM = "cool";
-const char str_ther_[] PROGMEM = "ther ";
+const char str_heatStartLowTemp[] PROGMEM = "heat start low temp";
+const char str_heatStopHighTemp[] PROGMEM = "heat stop high temp";
+const char str_coolStopLowTemp[] PROGMEM = "cool stop low temp";
+const char str_coolStartHighTemp[] PROGMEM = "cool start high temp";
 const char str_ther[] PROGMEM = "ther";
 const char str_fan_a[] PROGMEM = "fan a";
 const char str_fan_o[] PROGMEM = "fan o";
@@ -189,7 +192,6 @@ const char str_test_alert[] PROGMEM = "test alert";
 const char str_sens_read[] PROGMEM = "sens read";
 const char str_read_sens[] PROGMEM = "read sens";
 const char str_help[] PROGMEM = "help";
-char *string_to_match;
 bool heat_state = false;
 bool cool_state = false;
 long unsigned check_furnace_effectiveness_time;
@@ -804,6 +806,8 @@ void setup()
 
 void check_for_serial_input( char result )
 {
+    
+    
         char nextChar;
         nextChar = 0;
         while( Serial.available() )
@@ -825,80 +829,98 @@ void check_for_serial_input( char result )
 //        digitalWrite( LED_BUILTIN, LOW );                  // These lines for blinking the LED are here if you want the LED to blink when data is rec'd
         if( strFull[ 0 ] == 0 || nextChar != 0  ) return;       //The way this and while loop is set up allows reception of lines with no endings but at a timing cost of one loop()
         char *hit;
-        hit = strstr_P( strFull, string_to_match );
-        Serial.println( string_to_match );
+        
+        hit = strstr_P( strFull, str_talkback );
         if( hit )
         {
-            strcpy( hit, str_logging ); 
+            strcpy_P( hit, str_logging ); 
             memmove( hit + 7, hit + 8, strlen( hit + 7 ) );
         }
+        
         hit = strstr_P( strFull, str_pin_set );
         if( hit )
         {
-            strncpy( hit, str_set_pin, 7 ); 
-        }  
+            strncpy_P( hit, str_set_pin, 7 ); 
+        }
+        
+        hit = strstr_P( strFull, str_cycle_power );
+        if( hit )
+        {
+            strncpy_P( hit, str_power_cycle, 11 ); 
+        }
+        
         hit = strstr_P( strFull, str_pins_read );
         if( !hit ) hit = strstr_P( strFull, str_read_pins );
         if( hit )
         {
-            strncpy( hit, str_read_pin_dot, 11 ); 
-        }  
+            strncpy_P( hit, str_read_pin_dot, 11 ); 
+        }
+        
         hit = strstr_P( strFull, str_set_pin_to );
-        if( !hit ) hit = strstr_P( strFull, str_pin_set_to );
         if( hit )
         {
             memmove( hit + 7, hit + 10, strlen( hit + 9 ) );
         }
+
         hit = strstr_P( strFull, str_view );
         if( hit )
         {
             memmove( hit + 2, hit + 4, strlen( hit + 3 ) );
         }
+
         hit = strstr_P( strFull, str_sensor );
         if( hit )
         {
             memmove( hit + 4, hit + 6, strlen( hit + 5 ) );
         }
+
         hit = strstr_P( strFull, str_persistent_memory );
         if( hit )
         {
             memmove( hit + 4, hit + 17, strlen( hit + 16 ) );
         }
+
         hit = strstr_P( strFull, str_changes );
         if( hit )
         {
             memmove( hit + 2, hit + 7, strlen( hit + 6 ) );
         }
+
         hit = strstr_P( strFull, str_change );
         if( hit )
         {
             memmove( hit + 2, hit + 6, strlen( hit + 5 ) );
         }
+
         hit = strstr_P( strFull, str_thermostat );
         if( hit )
         {
             memmove( hit + 4, hit + 10, strlen( hit + 9 ) );
         }
+
         hit = strstr_P( strFull, str_fan_auto );
         if( hit )
         {
             memmove( hit + 5, hit + 8, strlen( hit + 7 ) );
         }
+
         hit = strstr_P( strFull, str_fan_on );
         if( hit )
         {
             memmove( hit + 5, hit + 6, strlen( hit + 5 ) );
         }
+
         hit = strstr_P( strFull, str_factory );
         if( hit )
         {
             memmove( hit + 4, hit + 7, strlen( hit + 6 ) );
         }
+
         char *address_str;
         char *data_str;
         char *number_specified_str;
         number_specified_str = strrchr( strFull, ' ' ) + 1;
-        if( strstr_P( strFull, str_power_cycle ) || strstr_P( strFull, str_cycle_power ) ) 
+        if( strstr_P( strFull, str_power_cycle ) ) 
         {
           digitalWrite( power_cycle_pin, HIGH );
           if( logging )
@@ -918,7 +940,9 @@ void check_for_serial_input( char result )
               Serial.println( digitalRead( power_cycle_pin ) );
           }
           strFull[ 0 ] = 0;
-        }
+        }//18664
+
+        
 /* //FUTURE 
         else if( strstr_P( strFull, str_cool_temps ) )
         {
@@ -927,7 +951,10 @@ void check_for_serial_input( char result )
            }
             strFull[ 0 ] = 0;
         }
+end of future
 */
+
+
         else if( strstr_P( strFull, str_heatStartLowTemp ) )//change to heat low start temp with optional numeric: heat high stop temp, cool low stop temp, cool high start temp
         {
            if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK ) )
@@ -957,7 +984,7 @@ void check_for_serial_input( char result )
                 Serial.println( lower_heat_temp_floated, 1 );
             }
             strFull[ 0 ] = 0;
-        }
+        }//19638
         else if( strstr_P( strFull, str_heatStopHighTemp ) )
         {
            if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK ) )
@@ -987,7 +1014,8 @@ void check_for_serial_input( char result )
                 Serial.println( upper_heat_temp_floated, 1 );
             }
            strFull[ 0 ] = 0;
-        }
+        }//19954
+        
         else if( strstr_P( strFull, str_coolStopLowTemp ) )
         {
            if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK ) )
@@ -1016,7 +1044,7 @@ void check_for_serial_input( char result )
                 Serial.println( lower_cool_temp_floated, 1 );
             }
            strFull[ 0 ] = 0;
-        }
+        }//20254
         else if( strstr_P( strFull, str_coolStartHighTemp ) )
         {
            if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK ) )
@@ -1045,7 +1073,7 @@ void check_for_serial_input( char result )
                 Serial.println( upper_cool_temp_floated, 1 );
             }
            strFull[ 0 ] = 0;
-        }
+        }//20554
         else if( strstr_P( strFull, str_report_master_room_temp ) )
         {
            if( result == DEVICE_READ_SUCCESS )
@@ -1074,7 +1102,7 @@ void check_for_serial_input( char result )
                 Serial.println( F( "Sensor didn't read" ) );
            }
             strFull[ 0 ] = 0;
-        }
+        }//21146
         else if( strstr_P( strFull, str_read_pin ) || strstr_P( strFull, str_pin_read ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1092,7 +1120,7 @@ void check_for_serial_input( char result )
                }
            }
            strFull[ 0 ] = 0;
-        }
+        }//22110
         else if( strstr_P( strFull, str_set_pin_high ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1128,7 +1156,7 @@ void check_for_serial_input( char result )
                }
            }
            strFull[ 0 ] = 0;
-        }
+        }//22618
         else if( strstr_P( strFull, str_set_pin_low ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1164,7 +1192,7 @@ void check_for_serial_input( char result )
                }
            }
            strFull[ 0 ] = 0;
-        }
+        }//22928
         else if( strstr_P( strFull, str_set_pin_output ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1215,7 +1243,7 @@ doneWithPinOutput:;
                }
            }
            strFull[ 0 ] = 0;
-        }
+        }//23340
         else if( strstr_P( strFull, str_set_pin_input_with_pullup ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1244,7 +1272,7 @@ doneWithPinOutput:;
                }
            }
            strFull[ 0 ] = 0;
-        }
+        }//23824
         else if( strstr_P( strFull, str_set_pin_input ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1280,7 +1308,7 @@ doneWithPinOutput:;
                }
            }
            strFull[ 0 ] = 0;
-        }
+        }//24124
         else if( strstr_P( strFull, str_ther ) )
         {
             if( strlen( strFull ) == 4 ) goto showThermostatSetting;
@@ -1335,7 +1363,7 @@ showThermostatSetting:;
             printThermoModeWord( thermostat_mode, true );
 after_change_thermostat:
            strFull[ 0 ] = 0;
-        }
+        }//24958
         else if( strstr_P( strFull, str_fan_a ) || strstr_P( strFull, str_fan_o ) )
         {
            fan_mode = strFull[ ( u8 )( strlen_P( str_fan_ ) ) ];
@@ -1357,7 +1385,7 @@ after_change_thermostat:
 #endif
 after_change_fan:
            strFull[ 0 ] = 0;
-        }
+        }//25114
         else if( strstr_P( strFull, str_fan ) )
         {
             if( strchr( &strFull[ 3 ], ' ' ) )
@@ -1372,7 +1400,7 @@ after_change_fan:
             if( fan_mode == 'a' ) Serial.println( F( "auto" ) );
             else if( fan_mode == 'o' ) Serial.println( F( "on" ) );
            strFull[ 0 ] = 0;
-        }
+        }//25332
         else if( strstr_P( strFull, str_logging_temp_ch_o ) )
         {
            Serial.print( F( "Talkback for logging temp changes being turned o" ) );
@@ -1387,14 +1415,14 @@ after_change_fan:
            if( logging_temp_changes ) Serial.println( strFull[ charat ] );
            else  Serial.println( F( "ff" ) );
            strFull[ 0 ] = 0;
-        }
+        }//25556
         else if( strstr_P( strFull, str_logging_temp_ch ) )
         {
            Serial.print( F( "Talkback for logging temp changes is turned o" ) );
            if( logging_temp_changes ) Serial.println( F( "n" ) );
            else  Serial.println( F( "ff" ) );
            strFull[ 0 ] = 0;
-        }
+        }//25670
         else if( strstr_P( strFull, str_logging_o ) )
         {
            Serial.print( F( "Talkback for logging being turned o" ) );
@@ -1409,14 +1437,14 @@ after_change_fan:
            if( logging ) Serial.println( strFull[ charat ] );
            else  Serial.println( F( "ff" ) );
            strFull[ 0 ] = 0;
-        }
+        }//25824
         else if( strstr_P( strFull, str_logging ) )
         {
            Serial.print( F( "Talkback for logging is turned o" ) );
            if( logging ) Serial.print( F( "n" ) );
            else  Serial.print( F( "ff" ) );
            strFull[ 0 ] = 0;
-        }
+        }//25918
         else if( strstr_P( strFull, str_vi_pers ) )
         {
           address_str = strchr( &strFull[ 7 ], ' ' ) + 1;//.substring( address_str.indexOf( ' ' )+ 1 );
@@ -1462,7 +1490,7 @@ after_change_fan:
              }
           }
            strFull[ 0 ] = 0;
-        }
+        }//26498
         else if( strstr_P( strFull, str_ch_pers ) )
         {
           address_str = strchr( &strFull[ 7 ], ' ' ) + 1;//.substring( address_str.indexOf( ' ' )+ 1 );
@@ -1553,7 +1581,7 @@ after_change_fan:
               Serial.println( EEPROM.read( address ) );
           }
            strFull[ 0 ] = 0;
-        }
+        }//27472
         else if( strstr_P( strFull, str_vi_fact ) ) // The Leonardo does not have enough room in PROGMEM for this feature
         {
 #ifdef __AVR_ATmega32U4__
@@ -1607,7 +1635,7 @@ after_change_fan:
              }
            }
            strFull[ 0 ] = 0;
-        }
+        }//29046
         else
         {
           if( !strstr_P( strFull, str_help ) )
