@@ -1,5 +1,5 @@
 /***********************************************************************************************************************
- *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0047
+ *      ARDUINO HOME THERMOSTAT SKETCH  v.0.5
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
  *      Date:  03/08/18
@@ -17,7 +17,7 @@
  *                                                                  fan is the term for same part but for the thermostat operator person
  * 
  *************************************************************************************************************************/
-#define VERSION "0.0.0047"
+#define VERSION "0.5"
 #ifndef u8
     #define u8 uint8_t
 #endif
