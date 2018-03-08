@@ -24,10 +24,13 @@
 #define TYPE_LIKELY_DHT11 3
 #define TYPE_LIKELY_DHT22 4
 
+#define LIVE 0
+#define RECENT 1
 
 float _TemperatureCelsius;  //GLOBAL TO SAVE SPACE IN STRUCT
 float _HumidityPercent;  //GLOBAL TO SAVE SPACE IN STRUCT
-
+float O_TemperatureCelsius;  //GLOBAL TO SAVE SPACE IN STRUCT
+float O_HumidityPercent;  //GLOBAL TO SAVE SPACE IN STRUCT
 typedef struct DHTresultStruct
 {
     signed char ErrorCode = DEVICE_NOT_YET_ACCESSED;//
@@ -212,15 +215,13 @@ past_device_type_sort:;
         DHTfunctionResultsArray[ pin - 1 ].HumidityPercent = *DataStreamBits0;
 }
 
-
-DHTresult* DHTreadWhenRested( u8 pin )
+DHTresult* FetchTemp( u8 pin, u8 LiveOrRecent )
 {
     if( ( pin < 1 ) || ( pin > NUM_DIGITAL_PINS ) )
     {
         DHTfunctionResultsArray[ NUM_DIGITAL_PINS ].ErrorCode = REFUSED_INVALID_PIN;
         return &DHTfunctionResultsArray[ NUM_DIGITAL_PINS ];
     }
-    while( ( micros() > ( long unsigned )-30000 ) || ( millis() > ( long unsigned )-30 ) );
     for( u8 d = 0; d < NUM_DIGITAL_PINS; d++ )
     {
         if( DHTfunctionResultsArray[ d ].ErrorCode < DEVICE_READ_SUCCESS )
@@ -245,22 +246,11 @@ DHTresult* DHTreadWhenRested( u8 pin )
         rest_time += 30; // account for the 19 mSec plus 5 mSec start prep plus 6 mSec for  data stream
         if( ( DHTfunctionResultsArray[ pin - 1 ].Type == TYPE_KNOWN_DHT22 ) || ( DHTfunctionResultsArray[ pin - 1 ].Type == TYPE_LIKELY_DHT22 ) )
             rest_time += 1000;//adds another 1000 mSec on so now = 2 full seconds
-        for( u8 d = 0; d < 1; d++ )
+        if( LiveOrRecent == RECENT && millis() - DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis < rest_time && DHTfunctionResultsArray[ pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS )
         {
-
-            if( DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis + rest_time > DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis )
-            {
-                 if( ( millis() < DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis ) || ( millis() > DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis + rest_time ) )
-                     break;
-            }
-            else
-            {
-                 if( ( millis() < DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis ) && ( millis() > DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis + rest_time ) )
-                      break;
-                 while( millis() > DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis );
-            }
-            while( millis() < DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis + rest_time );
+            return &DHTfunctionResultsArray[ pin - 1 ];
         }
+        while( millis() - DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis < rest_time );
     }
     GetReading( pin );
 deviceReadDone:;    
