@@ -1108,15 +1108,9 @@ void check_for_serial_input( char result )
                Serial.println( _HumidityPercent, 1 );
                Serial.print( F( "Temperature (°C): " ) );
                Serial.println( _TemperatureCelsius, 1 );
-               Serial.print( F( "Tempperature heat is set to start: " ) );
-               Serial.println( lower_heat_temp_floated, 1 );
-               Serial.print( F( "Temperature heat is set to stop: " ) );
-               Serial.println( upper_heat_temp_floated, 1 );
-               Serial.print( F( "Temperature cool is set to stop: " ) );
-               Serial.println( lower_cool_temp_floated, 1 );
-               Serial.print( F( "Temperature cool is set to start: " ) );
-               Serial.println( upper_cool_temp_floated, 1 );
-               Serial.print( F( "Furnace: " ) );
+                showHeatSettings();
+                showCoolSettings();
+                Serial.print( F( "Furnace: " ) );
                Serial.println( digitalRead( heat_pin ) );
                Serial.print( F( "Furnace fan: " ) );
                Serial.println( digitalRead( furnace_blower_pin ) );
