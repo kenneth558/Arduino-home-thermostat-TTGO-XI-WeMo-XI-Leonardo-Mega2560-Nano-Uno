@@ -67,6 +67,12 @@ u8 outdoor_temp_sensor2_address = 11;
 #define COOL_TEMP_BOUNDS_CHECK 2
 #define BOTH_TEMPS_BOUNDS_CHECK 3
 
+#define ADJUST_START_AND_STOP_LIMITS_TOGETHER 4
+#define SINGLE_LIMIT_ONLY 0
+
+#define ADJUST 0
+#define SETFULL 16
+
 #define HEAT_UPPER_BOUNDS 27
 #define HEAT_LOWER_BOUNDS 10
 #define COOL_UPPER_BOUNDS 32
@@ -218,8 +224,6 @@ void printThermoModeWord( char setting_char, bool newline )
         setting = str_heat;
     else if( setting_char == 'c' )
         setting = str_cool;
-//    else return false;
-//    setting = str_auto;
     Serial.print( ( const __FlashStringHelper * )setting );
     if( newline ) Serial.println();
 }
@@ -335,7 +339,7 @@ boolean IsValidPinNumber( const char* str )
     while( isdigit( str[ j ] ) ) j++;
     if( j == i )
     {
-        Serial.println( F( "Command must begin or end with a pin number as specified in help screen" ) );
+        Serial.println( F( "Pin number missing.  See help screen" ) );
         return false;
     }
     pin_specified = ( u8 )atoi( str );
@@ -362,40 +366,27 @@ if( reply )
 return false;
 }
 
-u8 IsValidTemp( const char* str, u8 boundsCheck, bool adjustTogether )
+u8 IsValidTemp( const char* str, u8 boundsCheckAndAdjustTogether )
 {
-//    for( unsigned int i = 0; i < str->length(); i++ )
     for( unsigned int i = 0; i < strlen( str ); i++ )
     {
         if( !i && str[ 0 ] == '-' );
         else if( !( isdigit( str[ i ] ) || str[ i ] == '.' ) || ( strchr( str, '.' ) != strrchr( str, '.' ) ) ) //allow one and only one decimal point in str
         {
-            Serial.println( F( "Command must end with a Celsius value" ) );
             return NO_TEMP_ENTERED;
         }
     }
     temp_specified_floated = ( float )atoi( str );
     if( strchr( str, '.' ) ){ str = strchr( str, '.' ) + 1; temp_specified_floated += ( ( float )atoi( str ) ) / 10; };
 
-    if( ( boundsCheck == HEAT_TEMP_BOUNDS_CHECK && !adjustTogether && ( temp_specified_floated < HEAT_LOWER_BOUNDS || temp_specified_floated > HEAT_UPPER_BOUNDS ) ) || \
-        ( boundsCheck == COOL_TEMP_BOUNDS_CHECK && !adjustTogether && ( temp_specified_floated < COOL_LOWER_BOUNDS || temp_specified_floated > COOL_UPPER_BOUNDS ) ) || \
-        ( boundsCheck == HEAT_TEMP_BOUNDS_CHECK && adjustTogether && ( temp_specified_floated < HEAT_LOWER_BOUNDS || temp_specified_floated > HEAT_UPPER_BOUNDS ) ) || \
-        ( boundsCheck == COOL_TEMP_BOUNDS_CHECK && adjustTogether && ( temp_specified_floated < COOL_LOWER_BOUNDS || temp_specified_floated > COOL_UPPER_BOUNDS ) ) || \
-        ( boundsCheck == BOTH_TEMPS_BOUNDS_CHECK && ( temp_specified_floated < COOL_LOWER_BOUNDS || temp_specified_floated > COOL_UPPER_BOUNDS ||  temp_specified_floated < HEAT_LOWER_BOUNDS || temp_specified_floated > HEAT_UPPER_BOUNDS ) ) )//This check should be called for the rooms where it matters
+    if( ( ( boundsCheckAndAdjustTogether & HEAT_TEMP_BOUNDS_CHECK ) && !( boundsCheckAndAdjustTogether & ADJUST_START_AND_STOP_LIMITS_TOGETHER ) && ( temp_specified_floated < HEAT_LOWER_BOUNDS || temp_specified_floated > HEAT_UPPER_BOUNDS ) ) || \
+        ( ( boundsCheckAndAdjustTogether & COOL_TEMP_BOUNDS_CHECK ) && !( boundsCheckAndAdjustTogether & ADJUST_START_AND_STOP_LIMITS_TOGETHER ) && ( temp_specified_floated < COOL_LOWER_BOUNDS || temp_specified_floated > COOL_UPPER_BOUNDS ) ) || \
+        ( ( boundsCheckAndAdjustTogether & HEAT_TEMP_BOUNDS_CHECK ) && ( boundsCheckAndAdjustTogether & ADJUST_START_AND_STOP_LIMITS_TOGETHER ) && ( lower_heat_temp_floated + temp_specified_floated < HEAT_LOWER_BOUNDS || upper_heat_temp_floated + temp_specified_floated > HEAT_UPPER_BOUNDS ) ) || \
+        ( ( boundsCheckAndAdjustTogether & COOL_TEMP_BOUNDS_CHECK ) && ( boundsCheckAndAdjustTogether & ADJUST_START_AND_STOP_LIMITS_TOGETHER ) && ( lower_cool_temp_floated + temp_specified_floated < COOL_LOWER_BOUNDS || upper_cool_temp_floated + temp_specified_floated > COOL_UPPER_BOUNDS ) ) )//This check should be called for the rooms where it matters
     {
-        Serial.print( F( "Temperature entered would exceed safety limits" ) );
-//        Serial.print( lower_limit );
-//        Serial.print( F( " through " ) );
-//        Serial.println( upper_limit );
+        Serial.println( F( "Value entered would exceed safety limits" ) );
         return ( u8 )false;
     }
-//    else if( combine );//&& () )
-/*
-    else if()
-    {
-        
-    }
-*/
     return ( u8 )true;
 }
 
@@ -404,7 +395,7 @@ void printBasicInfo()
     Serial.println( F( ".." ) );
     if( fresh_powerup )
     {
-       Serial.println( F( "A way to save talkbacks into a file in Ubuntu and Mint Linux is: (except change \"TIME_STAMP_THIS\" to lower case, not shown so this won't get filtered in by such command)" ) );
+       Serial.println( F( "A way to save talkbacks into a file in Linux is: (except change \"TIME_STAMP_THIS\" to lower case, not shown so this won't get filtered in by such command)" ) );
        Serial.print( F( "    nohup stty igncr -F \$(ls /dev/ttyA* /dev/ttyU* 2>/dev/null|tail -n1) " ) );
        Serial.print( _baud_rate_ );
 //The following would get time stamped inadvertently:
@@ -465,31 +456,31 @@ void printBasicInfo()
     Serial.println( F( "help (re-display this information)" ) );
     Serial.println( F( "ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat mode)" ) );//, auto requires outdoor sensor[s] and reverts to heat if sensor[s] fail)" ) );
     Serial.println( F( "fan[ a[uto]/ o[n]] (to read or set fan)" ) );
-    Serial.println( F( "heat start low temp <°C> (to turn heat on at this or lower temperature, always persistent)" ) );//not worth converting for some unkown odd reason
-    Serial.println( F( "heat stop high temp <°C> (to turn heat off at this or higher temperature, always persistent)" ) );
-    Serial.println( F( "cool stop low temp <°C> (to turn A/C off at this or lower temperature, always persistent)" ) );
-    Serial.println( F( "cool start high temp <°C> (to turn A/C on at this or higher temperature, always persistent)" ) );
+    Serial.println( F( "heat start low temp[ <°C>] (to turn heat on at this or lower temperature, always persistent)" ) );//not worth converting for some unkown odd reason
+    Serial.println( F( "heat stop high temp[ <°C>] (to turn heat off at this or higher temperature, always persistent)" ) );
+    Serial.println( F( "cool stop low temp[ <°C>] (to turn A/C off at this or lower temperature, always persistent)" ) );
+    Serial.println( F( "cool start high temp[ <°C>] (to turn A/C on at this or higher temperature, always persistent)" ) );
 
 //    Serial.print( ( const __FlashStringHelper * )str_heat_temps );//uses more bytes this way
-    Serial.println( F( "heat temps <°C> (adjust heat settings up, use - for down)" ) );
+    Serial.println( F( "heat temps[ <°C>] (adjust heat settings up, use - for down)" ) );
 //    Serial.print( ( const __FlashStringHelper * )str_cool_temps );//uses more bytes this way
-    Serial.println( F( "cool temps <°C> (adjust cool settings up, use - for down)" ) );
+    Serial.println( F( "cool temps[ <°C>] (adjust cool settings up, use - for down)" ) );
 //    Serial.print( ( const __FlashStringHelper * )str_all_temps );//uses more bytes this way
-    Serial.println( F( "all temps <°C> (adjust all temperature settings up, use - for down)" ) );
+    Serial.println( F( "all temps[ <°C>] (adjust all temperature settings up, use - for down)" ) );
 
     Serial.println( F( "talkback[ on/off] (or logging on/off)" ) );//(for the host system to log when each output pin gets set high or low, always persistent)" ) );
     Serial.println( F( "talkback temp change[s[ on/off]] (or logging temp changes[ on/off])(requires normal talkback on)" ) );// - for the host system to log whenever the main room temperature changes, always persistent)" ) );
     Serial.println( ( const __FlashStringHelper * )str_report_master_room_temp );
     Serial.println( F( "power cycle (or cycle power)" ) );
 
-    Serial.println( F( "read pin <pin number> (or ...pin read...)(obtain the name if any, setting and voltage)" ) );
+    Serial.println( F( "read pin <pin number or .> (or ...pin read...)(obtain the name if any, setting and voltage)" ) );
     Serial.println( F( "read pins (or pins read )(obtain the names, settings and voltages of ALL pins)" ) );
-    Serial.println( F( "read sens[or] <pin number> (retrieves sensor reading, a period with due care in place of pin number for all pins)" ) );
-    Serial.println( F( "set pin [to] output <pin number> (or ...pin set)" ) );
-    Serial.println( F( "set pin [to] input <pin number> [pers] (or ...pin set...) optional persistence FUTURE" ) );
-    Serial.println( F( "set pin [to] input with pullup <pin number> [pers] (or ...pin set...) optional persistence FUTURE" ) );
-    Serial.println( F( "set pin [to] low <pin number> [pers] (or ...pin set...)(only allowed to pins assigned as output) optional persistence FUTURE" ) );
-    Serial.println( F( "set pin [to] high <pin number> [pers] (or ...pin set...)(only allowed to pins assigned as output) optional persistence FUTURE" ) );
+    Serial.println( F( "read sens[or] <pin number or .> (retrieves sensor reading, a period with due care in place of pin number for all pins)" ) );
+    Serial.println( F( "set pin [to] output <pin number or .> (or ...pin set)" ) );
+    Serial.println( F( "set pin [to] input <pin number or .> [pers] (or ...pin set...) optional persistence FUTURE" ) );
+    Serial.println( F( "set pin [to] input with pullup <pin number or .> [pers] (or ...pin set...) optional persistence FUTURE" ) );
+    Serial.println( F( "set pin [to] low <pin number or .> [pers] (or ...pin set...)(only allowed to pins assigned as output) optional persistence FUTURE" ) );
+    Serial.println( F( "set pin [to] high <pin number or .> [pers] (or ...pin set...)(only allowed to pins assigned as output) optional persistence FUTURE" ) );
 
     Serial.println( F( "ch[ange] pers[istent memory] <address> <value> (changes EEPROM, see source code for addresses of data)" ) );
     Serial.println( F( "ch[ange] pers[istent memory] <StartingAddress> \"<character string>[\"[ 0]] (store character string in EEPROM as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])" ) );
@@ -850,6 +841,44 @@ void printTooHighLow( u8 highOrLow )
         Serial.println( F( "high for this value. Lower" ) );
    Serial.println( F( " that before trying this value" ) );
 }
+
+void LimitSet( float *settingOfInterest, unsigned int settingOfInterestAddress, u8 AdjustOrSetfull )
+{
+    if( AdjustOrSetfull == SETFULL )
+        *settingOfInterest = temp_specified_floated;
+    else
+        *settingOfInterest += temp_specified_floated;
+    
+    timer_alert_furnace_sent = 0;
+    short temp_specified_shorted_times_ten = ( short )( *settingOfInterest * 10 );
+#ifndef __LGT8FX8E__
+    EEPROM.put( settingOfInterestAddress, temp_specified_shorted_times_ten );
+#else
+    EEPROMupdate( settingOfInterestAddress, ( u8 )temp_specified_shorted_times_ten );
+    EEPROMupdate( settingOfInterestAddress + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
+#endif
+}
+
+void showHeatSettings( void )
+{
+    Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
+    Serial.print( F( " now " ) );
+    Serial.println( lower_heat_temp_floated, 1 );
+    Serial.print( ( const __FlashStringHelper * )str_heatStopHighTemp );
+    Serial.print( F( " now " ) );
+    Serial.println( upper_heat_temp_floated, 1 );
+}
+
+void showCoolSettings( void )
+{
+    Serial.print( ( const __FlashStringHelper * )str_coolStopLowTemp );
+    Serial.print( F( " now " ) );
+    Serial.println( lower_cool_temp_floated, 1 );
+    Serial.print( ( const __FlashStringHelper * )str_coolStartHighTemp );
+    Serial.print( F( " now " ) );
+    Serial.println( upper_cool_temp_floated, 1 );
+}
+
 void check_for_serial_input( char result )
 {
     
@@ -914,77 +943,104 @@ void check_for_serial_input( char result )
               Serial.print( '=' );
               Serial.println( digitalRead( power_cycle_pin ) );
           }
-          
-        }
-        else if( strstr_P( strFull, str_cool_temps ) )
-        {
-           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK, false ) != NO_TEMP_ENTERED && ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK, true ) );
-           {
-            ;
-           }
-            
         }
         else if( strstr_P( strFull, str_heat_temps ) )
         {
-           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK, false ) != NO_TEMP_ENTERED && ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK, true ) );
+           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK ) != NO_TEMP_ENTERED )
            {
-            ;
+                if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK + ADJUST_START_AND_STOP_LIMITS_TOGETHER ) )
+               {
+                    if( temp_specified_floated < 0 )
+                    {
+                        LimitSet( &lower_heat_temp_floated, lower_heat_temp_address, ADJUST );
+                    }
+                    LimitSet( &upper_heat_temp_floated, upper_heat_temp_address, ADJUST );
+                    if( temp_specified_floated >= 0 )
+                    {
+                        LimitSet( &lower_heat_temp_floated, lower_heat_temp_address, ADJUST );
+                    }
+               }
            }
-            
+           if( logging )
+            {
+                showHeatSettings();
+            }
+        }
+        else if( strstr_P( strFull, str_cool_temps ) )
+        {
+           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK ) != NO_TEMP_ENTERED )
+           {
+               if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK + ADJUST_START_AND_STOP_LIMITS_TOGETHER ) )
+               {
+                    if( temp_specified_floated < 0 )
+                        LimitSet( &lower_cool_temp_floated, lower_cool_temp_address, ADJUST );
+                    LimitSet( &upper_cool_temp_floated, upper_cool_temp_address, ADJUST );
+                    if( temp_specified_floated >= 0 )
+                        LimitSet( &lower_cool_temp_floated, lower_cool_temp_address, ADJUST );
+               }
+           }
+           if( logging )
+            {
+                showCoolSettings();
+           }
         }
         else if( strstr_P( strFull, str_all_temps ) )
         {
-           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK, false ) != NO_TEMP_ENTERED && ( bool )IsValidTemp( number_specified_str, BOTH_TEMPS_BOUNDS_CHECK, true ) );
+           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK ) != NO_TEMP_ENTERED )
            {
-            ;
+               if( ( bool )IsValidTemp( number_specified_str, BOTH_TEMPS_BOUNDS_CHECK + ADJUST_START_AND_STOP_LIMITS_TOGETHER ) )
+               {
+                    if( temp_specified_floated < 0 )
+                    {
+                        LimitSet( &lower_heat_temp_floated, lower_heat_temp_address, ADJUST );
+                        LimitSet( &lower_cool_temp_floated, lower_cool_temp_address, ADJUST );
+                    }
+                    LimitSet( &upper_heat_temp_floated, upper_heat_temp_address, ADJUST );
+                    LimitSet( &upper_cool_temp_floated, upper_cool_temp_address, ADJUST );
+                    if( temp_specified_floated >= 0 )
+                    {
+                        LimitSet( &lower_heat_temp_floated, lower_heat_temp_address, ADJUST );
+                        LimitSet( &lower_cool_temp_floated, lower_cool_temp_address, ADJUST );
+                    }
+               }
            }
-            
+           if( logging )
+            {
+                showHeatSettings();
+                showCoolSettings();
+           }
         }
         else if( strstr_P( strFull, str_heatStartLowTemp ) )//change to heat low start temp with optional numeric: heat high stop temp, cool low stop temp, cool high start temp
         {
-           if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK, false ) )
+           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK ) != NO_TEMP_ENTERED )
            {
-              if( temp_specified_floated <= upper_heat_temp_floated )
-              {
-                lower_heat_temp_floated = temp_specified_floated;
-                timer_alert_furnace_sent = 0;
-                short temp_specified_shorted_times_ten = ( short )( temp_specified_floated * 10 );
-#ifndef __LGT8FX8E__
-                EEPROM.put( lower_heat_temp_address, temp_specified_shorted_times_ten );
-#else
-                EEPROMupdate( lower_heat_temp_address, ( u8 )temp_specified_shorted_times_ten );
-                EEPROMupdate( lower_heat_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
-#endif
-              }
-              else 
-              {
-                Serial.print( ( const __FlashStringHelper * )str_heatStopHighTemp );
-                printTooHighLow( LOW );
-              }
-            }
+               if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK + SINGLE_LIMIT_ONLY ) )
+               {
+                  if( temp_specified_floated <= upper_heat_temp_floated )
+                  {
+                    LimitSet( &lower_heat_temp_floated, lower_heat_temp_address, SETFULL );
+                  }
+                  else 
+                  {
+                    Serial.print( ( const __FlashStringHelper * )str_heatStopHighTemp );
+                    printTooHighLow( LOW );
+                  }
+                }
+           }
             if( logging )
             {
                 Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
                 Serial.print( F( " now " ) );
                 Serial.println( lower_heat_temp_floated, 1 );
             }
-            
         }
         else if( strstr_P( strFull, str_heatStopHighTemp ) )
         {
-           if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK, false ) )
+           if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK + SINGLE_LIMIT_ONLY ) )
            {
               if( temp_specified_floated >= lower_heat_temp_floated )
               {
-                upper_heat_temp_floated = temp_specified_floated;
-                timer_alert_furnace_sent = 0;
-                short temp_specified_shorted_times_ten = ( short )( temp_specified_floated * 10 );
-#ifndef __LGT8FX8E__
-                EEPROM.put( upper_heat_temp_address, temp_specified_shorted_times_ten );
-#else
-                EEPROMupdate( upper_heat_temp_address, ( u8 )temp_specified_shorted_times_ten );
-                EEPROMupdate( upper_heat_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
-#endif
+                LimitSet( &upper_heat_temp_floated, upper_heat_temp_address, SETFULL );
               }
               else 
               {
@@ -1000,21 +1056,13 @@ void check_for_serial_input( char result )
             }
            
         }
-        
         else if( strstr_P( strFull, str_coolStopLowTemp ) )
         {
-           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK, false ) )
+           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK + SINGLE_LIMIT_ONLY ) )
            {
               if( temp_specified_floated <= upper_cool_temp_floated )
               {
-                lower_cool_temp_floated = temp_specified_floated;
-                short temp_specified_shorted_times_ten = ( short )( temp_specified_floated * 10 );
-#ifndef __LGT8FX8E__
-                EEPROM.put( lower_cool_temp_address, temp_specified_shorted_times_ten );
-#else
-                EEPROMupdate( lower_cool_temp_address, ( u8 )temp_specified_shorted_times_ten );
-                EEPROMupdate( lower_cool_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
-#endif
+                LimitSet( &lower_cool_temp_floated, lower_cool_temp_address, SETFULL );
               }
               else 
               {
@@ -1032,18 +1080,11 @@ void check_for_serial_input( char result )
         }
         else if( strstr_P( strFull, str_coolStartHighTemp ) )
         {
-           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK, false ) )
+           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK + SINGLE_LIMIT_ONLY ) )
            {
               if( temp_specified_floated >= lower_cool_temp_floated )
               {
-                upper_cool_temp_floated = temp_specified_floated;
-                short temp_specified_shorted_times_ten = ( short )( temp_specified_floated * 10 );
-#ifndef __LGT8FX8E__
-                EEPROM.put( upper_cool_temp_address, temp_specified_shorted_times_ten );
-#else
-                EEPROMupdate( upper_cool_temp_address, ( u8 )temp_specified_shorted_times_ten );
-                EEPROMupdate( upper_cool_temp_address + 1, ( u8 )( temp_specified_shorted_times_ten >> 8 ) );
-#endif
+                LimitSet( &upper_cool_temp_floated, upper_cool_temp_address, SETFULL );
               }
               else 
               {
