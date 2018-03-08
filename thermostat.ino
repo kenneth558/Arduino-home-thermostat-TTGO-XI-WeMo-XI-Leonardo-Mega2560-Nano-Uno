@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
- *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0045
+ *      ARDUINO HOME THERMOSTAT SKETCH  v.0.0.0047
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  03/07/18
+ *      Date:  03/08/18
  * 
  * 
  * TODO:  labels to pins 
@@ -17,7 +17,7 @@
  *                                                                  fan is the term for same part but for the thermostat operator person
  * 
  *************************************************************************************************************************/
-#define VERSION "0.0.0045"
+#define VERSION "0.0.0047"
 #ifndef u8
     #define u8 uint8_t
 #endif
@@ -65,12 +65,16 @@ u8 outdoor_temp_sensor2_address = 11;
 #define NO_BOUNDS_CHECK 0
 #define HEAT_TEMP_BOUNDS_CHECK 1
 #define COOL_TEMP_BOUNDS_CHECK 2
+#define BOTH_TEMPS_BOUNDS_CHECK 3
 
 #define HEAT_UPPER_BOUNDS 27
 #define HEAT_LOWER_BOUNDS 10
 #define COOL_UPPER_BOUNDS 32
 #define COOL_LOWER_BOUNDS 15
 #define NO_TEMP_ENTERED 2
+
+#define SHORTEN 0
+#define REPLACE 1
 
 unsigned int logging_address = EEPROMlength - sizeof( boolean );
 unsigned int upper_heat_temp_address = logging_address - sizeof( short );//EEPROMlength - 2;
@@ -127,7 +131,7 @@ const u8 factory_setting_secondary_temp_sensor_pin PROGMEM = 8;
 const u8 factory_setting_outdoor_temp_sensor1_pin PROGMEM = 10;
 const u8 factory_setting_outdoor_temp_sensor2_pin PROGMEM = 11;
 const float minutes_furnace_should_be_effective_after PROGMEM = 5.5; //Can be decimal this way
-const unsigned long loop_cycles_to_skip_between_alert_outputs PROGMEM = 5 * 60 * 30;//estimating 5 loops per second, 60 seconds per minute, 30 minutes per alert
+const unsigned long loop_cycles_to_skip_between_alert_outputs PROGMEM = 4 * 60 * 30;//estimating 4 loops per second, 60 seconds per minute, 30 minutes per alert
 
 const char str_talkback[] PROGMEM = "talkback";
 const char str_pin_set[] PROGMEM = "pin set";
@@ -154,9 +158,9 @@ const char str_heat[] PROGMEM = "heat";
 const char str_cool[] PROGMEM = "cool";
 const char str_ther_[] PROGMEM = "ther ";
 
-//FUTURE const char str_heat_temps[] PROGMEM = "heat temps";
-//FUTURE const char str_cool_temps[] PROGMEM = "cool temps";
-//FUTURE const char str_all_temps[] PROGMEM = "all temps";
+const char str_heat_temps[] PROGMEM = "heat temps";
+const char str_cool_temps[] PROGMEM = "cool temps";
+const char str_all_temps[] PROGMEM = "all temps";
 const char str_power_cycle[] PROGMEM = "power cycle";
 const char str_read_pin[] PROGMEM = "read pin";
 const char str_read_pin_dot[] PROGMEM = "read pin .";
@@ -358,7 +362,7 @@ if( reply )
 return false;
 }
 
-u8 IsValidTemp( const char* str, u8 boundsCheck )
+u8 IsValidTemp( const char* str, u8 boundsCheck, bool adjustTogether )
 {
 //    for( unsigned int i = 0; i < str->length(); i++ )
     for( unsigned int i = 0; i < strlen( str ); i++ )
@@ -373,7 +377,11 @@ u8 IsValidTemp( const char* str, u8 boundsCheck )
     temp_specified_floated = ( float )atoi( str );
     if( strchr( str, '.' ) ){ str = strchr( str, '.' ) + 1; temp_specified_floated += ( ( float )atoi( str ) ) / 10; };
 
-    if( ( boundsCheck == HEAT_TEMP_BOUNDS_CHECK && ( temp_specified_floated < HEAT_LOWER_BOUNDS || temp_specified_floated > HEAT_UPPER_BOUNDS ) ) || ( boundsCheck == COOL_TEMP_BOUNDS_CHECK && ( temp_specified_floated < COOL_LOWER_BOUNDS || temp_specified_floated > COOL_UPPER_BOUNDS ) ) )//This check should be called for the rooms where it matters
+    if( ( boundsCheck == HEAT_TEMP_BOUNDS_CHECK && !adjustTogether && ( temp_specified_floated < HEAT_LOWER_BOUNDS || temp_specified_floated > HEAT_UPPER_BOUNDS ) ) || \
+        ( boundsCheck == COOL_TEMP_BOUNDS_CHECK && !adjustTogether && ( temp_specified_floated < COOL_LOWER_BOUNDS || temp_specified_floated > COOL_UPPER_BOUNDS ) ) || \
+        ( boundsCheck == HEAT_TEMP_BOUNDS_CHECK && adjustTogether && ( temp_specified_floated < HEAT_LOWER_BOUNDS || temp_specified_floated > HEAT_UPPER_BOUNDS ) ) || \
+        ( boundsCheck == COOL_TEMP_BOUNDS_CHECK && adjustTogether && ( temp_specified_floated < COOL_LOWER_BOUNDS || temp_specified_floated > COOL_UPPER_BOUNDS ) ) || \
+        ( boundsCheck == BOTH_TEMPS_BOUNDS_CHECK && ( temp_specified_floated < COOL_LOWER_BOUNDS || temp_specified_floated > COOL_UPPER_BOUNDS ||  temp_specified_floated < HEAT_LOWER_BOUNDS || temp_specified_floated > HEAT_UPPER_BOUNDS ) ) )//This check should be called for the rooms where it matters
     {
         Serial.print( F( "Temperature entered would exceed safety limits" ) );
 //        Serial.print( lower_limit );
@@ -381,6 +389,7 @@ u8 IsValidTemp( const char* str, u8 boundsCheck )
 //        Serial.println( upper_limit );
         return ( u8 )false;
     }
+//    else if( combine );//&& () )
 /*
     else if()
     {
@@ -458,13 +467,15 @@ void printBasicInfo()
     Serial.println( F( "fan[ a[uto]/ o[n]] (to read or set fan)" ) );
     Serial.println( F( "heat start low temp <°C> (to turn heat on at this or lower temperature, always persistent)" ) );//not worth converting for some unkown odd reason
     Serial.println( F( "heat stop high temp <°C> (to turn heat off at this or higher temperature, always persistent)" ) );
-//FUTURE     Serial.println( F( "heat temps <°C> (adjust both heat settings up or down)" ) );
-    
     Serial.println( F( "cool stop low temp <°C> (to turn A/C off at this or lower temperature, always persistent)" ) );
     Serial.println( F( "cool start high temp <°C> (to turn A/C on at this or higher temperature, always persistent)" ) );
-//FUTURE     Serial.println( F( "cool temps <°C> (adjust both A/C settings up or down)" ) );
 
-//FUTURE     Serial.println( F( "all temps <°C> (adjust all heat and cool settings up or down)" ) );
+//    Serial.print( ( const __FlashStringHelper * )str_heat_temps );//uses more bytes this way
+    Serial.println( F( "heat temps <°C> (adjust heat settings up, use - for down)" ) );
+//    Serial.print( ( const __FlashStringHelper * )str_cool_temps );//uses more bytes this way
+    Serial.println( F( "cool temps <°C> (adjust cool settings up, use - for down)" ) );
+//    Serial.print( ( const __FlashStringHelper * )str_all_temps );//uses more bytes this way
+    Serial.println( F( "all temps <°C> (adjust all temperature settings up, use - for down)" ) );
 
     Serial.println( F( "talkback[ on/off] (or logging on/off)" ) );//(for the host system to log when each output pin gets set high or low, always persistent)" ) );
     Serial.println( F( "talkback temp change[s[ on/off]] (or logging temp changes[ on/off])(requires normal talkback on)" ) );// - for the host system to log whenever the main room temperature changes, always persistent)" ) );
@@ -483,7 +494,7 @@ void printBasicInfo()
     Serial.println( F( "ch[ange] pers[istent memory] <address> <value> (changes EEPROM, see source code for addresses of data)" ) );
     Serial.println( F( "ch[ange] pers[istent memory] <StartingAddress> \"<character string>[\"[ 0]] (store character string in EEPROM as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])" ) );
     Serial.println( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>] (views EEPROM)" ) );
-    Serial.println( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );//Wemo XI does not have enough memory for this
+    Serial.println( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );
     Serial.println( F( "reset (factory defaults: pure, simple and absolute)" ) );
     Serial.println( F( "test alert (sends an alert message to host for testing purposes)" ) );
     Serial.println( F( ".." ) );
@@ -569,42 +580,42 @@ void restore_factory_defaults()
         Serial.println( F( "cool" ) );
 */
 #ifndef __LGT8FX8E__
-    EEPROM.update( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );//2 );
+    EEPROM.update( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );
 #else
     EEPROMupdate( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( heat_pin_address, factory_setting_heat_pin );//3 );
+    EEPROM.update( heat_pin_address, factory_setting_heat_pin );
 #else
     EEPROMupdate( heat_pin_address, factory_setting_heat_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( furnace_blower_pin_address, factory_setting_furnace_blower_pin );//4 );
+    EEPROM.update( furnace_blower_pin_address, factory_setting_furnace_blower_pin );
 #else
     EEPROMupdate( furnace_blower_pin_address, factory_setting_furnace_blower_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( power_cycle_address, factory_setting_power_cycle_pin );//5);
+    EEPROM.update( power_cycle_address, factory_setting_power_cycle_pin );
 #else
     EEPROMupdate( power_cycle_address, factory_setting_power_cycle_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( logging_address, factory_setting_logging_setting );//( uint8_t )true );
+    EEPROM.update( logging_address, factory_setting_logging_setting );
 #else
     EEPROMupdate( logging_address, factory_setting_logging_setting );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );//( uint8_t )true );
+    EEPROM.update( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );
 #else
     EEPROMupdate( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( thermostat_mode_address, factory_setting_thermostat_mode );//'a' );
+    EEPROM.update( thermostat_mode_address, factory_setting_thermostat_mode );
 #else
     EEPROMupdate( thermostat_mode_address, factory_setting_thermostat_mode );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( fan_mode_address, factory_setting_fan_mode );//'a' );
+    EEPROM.update( fan_mode_address, factory_setting_fan_mode );
 #else
     EEPROMupdate( fan_mode_address, factory_setting_fan_mode );
 #endif
@@ -614,42 +625,42 @@ void restore_factory_defaults()
     short factory_setting_lower_cool_temp_shorted_times_ten = ( short )( factory_setting_lower_cool_temp_floated * 10 );
     short factory_setting_upper_cool_temp_shorted_times_ten = ( short )( factory_setting_upper_cool_temp_floated * 10 );
 #ifndef __LGT8FX8E__
-    EEPROM.put( lower_heat_temp_address, factory_setting_lower_heat_temp_shorted_times_ten );//21 );
+    EEPROM.put( lower_heat_temp_address, factory_setting_lower_heat_temp_shorted_times_ten );
 #else
     EEPROMupdate( lower_heat_temp_address, ( u8 )factory_setting_lower_heat_temp_shorted_times_ten );
     EEPROMupdate( lower_heat_temp_address + 1, ( u8 )( factory_setting_lower_heat_temp_shorted_times_ten >> 8 ) );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.put( upper_heat_temp_address, factory_setting_upper_heat_temp_shorted_times_ten );//21 );
+    EEPROM.put( upper_heat_temp_address, factory_setting_upper_heat_temp_shorted_times_ten );
 #else
     EEPROMupdate( upper_heat_temp_address, ( u8 )factory_setting_upper_heat_temp_shorted_times_ten );
     EEPROMupdate( upper_heat_temp_address + 1, ( u8 )( factory_setting_upper_heat_temp_shorted_times_ten >> 8 ) );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.put( lower_cool_temp_address, factory_setting_lower_cool_temp_shorted_times_ten );//21 );
+    EEPROM.put( lower_cool_temp_address, factory_setting_lower_cool_temp_shorted_times_ten );
 #else
     EEPROMupdate( lower_cool_temp_address, ( u8 )factory_setting_lower_cool_temp_shorted_times_ten );
     EEPROMupdate( lower_cool_temp_address + 1, ( u8 )( factory_setting_lower_cool_temp_shorted_times_ten >> 8 ) );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.put( upper_cool_temp_address, factory_setting_upper_cool_temp_shorted_times_ten );//21 );
+    EEPROM.put( upper_cool_temp_address, factory_setting_upper_cool_temp_shorted_times_ten );
 #else
     EEPROMupdate( upper_cool_temp_address, ( u8 )factory_setting_upper_cool_temp_shorted_times_ten );
     EEPROMupdate( upper_cool_temp_address + 1, ( u8 )( factory_setting_upper_cool_temp_shorted_times_ten >> 8 ) );
 #endif
 
 #ifndef __LGT8FX8E__
-    EEPROM.update( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );//2 );
+    EEPROM.update( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );
 #else
     EEPROMupdate( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );//2 );
+    EEPROM.update( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );
 #else
     EEPROMupdate( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );//2 );
+    EEPROM.update( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );
 #else
     EEPROMupdate( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );
 #endif
@@ -804,6 +815,41 @@ void setup()
     logging = ( boolean )EEPROM.read( logging_address );
 }
 
+void fixInputted( u8 functionDesired, const char *strToFind, const char *strToReplaceWith, u8 lengthGoal )
+{
+    char *hit;
+    hit = strstr_P( strFull, strToFind );
+    if( hit )
+    {
+        if( functionDesired == REPLACE )
+        {
+            if( strlen_P( strToReplaceWith ) < strlen_P( strToFind ) )
+            {
+                functionDesired = SHORTEN;
+                lengthGoal = strlen_P( strToReplaceWith );
+                strcpy_P( hit, strToReplaceWith ); 
+            }
+            else
+            {
+                strncpy_P( hit, strToReplaceWith, strlen_P( strToReplaceWith ) ); 
+            }
+        }
+        if( functionDesired == SHORTEN )
+        {
+            memmove( hit + lengthGoal, hit + strlen_P( strToFind ), strlen( hit + strlen_P( strToFind ) ) + 1 );
+        }
+    }    
+}
+
+void printTooHighLow( u8 highOrLow )
+{
+    Serial.print( F( " too " ) );
+    if( highOrLow == LOW )
+        Serial.println( F( "low for this value. Raise" ) );
+    else
+        Serial.println( F( "high for this value. Lower" ) );
+   Serial.println( F( " that before trying this value" ) );
+}
 void check_for_serial_input( char result )
 {
     
@@ -829,92 +875,21 @@ void check_for_serial_input( char result )
 //        digitalWrite( LED_BUILTIN, LOW );                  // These lines for blinking the LED are here if you want the LED to blink when data is rec'd
         if( strFull[ 0 ] == 0 || nextChar != 0  ) return;       //The way this and while loop is set up allows reception of lines with no endings but at a timing cost of one loop()
         char *hit;
-        
-        hit = strstr_P( strFull, str_talkback );
-        if( hit )
-        {
-            strcpy_P( hit, str_logging ); 
-            memmove( hit + 7, hit + 8, strlen( hit + 7 ) );
-        }
-        
-        hit = strstr_P( strFull, str_pin_set );
-        if( hit )
-        {
-            strncpy_P( hit, str_set_pin, 7 ); 
-        }
-        
-        hit = strstr_P( strFull, str_cycle_power );
-        if( hit )
-        {
-            strncpy_P( hit, str_power_cycle, 11 ); 
-        }
-        
-        hit = strstr_P( strFull, str_pins_read );
-        if( !hit ) hit = strstr_P( strFull, str_read_pins );
-        if( hit )
-        {
-            strncpy_P( hit, str_read_pin_dot, 11 ); 
-        }
-        
-        hit = strstr_P( strFull, str_set_pin_to );
-        if( hit )
-        {
-            memmove( hit + 7, hit + 10, strlen( hit + 9 ) );
-        }
-
-        hit = strstr_P( strFull, str_view );
-        if( hit )
-        {
-            memmove( hit + 2, hit + 4, strlen( hit + 3 ) );
-        }
-
-        hit = strstr_P( strFull, str_sensor );
-        if( hit )
-        {
-            memmove( hit + 4, hit + 6, strlen( hit + 5 ) );
-        }
-
-        hit = strstr_P( strFull, str_persistent_memory );
-        if( hit )
-        {
-            memmove( hit + 4, hit + 17, strlen( hit + 16 ) );
-        }
-
-        hit = strstr_P( strFull, str_changes );
-        if( hit )
-        {
-            memmove( hit + 2, hit + 7, strlen( hit + 6 ) );
-        }
-
-        hit = strstr_P( strFull, str_change );
-        if( hit )
-        {
-            memmove( hit + 2, hit + 6, strlen( hit + 5 ) );
-        }
-
-        hit = strstr_P( strFull, str_thermostat );
-        if( hit )
-        {
-            memmove( hit + 4, hit + 10, strlen( hit + 9 ) );
-        }
-
-        hit = strstr_P( strFull, str_fan_auto );
-        if( hit )
-        {
-            memmove( hit + 5, hit + 8, strlen( hit + 7 ) );
-        }
-
-        hit = strstr_P( strFull, str_fan_on );
-        if( hit )
-        {
-            memmove( hit + 5, hit + 6, strlen( hit + 5 ) );
-        }
-
-        hit = strstr_P( strFull, str_factory );
-        if( hit )
-        {
-            memmove( hit + 4, hit + 7, strlen( hit + 6 ) );
-        }
+        fixInputted( REPLACE, str_talkback, str_logging, 0 );
+        fixInputted( REPLACE, str_pin_set, str_set_pin, 0 );
+        fixInputted( REPLACE, str_cycle_power, str_power_cycle, 0 );
+        fixInputted( REPLACE, str_pins_read, str_read_pin_dot, 0 );
+        fixInputted( REPLACE, str_read_pins, str_read_pin_dot, 0 );
+        fixInputted( REPLACE, str_set_pin_to, str_set_pin, 0 );
+        fixInputted( SHORTEN, str_view, 0, 2 );
+        fixInputted( SHORTEN, str_sensor, 0, 4 );
+        fixInputted( SHORTEN, str_persistent_memory, 0, 4 );
+        fixInputted( SHORTEN, str_changes, 0, 2 );
+        fixInputted( SHORTEN, str_change, 0, 2 );
+        fixInputted( SHORTEN, str_thermostat, 0, 4 );
+        fixInputted( SHORTEN, str_fan_auto, 0, 5 );
+        fixInputted( SHORTEN, str_fan_on, 0, 5 );
+        fixInputted( SHORTEN, str_factory, 0, 4 );
 
         char *address_str;
         char *data_str;
@@ -939,25 +914,35 @@ void check_for_serial_input( char result )
               Serial.print( '=' );
               Serial.println( digitalRead( power_cycle_pin ) );
           }
-          strFull[ 0 ] = 0;
-        }//18664
-
-        
-/* //FUTURE 
+          
+        }
         else if( strstr_P( strFull, str_cool_temps ) )
         {
-           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK ) != NO_TEMP_ENTERED && ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK ));//&& !(  ) );
+           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK, false ) != NO_TEMP_ENTERED && ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK, true ) );
            {
+            ;
            }
-            strFull[ 0 ] = 0;
+            
         }
-end of future
-*/
-
-
+        else if( strstr_P( strFull, str_heat_temps ) )
+        {
+           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK, false ) != NO_TEMP_ENTERED && ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK, true ) );
+           {
+            ;
+           }
+            
+        }
+        else if( strstr_P( strFull, str_all_temps ) )
+        {
+           if( IsValidTemp( number_specified_str, NO_BOUNDS_CHECK, false ) != NO_TEMP_ENTERED && ( bool )IsValidTemp( number_specified_str, BOTH_TEMPS_BOUNDS_CHECK, true ) );
+           {
+            ;
+           }
+            
+        }
         else if( strstr_P( strFull, str_heatStartLowTemp ) )//change to heat low start temp with optional numeric: heat high stop temp, cool low stop temp, cool high start temp
         {
-           if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK ) )
+           if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK, false ) )
            {
               if( temp_specified_floated <= upper_heat_temp_floated )
               {
@@ -974,7 +959,7 @@ end of future
               else 
               {
                 Serial.print( ( const __FlashStringHelper * )str_heatStopHighTemp );
-                Serial.println( F( " too low for this value. Raise that before trying this value" ) );
+                printTooHighLow( LOW );
               }
             }
             if( logging )
@@ -983,11 +968,11 @@ end of future
                 Serial.print( F( " now " ) );
                 Serial.println( lower_heat_temp_floated, 1 );
             }
-            strFull[ 0 ] = 0;
-        }//19638
+            
+        }
         else if( strstr_P( strFull, str_heatStopHighTemp ) )
         {
-           if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK ) )
+           if( ( bool )IsValidTemp( number_specified_str, HEAT_TEMP_BOUNDS_CHECK, false ) )
            {
               if( temp_specified_floated >= lower_heat_temp_floated )
               {
@@ -1004,7 +989,7 @@ end of future
               else 
               {
                 Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
-                Serial.println( F( " too high for this value. Lower that before trying this value" ) );
+                printTooHighLow( HIGH );
               }
            }
             if( logging )
@@ -1013,12 +998,12 @@ end of future
                 Serial.print( F( " now " ) );
                 Serial.println( upper_heat_temp_floated, 1 );
             }
-           strFull[ 0 ] = 0;
-        }//19954
+           
+        }
         
         else if( strstr_P( strFull, str_coolStopLowTemp ) )
         {
-           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK ) )
+           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK, false ) )
            {
               if( temp_specified_floated <= upper_cool_temp_floated )
               {
@@ -1034,7 +1019,7 @@ end of future
               else 
               {
                 Serial.print( ( const __FlashStringHelper * )str_coolStartHighTemp );
-                Serial.println( F( " too low for this value. Raise that before trying this value" ) );
+                printTooHighLow( LOW );
               }
            }
             if( logging )
@@ -1043,11 +1028,11 @@ end of future
                 Serial.print( F( " now " ) );
                 Serial.println( lower_cool_temp_floated, 1 );
             }
-           strFull[ 0 ] = 0;
-        }//20254
+           
+        }
         else if( strstr_P( strFull, str_coolStartHighTemp ) )
         {
-           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK ) )
+           if( ( bool )IsValidTemp( number_specified_str, COOL_TEMP_BOUNDS_CHECK, false ) )
            {
               if( temp_specified_floated >= lower_cool_temp_floated )
               {
@@ -1063,7 +1048,7 @@ end of future
               else 
               {
                 Serial.print( ( const __FlashStringHelper * )str_coolStopLowTemp );
-                Serial.println( F( " too high for this value. Lower that before trying this value" ) );
+                printTooHighLow( HIGH );
               }
            }
             if( logging )
@@ -1072,8 +1057,8 @@ end of future
                 Serial.print( F( " now " ) );
                 Serial.println( upper_cool_temp_floated, 1 );
             }
-           strFull[ 0 ] = 0;
-        }//20554
+           
+        }
         else if( strstr_P( strFull, str_report_master_room_temp ) )
         {
            if( result == DEVICE_READ_SUCCESS )
@@ -1101,8 +1086,8 @@ end of future
            {
                 Serial.println( F( "Sensor didn't read" ) );
            }
-            strFull[ 0 ] = 0;
-        }//21146
+            
+        }
         else if( strstr_P( strFull, str_read_pin ) || strstr_P( strFull, str_pin_read ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1119,8 +1104,8 @@ end of future
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           strFull[ 0 ] = 0;
-        }//22110
+           
+        }
         else if( strstr_P( strFull, str_set_pin_high ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1155,8 +1140,8 @@ end of future
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           strFull[ 0 ] = 0;
-        }//22618
+           
+        }
         else if( strstr_P( strFull, str_set_pin_low ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1191,8 +1176,8 @@ end of future
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           strFull[ 0 ] = 0;
-        }//22928
+           
+        }
         else if( strstr_P( strFull, str_set_pin_output ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1242,8 +1227,8 @@ doneWithPinOutput:;
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           strFull[ 0 ] = 0;
-        }//23340
+           
+        }
         else if( strstr_P( strFull, str_set_pin_input_with_pullup ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1271,8 +1256,8 @@ doneWithPinOutput:;
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           strFull[ 0 ] = 0;
-        }//23824
+           
+        }
         else if( strstr_P( strFull, str_set_pin_input ) )
         {
            if( IsValidPinNumber( number_specified_str ) )
@@ -1307,8 +1292,8 @@ doneWithPinOutput:;
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           strFull[ 0 ] = 0;
-        }//24124
+           
+        }
         else if( strstr_P( strFull, str_ther ) )
         {
             if( strlen( strFull ) == 4 ) goto showThermostatSetting;
@@ -1337,8 +1322,12 @@ doneWithPinOutput:;
                     goto showThermostatSetting;
                 }
            }
-           if( !( strFull[ 5 ] == 'a' ) && !( strFull[ 5 ] == 'h' ) && !( strFull[ 5 ] == 'c' ) && !( strFull[ 5 ] == 'o' ) ) goto badTherMode;
-                Serial.print( F( "Thermostat being set to " ) );
+           if( !( strFull[ 5 ] == 'a' ) && !( strFull[ 5 ] == 'h' ) && !( strFull[ 5 ] == 'c' ) && !( strFull[ 5 ] == 'o' ) )
+           {
+            Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c.  They mean auto, off, heat, and cool and may be fully spelled out" ) );
+            goto showThermostatSetting;
+           }
+            Serial.print( F( "Thermostat being set to " ) );
           printThermoModeWord( strFull[ 5 ], true );
           if( thermostat_mode == strFull[ 5 ] );
            if( thermostat_mode == 'o' ) 
@@ -1355,15 +1344,16 @@ doneWithPinOutput:;
 #else
            EEPROMupdate( thermostat_mode_address, strFull[ 5 ] );
 #endif
-            goto after_change_thermostat;
-badTherMode:;
-            Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c.  They mean auto, off, heat, and cool and may be fully spelled out" ) );
+//            goto after_change_thermostat;
+            if( false )
+            {
 showThermostatSetting:;
-            Serial.print( F( "Thermostat is " ) );
-            printThermoModeWord( thermostat_mode, true );
-after_change_thermostat:
-           strFull[ 0 ] = 0;
-        }//24958
+                Serial.print( F( "Thermostat is " ) );
+                printThermoModeWord( thermostat_mode, true );
+            }
+//after_change_thermostat:;
+           
+        }
         else if( strstr_P( strFull, str_fan_a ) || strstr_P( strFull, str_fan_o ) )
         {
            fan_mode = strFull[ ( u8 )( strlen_P( str_fan_ ) ) ];
@@ -1382,10 +1372,8 @@ after_change_thermostat:
            EEPROM.update( fan_mode_address, fan_mode );
 #else
            EEPROMupdate( fan_mode_address, fan_mode );
-#endif
-after_change_fan:
-           strFull[ 0 ] = 0;
-        }//25114
+#endif           
+        }
         else if( strstr_P( strFull, str_fan ) )
         {
             if( strchr( &strFull[ 3 ], ' ' ) )
@@ -1399,8 +1387,8 @@ after_change_fan:
             Serial.print( F( "Fan is " ) );
             if( fan_mode == 'a' ) Serial.println( F( "auto" ) );
             else if( fan_mode == 'o' ) Serial.println( F( "on" ) );
-           strFull[ 0 ] = 0;
-        }//25332
+           
+        }
         else if( strstr_P( strFull, str_logging_temp_ch_o ) )
         {
            Serial.print( F( "Talkback for logging temp changes being turned o" ) );
@@ -1414,15 +1402,15 @@ after_change_fan:
 #endif
            if( logging_temp_changes ) Serial.println( strFull[ charat ] );
            else  Serial.println( F( "ff" ) );
-           strFull[ 0 ] = 0;
-        }//25556
+           
+        }
         else if( strstr_P( strFull, str_logging_temp_ch ) )
         {
            Serial.print( F( "Talkback for logging temp changes is turned o" ) );
            if( logging_temp_changes ) Serial.println( F( "n" ) );
            else  Serial.println( F( "ff" ) );
-           strFull[ 0 ] = 0;
-        }//25670
+           
+        }
         else if( strstr_P( strFull, str_logging_o ) )
         {
            Serial.print( F( "Talkback for logging being turned o" ) );
@@ -1436,15 +1424,15 @@ after_change_fan:
 #endif
            if( logging ) Serial.println( strFull[ charat ] );
            else  Serial.println( F( "ff" ) );
-           strFull[ 0 ] = 0;
-        }//25824
+           
+        }
         else if( strstr_P( strFull, str_logging ) )
         {
            Serial.print( F( "Talkback for logging is turned o" ) );
            if( logging ) Serial.println( F( "n" ) );
            else  Serial.println( F( "ff" ) );
-           strFull[ 0 ] = 0;
-        }//25918
+           
+        }
         else if( strstr_P( strFull, str_vi_pers ) )
         {
           address_str = strchr( &strFull[ 7 ], ' ' ) + 1;//.substring( address_str.indexOf( ' ' )+ 1 );
@@ -1489,8 +1477,8 @@ after_change_fan:
                Serial.println();
              }
           }
-           strFull[ 0 ] = 0;
-        }//26498
+           
+        }
         else if( strstr_P( strFull, str_ch_pers ) )
         {
           address_str = strchr( &strFull[ 7 ], ' ' ) + 1;//.substring( address_str.indexOf( ' ' )+ 1 );
@@ -1546,15 +1534,15 @@ after_change_fan:
                 else
                 {
                 Serial.println( F( "Data string too long to fit there in EEPROM." ) );
-                strFull[ 0 ] = 0;
+                
                 return;
                 }
-                strFull[ 0 ] = 0;
+                
               }
               else
               {
                 Serial.println( F( "Invalid data entered" ) );
-                strFull[ 0 ] = 0;
+                
                 return;
               }
           }
@@ -1580,8 +1568,8 @@ after_change_fan:
               Serial.print( F( " newly stored data: " ) );
               Serial.println( EEPROM.read( address ) );
           }
-           strFull[ 0 ] = 0;
-        }//27472
+           
+        }
         else if( strstr_P( strFull, str_vi_fact ) ) // The Leonardo does not have enough room in PROGMEM for this feature
         {
 #ifdef __AVR_ATmega32U4__
@@ -1589,17 +1577,17 @@ after_change_fan:
 #else
             print_factory_defaults();
 #endif
-           strFull[ 0 ] = 0;
+           
         }
         else if( strstr_P( strFull, str_reset ) )
         {
            restore_factory_defaults();
-           strFull[ 0 ] = 0;
+           
         }
         else if( strstr_P( strFull, str_test_alert ) )
         {
            Serial.println( F( "time_stamp_this ALERT test as requested" ) );
-           strFull[ 0 ] = 0;
+           
         }
         else if( strstr_P( strFull, str_sens_read ) || strstr_P( strFull, str_read_sens ) )
         {
@@ -1612,7 +1600,7 @@ after_change_fan:
                  Serial.print( F( "Pin " ) );
                  Serial.print( pin_specified );
                  Serial.print( F( " sensor read: " ) );
-                 DHTresult* noInterrupt_result = ( DHTresult* )DHTreadWhenRested( pin_specified );
+                 DHTresult* noInterrupt_result = ( DHTresult* )FetchTemp( pin_specified, LIVE );
                  if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
                  {
                      Serial.print( ( float )( ( float )noInterrupt_result->TemperatureCelsius / 10 ), 1 );
@@ -1634,8 +1622,7 @@ after_change_fan:
                  if( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) break;
              }
            }
-           strFull[ 0 ] = 0;
-        }//29046
+        }
         else
         {
           if( !strstr_P( strFull, str_help ) )
@@ -1647,8 +1634,8 @@ notValidCommand:;
                 Serial.println(); 
           }
           printBasicInfo();
-          strFull[ 0 ] = 0;
         }
+      strFull[ 0 ] = 0;
 }
 
 u8 last_three_temps_index = 0;
@@ -1755,8 +1742,8 @@ if( fresh_powerup && logging )
     }
 }
 else fresh_powerup = false;
-    DHTresult* noInterrupt_result = ( DHTresult* )( DHTreadWhenRested( primary_temp_sensor_pin ) ); 
-    if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( DHTreadWhenRested( secondary_temp_sensor_pin ) );
+    DHTresult* noInterrupt_result = ( DHTresult* )( FetchTemp( primary_temp_sensor_pin, RECENT ) ); 
+    if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( FetchTemp( secondary_temp_sensor_pin, RECENT ) );
     if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
     {
         timeOfLastSensorTimeoutError = 0;
@@ -1799,8 +1786,8 @@ else fresh_powerup = false;
         }
         else if( thermostat_mode == 'a' )
         {
-            noInterrupt_result = ( DHTresult* )( DHTreadWhenRested( outdoor_temp_sensor1_pin ) ); 
-            if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( DHTreadWhenRested( outdoor_temp_sensor2_pin ) );
+            noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) ); 
+            if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
             if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
             {
                 if( noInterrupt_result->TemperatureCelsius & 0x8000 ) O_TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
