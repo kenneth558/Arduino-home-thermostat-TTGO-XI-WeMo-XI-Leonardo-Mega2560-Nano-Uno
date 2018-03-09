@@ -476,7 +476,7 @@ void printBasicInfo()
 //    Serial.print( ( const __FlashStringHelper * )str_all_temps );//uses more bytes this way
     Serial.println( F( "all temps[ <°C>] (adjust all temperature settings up, use - for down)" ) );
 
-    Serial.println( F( "talkback[ on/off] (or logging on/off)" ) );//(for the host system to log when each output pin gets set high or low, always persistent)" ) );
+    Serial.println( F( "talkback[ on/off] (or logging[ on/off])" ) );//(for the host system to log when each output pin gets set high or low, always persistent)" ) );
     Serial.println( F( "talkback temp change[s[ on/off]] (or logging temp changes[ on/off])(requires normal talkback on)" ) );// - for the host system to log whenever the main room temperature changes, always persistent)" ) );
     Serial.println( ( const __FlashStringHelper * )str_report_master_room_temp );
     Serial.println( F( "power cycle (or cycle power)" ) );
@@ -497,7 +497,7 @@ void printBasicInfo()
     Serial.println( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );
     Serial.println( F( "reset (factory defaults: pure, simple and absolute)" ) );
 #else
-    Serial.println( F( "vi[ew] fact[ory defaults] (sketch re-compile required with this board)" ) );
+    Serial.println( F( "vi[ew] fact[ory defaults] (sketch re-compile would be required to reset this board as per source code comments)" ) );
 #endif
     Serial.println( F( "test alert (sends an alert message to host for testing purposes)" ) );
     Serial.println( F( ".." ) );
