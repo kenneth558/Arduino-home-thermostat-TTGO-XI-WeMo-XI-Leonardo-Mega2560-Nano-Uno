@@ -19,7 +19,7 @@
  *************************************************************************************************************************/
 #define VERSION "0.6"
 // On the first run of this sketch, if you received an error message about the following line...
- #define RESTORE_FACTORY_DEFAULTS //As the error message said, uncomment this line, compile & load for first run EEPROM setup in WeMo XI/TTGO XI and any other board that needs it, then comment back out and recompile and load b/c sketch would be too long otherwise
+// #define RESTORE_FACTORY_DEFAULTS //As the error message said, uncomment this line, compile & load for first run EEPROM setup in WeMo XI/TTGO XI and any other board that needs it, then comment back out and recompile and load b/c sketch would be too long otherwise
 #ifndef u8
     #define u8 uint8_t
 #endif
