@@ -1185,26 +1185,31 @@ doneWithPinOutput:;
             if( strFull[ 4 ] != ' ' ) goto notValidCommand;
            if( strFull[ 5 ] == 'a' )
            {
-                if( !( DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS ) && !( DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS ) ) 
+                if( ( !( DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS ) && DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].Type < TYPE_ANALOG ) && ( !( DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS ) && DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].Type < TYPE_ANALOG ) ) 
                 {
-                    Serial.println( F( "NO CHANGE due to outdoor sensors not reporting." ) );
-                    if( outdoor_temp_sensor1_pin || outdoor_temp_sensor2_pin )
+                    DHTresult* noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) );
+                    if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && noInterrupt_result->Type < TYPE_ANALOG ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
+                    if( ( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && noInterrupt_result->Type < TYPE_ANALOG ) || noInterrupt_result->Type == TYPE_ANALOG )
                     {
-                        Serial.print( F( "To start one send \"sens read " ) );
-                        if( outdoor_temp_sensor1_pin )
+                        Serial.println( F( "NO CHANGE due to outdoor sensors not reporting." ) );
+                        if( outdoor_temp_sensor1_pin || outdoor_temp_sensor2_pin )
                         {
-                            Serial.print ( outdoor_temp_sensor1_pin );
-                            if(outdoor_temp_sensor2_pin )
-                            Serial.print( F( "\" or \"sens read " ) );
-                            Serial.print ( outdoor_temp_sensor2_pin );
+                            Serial.print( F( "To start one send \"sens read " ) );
+                            if( outdoor_temp_sensor1_pin )
+                            {
+                                Serial.print ( outdoor_temp_sensor1_pin );
+                                if(outdoor_temp_sensor2_pin )
+                                Serial.print( F( "\" or \"sens read " ) );
+                                Serial.print ( outdoor_temp_sensor2_pin );
+                            }
+                            else
+                                Serial.print ( outdoor_temp_sensor2_pin );
+                            Serial.println( F( "\"" ) );
+                            Serial.println( DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].ErrorCode );
+                            Serial.println( DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].ErrorCode );
                         }
-                        else
-                            Serial.print ( outdoor_temp_sensor2_pin );
-                        Serial.println( F( "\"" ) );
-                        Serial.println( DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].ErrorCode );
-                        Serial.println( DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].ErrorCode );
+                        goto showThermostatSetting;
                     }
-                    goto showThermostatSetting;
                 }
            }
            if( !( strFull[ 5 ] == 'a' ) && !( strFull[ 5 ] == 'h' ) && !( strFull[ 5 ] == 'c' ) && !( strFull[ 5 ] == 'o' ) )
