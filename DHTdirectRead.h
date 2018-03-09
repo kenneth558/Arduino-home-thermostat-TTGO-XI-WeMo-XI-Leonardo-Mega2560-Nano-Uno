@@ -56,11 +56,12 @@ DHTresult DHTfunctionResultsArray[ 15 ]; //The last entry will be the return val
 
 void ReadAnalogTempFromPin( u8 pin )
 {
-    if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) - 1 )
+    if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) )
         pin = ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) );
     double Temp = log( ( 10240000 / analogRead( pin ) ) - 10000 );
-    Temp = ( 10 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 273.15;
-    DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )Temp;
+    Temp = ( 1 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 273.15;//startpoint as provided, close enough when using 3.3v for sensor supply
+//    Temp = ( 1 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 294.45; //wen connected to full Vcc accurate at 21.4
+    DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( Temp * 10 );
     DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
 }
 
@@ -77,7 +78,8 @@ void GetReading( u8 pin )
 tryAnalog:;
 //            Temp = log( ( 10240000 / analogRead( pin ) ) - 10000 );
 //            Temp = 10 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp );
-            ReadAnalogTempFromPin( pin );
+            if( !( DHTfunctionResultsArray[ pin - 1 ].Type > 0 && DHTfunctionResultsArray[ pin - 1 ].Type < TYPE_ANALOG ) )
+                ReadAnalogTempFromPin( pin );
 //            DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( Temp - 273.15 );
 //            DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
             return; //to ensure the LOW level remains to ensure no conduction to high level
@@ -268,7 +270,10 @@ DHTresult* FetchTemp( u8 pin, u8 LiveOrRecent )
         if( DHTfunctionResultsArray[ d ].ErrorCode < DEVICE_READ_SUCCESS )
         {
             for( d = 0; d < ( u8 ) ( sizeof( DHTfunctionResultsArray )/sizeof( DHTresultStruct ) ) - 1; d++ )
+            {
                 DHTfunctionResultsArray[ d ].ErrorCode = DEVICE_NOT_YET_ACCESSED;
+                DHTfunctionResultsArray[ d ].Type = 0;
+            }
             break;
         }
     }
