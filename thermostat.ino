@@ -29,18 +29,22 @@
 #include "DHTdirectRead.h"
 #include <EEPROM.h>
 
+#define _baud_rate_ 57600 //Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 #if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
     #ifndef RESTORE_FACTORY_DEFAULTS
         #define RESTORE_FACTORY_DEFAULTS
     #endif
-    #define _baud_rate_ 57600 //Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
-    u16 EEPROMlength = EEPROM.length();
 #else
-    #define _baud_rate_ 19200 //During sketch development it was found that the XI tends to revert to baud 19200 after programming or need that rate prior to programming so we can't risk setting baud to anything but that until trusted in the future
-    #define LED_BUILTIN 12
-//Commonly available TTGO XI/WeMo XI EEPROM library has only .read() and .write() methods.
-    u16 EEPROMlength = 1024;
-    #define NUM_DIGITAL_PINS 19  //here if necessary or FYI
+    #if defined ( __LGT8FX8E__ )
+        #define _baud_rate_ 19200 //During sketch development it was found that the XI tends to revert to baud 19200 after programming or need that rate prior to programming so we can't risk setting baud to anything but that until trusted in the future
+        #define LED_BUILTIN 12
+    //Commonly available TTGO XI/WeMo XI EEPROM library has only .read() and .write() methods.
+        #define EEPROMlength = 1024;
+        #define NUM_DIGITAL_PINS 19  //here if necessary or FYI
+    #endif
+#endif
+#ifndef EEPROMlength
+    #define EEPROMlength EEPROM.length()
 #endif
 
 #ifndef SERIAL_PORT_HARDWARE
