@@ -347,7 +347,7 @@ boolean IsValidPinNumber( const char* str )
     while( isdigit( str[ j ] ) ) j++;
     if( j == i )
     {
-        Serial.println( F( "Pin number missing.  See help screen" ) );
+        Serial.println( F( "Pin number missing, see help screen" ) );
         return false;
     }
     pin_specified = ( u8 )atoi( str );
@@ -575,7 +575,7 @@ void setup()
         while ( !Serial ); // wait for serial port to connect. Needed for Leonardo's native USB
         Serial.println(); 
 #ifdef RESTORE_FACTORY_DEFAULTS
-            Serial.println( F( "Detected first time run so initializing to factory default pin names, power-up states and thermostat assignments.  Please wait..." ) );    
+            Serial.println( F( "Detected first time run so initializing to factory default pin names, power-up states and thermostat assignments, please wait..." ) );    
            restore_factory_defaults();
 #else
         while( true )
@@ -1214,7 +1214,7 @@ doneWithPinOutput:;
            }
            if( !( strFull[ 5 ] == 'a' ) && !( strFull[ 5 ] == 'h' ) && !( strFull[ 5 ] == 'c' ) && !( strFull[ 5 ] == 'o' ) )
            {
-            Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c.  They mean auto, off, heat, and cool and may be fully spelled out" ) );
+            Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c. They mean auto, off, heat, and cool and may be fully spelled out" ) );
             goto showThermostatSetting;
            }
            thermostat_mode = strFull[ 5 ];
@@ -1269,7 +1269,7 @@ showThermostatSetting:;
             if( strchr( &strFull[ 3 ], ' ' ) )
             {
 //#ifndef __LGT8FX8E__
-                Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a or o.  They mean auto and on and optionally may be spelled out completely" ) );
+                Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a or o. They mean auto and on and optionally may be spelled out completely" ) );
 //#else
 //                Serial.println( F( "The only valid characters allowed after that space are the options lower case a or o (auto/on or may be spelled out)" ) );
 //#endif
@@ -1331,7 +1331,7 @@ showThermostatSetting:;
           unsigned int address_end = atoi( address_str );//.toInt();
           if( address_start < 0 || address_start >= EEPROMlength || address_end < 0 || address_end >= EEPROMlength )
           {
-            Serial.print( F( "Out of range.  Each address can only be 0 to " ) );
+            Serial.print( F( "Out of range. Each address can only be 0 to " ) );
             Serial.println( EEPROMlength - 1 );
           }
           else
