@@ -1,3 +1,4 @@
+
 #define DEVICE_NOT_YET_ACCESSED -1 //255
 #define DEVICE_FAILS_DURING_INITIALIZE -2  //254
 #define DEVICE_FAILS_DURING_INITIALIZE1 -3 //253 common to dht22
@@ -23,6 +24,7 @@
 #define TYPE_KNOWN_DHT22 2
 #define TYPE_LIKELY_DHT11 3
 #define TYPE_LIKELY_DHT22 4
+#define TYPE_ANALOG 5
 
 #define LIVE 0
 #define RECENT 1
@@ -40,12 +42,27 @@ typedef struct DHTresultStruct
     unsigned long timeOfLastAccessMillis;
 } DHTresult;
 
+#ifndef __LGT8FX8E__
 DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will be the return values for "invalid pin numbers sent into the function" 
                                                            //and others like "rollover expected need to wait" where device type shouldn't be mucked with
+#else
+DHTresult DHTfunctionResultsArray[ 15 ]; //The last entry will be the return values for "invalid pin numbers sent into the function" 
+                                                           //and others like "rollover expected need to wait" where device type shouldn't be mucked with
+#endif
 //TODO: make retrieve data into a function
 
 
 //TODO: verify and enforce rest time
+
+void ReadAnalogTempFromPin( u8 pin )
+{
+    if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) - 1 )
+        pin = ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) );
+    double Temp = log( ( 10240000 / analogRead( pin ) ) - 10000 );
+    Temp = ( 10 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 273.15;
+    DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )Temp;
+    DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
+}
 
 void GetReading( u8 pin )
 {
@@ -57,6 +74,12 @@ void GetReading( u8 pin )
         if( digitalRead( pin ) == HIGH )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE;
+tryAnalog:;
+//            Temp = log( ( 10240000 / analogRead( pin ) ) - 10000 );
+//            Temp = 10 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp );
+            ReadAnalogTempFromPin( pin );
+//            DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( Temp - 273.15 );
+//            DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
             return; //to ensure the LOW level remains to ensure no conduction to high level
         }
 //        pinMode( pin, OUTPUT );
@@ -64,14 +87,16 @@ void GetReading( u8 pin )
         if( digitalRead( pin ) == HIGH )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE1;
-            return; //to ensure the LOW level remains to ensure no conduction to high level
+            goto tryAnalog;
+            //to ensure the LOW level remains to ensure no conduction to high level
         }
         digitalWrite( pin, HIGH );//Now is safe to put a high on the pin, assuming a DHT data pin is there 
         turnover_reference_time = micros();//Handover. This marks end of host drive, beginning of device drive
         if( digitalRead( pin ) == LOW )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE2;
-            return; //to ensure the LOW level remains to ensure no conduction to high level
+            goto tryAnalog;
+             //to ensure the LOW level remains to ensure no conduction to high level
         }
 
         *portModeRegister( digitalPinToPort( pin ) ) &= ~digitalPinToBitMask( pin );
@@ -82,14 +107,17 @@ void GetReading( u8 pin )
         if( digitalRead( pin ) == LOW )
         {//dht22 errors here with 104 if loop above is skipped
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE3;//88 uSec from pullup applied to high level
-            return; //to ensure the LOW level remains to ensure no conduction to high level
+            goto tryAnalog;
+            //to ensure the LOW level remains to ensure no conduction to high level
         }
         while( ( micros() - startBitTime < 300 ) && ( digitalRead( pin ) == HIGH ) );
         if( digitalRead( pin ) == HIGH )
         {//dht11 errors here at 56-60 uSec if loop above is executed
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE4;//172 uSec from pullup applied to low level
-            return; //to ensure the LOW level remains to ensure no conduction to high level
+            goto tryAnalog;
+            //to ensure the LOW level remains to ensure no conduction to high level
         }
+//All device read errors prior to this line should retry for analog type
         startBitTime = micros();
         u8 bitnumber = 0;
         u8 DataStreamBits[ 5 ];
@@ -217,16 +245,29 @@ past_device_type_sort:;
 
 DHTresult* FetchTemp( u8 pin, u8 LiveOrRecent )
 {
-    if( ( pin < 1 ) || ( pin > NUM_DIGITAL_PINS ) )
+    if( pin >= NUM_DIGITAL_PINS )
     {
-        DHTfunctionResultsArray[ NUM_DIGITAL_PINS ].ErrorCode = REFUSED_INVALID_PIN;
-        return &DHTfunctionResultsArray[ NUM_DIGITAL_PINS ];
+        if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray )/sizeof( DHTresultStruct ) ) - 1 )//sizeof( DHTfunctionResultsArray )/sizeof( DHTresultStruct )
+        {
+            if( ( pin > 0 ) && ( pin <= NUM_DIGITAL_PINS ) )
+            DHTfunctionResultsArray[ ( u8 ) ( sizeof( DHTfunctionResultsArray )/sizeof( DHTresultStruct ) ) - 1 ].ErrorCode = REFUSED_INVALID_PIN;
+            return &DHTfunctionResultsArray[ ( u8 ) ( sizeof( DHTfunctionResultsArray )/sizeof( DHTresultStruct ) ) - 1 ];
+        }
+        else
+        {
+            ReadAnalogTempFromPin( pin );
+//            Temp = log( ( 10240000 / analogRead( pin ) ) - 10000 );
+//            Temp = 10 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp );
+//            DHTfunctionResultsArray[ ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) - 1 ].TemperatureCelsius = ( short )( Temp - 273.15 );
+//            DHTfunctionResultsArray[ ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) - 1 ].Type = TYPE_ANALOG;
+            return &DHTfunctionResultsArray[ pin - 1 ];
+        }
     }
-    for( u8 d = 0; d < NUM_DIGITAL_PINS; d++ )
+    for( u8 d = 0; d < ( u8 ) ( sizeof( DHTfunctionResultsArray )/sizeof( DHTresultStruct ) ) - 1; d++ )
     {
         if( DHTfunctionResultsArray[ d ].ErrorCode < DEVICE_READ_SUCCESS )
         {
-            for( d = 0; d < NUM_DIGITAL_PINS; d++ )
+            for( d = 0; d < ( u8 ) ( sizeof( DHTfunctionResultsArray )/sizeof( DHTresultStruct ) ) - 1; d++ )
                 DHTfunctionResultsArray[ d ].ErrorCode = DEVICE_NOT_YET_ACCESSED;
             break;
         }
