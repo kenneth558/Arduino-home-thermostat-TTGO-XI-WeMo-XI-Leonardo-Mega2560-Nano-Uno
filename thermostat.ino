@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
- *      ARDUINO HOME THERMOSTAT SKETCH  v.0.5
+ *      ARDUINO HOME THERMOSTAT SKETCH  v.0.6
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  03/08/18
+ *      Date:  03/09/18
  * 
  * 
  * TODO:  labels to pins 
@@ -17,7 +17,9 @@
  *                                                                  fan is the term for same part but for the thermostat operator person
  * 
  *************************************************************************************************************************/
-#define VERSION "0.5"
+#define VERSION "0.6"
+// On the first run of this sketch, if you received an error message about the following line...
+// #define RESTORE_FACTORY_DEFAULTS //As the error message said, uncomment this line, compile & load for first run EEPROM setup in WeMo XI/TTGO XI and any other board that needs it, then comment back out and recompile and load b/c sketch would be too long otherwise
 #ifndef u8
     #define u8 uint8_t
 #endif
@@ -26,13 +28,25 @@
 #endif
 #include "DHTdirectRead.h"
 #include <EEPROM.h>
-#ifndef __LGT8FX8E__
-    short unsigned _baud_rate_ = 57600;//Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
+
+#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
+    #ifndef RESTORE_FACTORY_DEFAULTS
+        #define RESTORE_FACTORY_DEFAULTS
+    #endif
+    #define _baud_rate_ 57600 //Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
+    u16 EEPROMlength = EEPROM.length();
 #else
-    short unsigned _baud_rate_ = 19200;//The XI tends to revert to baud 19200 after programming or need that rate prior to programming so we can't risk setting baud to anything but that
+    #define _baud_rate_ 19200 //During sketch development it was found that the XI tends to revert to baud 19200 after programming or need that rate prior to programming so we can't risk setting baud to anything but that until trusted in the future
     #define LED_BUILTIN 12
-    #define NUM_DIGITAL_PINS 14
+//Commonly available TTGO XI/WeMo XI EEPROM library has only .read() and .write() methods.
+    u16 EEPROMlength = 1024;
+//    #define NUM_DIGITAL_PINS 14  //here if necessary or FYI
 #endif
+
+#ifndef SERIAL_PORT_HARDWARE
+    #define SERIAL_PORT_HARDWARE 0
+#endif
+
 
 //All temps are shorts until displayed
 //Where are other indoor sensors?
@@ -51,16 +65,6 @@ u8 secondary_temp_sensor_address = 8;
 u8 cool_pin_address = 9;
 u8 outdoor_temp_sensor1_address = 10;
 u8 outdoor_temp_sensor2_address = 11;
-
-//Commonly available TTGO XI/WeMo XI EEPROM library has only .read() and .write() methods.
-#ifndef __LGT8FX8E__
-    u16 EEPROMlength = EEPROM.length();
-#else
-    u16 EEPROMlength = 1024;
-#endif
-#ifndef SERIAL_PORT_HARDWARE
-    u8 SERIAL_PORT_HARDWARE = 0;
-#endif
 
 #define NO_BOUNDS_CHECK 0
 #define HEAT_TEMP_BOUNDS_CHECK 1
@@ -243,6 +247,10 @@ void printThermoModeWord( long unsigned var_with_setting, bool newline )
     if( newline ) Serial.println();
 }
 
+#ifdef RESTORE_FACTORY_DEFAULTS
+    #include "restore_factory_defaults.h"
+#endif
+
 void refusedNo_exclamation() //putting this in a function for just 2 calls saves 64 bytes due to short memory in WeMo/TTGO XI
 {
      if( logging )
@@ -354,16 +362,16 @@ boolean IsValidPinNumber( const char* str )
 
 boolean isanoutput( int pin, boolean reply )
 {
-uint8_t bit = digitalPinToBitMask( pin );
-volatile uint8_t *reg = portModeRegister( digitalPinToPort( pin ) );
-if( *reg & bit ) return true;
-if( reply )
-{
-    Serial.print( F( "Sorry, pin " ) );
-    Serial.print( pin );
-    Serial.println( F( " is not yet set to output" ) );
-}
-return false;
+    uint8_t bit = digitalPinToBitMask( pin );
+    volatile uint8_t *reg = portModeRegister( digitalPinToPort( pin ) );
+    if( *reg & bit ) return true;
+    if( reply )
+    {
+        Serial.print( F( "Sorry, pin " ) );
+        Serial.print( pin );
+        Serial.println( F( " is not yet set to output" ) );
+    }
+    return false;
 }
 
 u8 IsValidTemp( const char* str, u8 boundsCheckAndAdjustTogether )
@@ -486,184 +494,11 @@ void printBasicInfo()
     Serial.println( F( "ch[ange] pers[istent memory] <StartingAddress> \"<character string>[\"[ 0]] (store character string in EEPROM as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])" ) );
     Serial.println( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>] (views EEPROM)" ) );
     Serial.println( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );
+#ifdef RESTORE_FACTORY_DEFAULTS
     Serial.println( F( "reset (factory defaults: pure, simple and absolute)" ) );
+#endif
     Serial.println( F( "test alert (sends an alert message to host for testing purposes)" ) );
     Serial.println( F( ".." ) );
-}
-
-void restore_factory_defaults()
-{
-/* no EEPROM updates allowed while in interrupts */
-    primary_temp_sensor_pin = factory_setting_primary_temp_sensor_pin;
-    heat_pin = factory_setting_heat_pin;
-    furnace_blower_pin = factory_setting_furnace_blower_pin;
-    cool_pin = factory_setting_cool_pin;
-    power_cycle_pin = factory_setting_power_cycle_pin;
-    logging = factory_setting_logging_setting;
-    logging_temp_changes = factory_setting_logging_temp_changes_setting;
-    secondary_temp_sensor_pin = factory_setting_secondary_temp_sensor_pin;
-    outdoor_temp_sensor1_pin = factory_setting_outdoor_temp_sensor1_pin;
-    outdoor_temp_sensor2_pin = factory_setting_outdoor_temp_sensor2_pin;
-    thermostat_mode = factory_setting_thermostat_mode;
-    timer_alert_furnace_sent = 0;
-    fan_mode = factory_setting_fan_mode;
-    
-    lower_heat_temp_floated = factory_setting_lower_heat_temp_floated;
-    upper_heat_temp_floated = factory_setting_upper_heat_temp_floated;
-    upper_cool_temp_floated = factory_setting_upper_cool_temp_floated;    
-    lower_cool_temp_floated = factory_setting_lower_cool_temp_floated;    
-    if( fan_mode == 'o' ) digitalWrite( furnace_blower_pin, HIGH );
-    else digitalWrite( furnace_blower_pin, LOW );
-    if( thermostat_mode == 'o' || thermostat_mode == 'c' )
-    {
-        digitalWrite( heat_pin, LOW );
-        heat_state = false;
-    }
-    if( thermostat_mode == 'h' || thermostat_mode == 'o' ) 
-    {
-        digitalWrite( cool_pin, LOW );
-        cool_state = false;
-    }
-    Serial.print( F( "Storing thermostat-related.  Primary temperature sensor goes on pin " ) );
-    Serial.print( factory_setting_primary_temp_sensor_pin );
-    Serial.print( F( ", secondary sensor on pin " ) );
-    Serial.print( factory_setting_secondary_temp_sensor_pin );
-    Serial.print( F( ", heat controlled by pin " ) );
-    Serial.print( factory_setting_heat_pin );
-    Serial.print( F( ", furnace blower controlled by pin " ) );
-    Serial.print( factory_setting_furnace_blower_pin );
-    Serial.print( F( ", cool controlled by pin " ) );
-    Serial.print( factory_setting_cool_pin );
-    Serial.print( F( ", outdoor sensor 1 on pin " ) );
-    Serial.print( factory_setting_outdoor_temp_sensor1_pin );
-    Serial.print( F( ", outdoor sensor 2 on pin " ) );
-    Serial.print( factory_setting_outdoor_temp_sensor2_pin );
-    Serial.print( F( ", power cycle of automation system or whatnot controlled by pin " ) );
-    Serial.print( factory_setting_power_cycle_pin );
-    Serial.print( F( ", logging o" ) );
-    if( factory_setting_logging_setting ) Serial.print( F( "n" ) );
-    else Serial.print( F( "ff" ) );
-    Serial.print( F( ", logging temp changes o" ) );
-    if( factory_setting_logging_temp_changes_setting ) Serial.print( F( "n, " ) );
-    else Serial.print( F( "ff, " ) );
-    Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
-    Serial.print( '=' );
-    Serial.print( factory_setting_lower_heat_temp_floated, 1 );
-    Serial.print( F( ", heat stop high temp=" ) );
-    Serial.print( factory_setting_upper_heat_temp_floated, 1 );
-    Serial.print( F( ", cool stop low temp=" ) );
-    Serial.print( factory_setting_lower_cool_temp_floated, 1 );
-    Serial.print( F( ", cool start high temp=" ) );
-    Serial.print( factory_setting_upper_cool_temp_floated, 1 );
-    Serial.print( F( ", heat mode=" ) );
-    printThermoModeWord( factory_setting_thermostat_mode, true );
-    Serial.print( F( ", fan mode=" ) );
-    Serial.print( factory_setting_fan_mode );
-    
-/*
-    if( factory_setting_thermostat_mode == 'a' )
-        Serial.println( F( "auto" ) );
-    else if( factory_setting_thermostat_mode == 'o' )
-        Serial.println( F( "off" ) );
-    else if( factory_setting_thermostat_mode == 'h' )
-        Serial.println( F( "heat" ) );
-    else if( factory_setting_thermostat_mode == 'c' )
-        Serial.println( F( "cool" ) );
-*/
-#ifndef __LGT8FX8E__
-    EEPROM.update( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );
-#else
-    EEPROMupdate( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.update( heat_pin_address, factory_setting_heat_pin );
-#else
-    EEPROMupdate( heat_pin_address, factory_setting_heat_pin );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.update( furnace_blower_pin_address, factory_setting_furnace_blower_pin );
-#else
-    EEPROMupdate( furnace_blower_pin_address, factory_setting_furnace_blower_pin );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.update( power_cycle_address, factory_setting_power_cycle_pin );
-#else
-    EEPROMupdate( power_cycle_address, factory_setting_power_cycle_pin );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.update( logging_address, factory_setting_logging_setting );
-#else
-    EEPROMupdate( logging_address, factory_setting_logging_setting );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.update( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );
-#else
-    EEPROMupdate( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.update( thermostat_mode_address, factory_setting_thermostat_mode );
-#else
-    EEPROMupdate( thermostat_mode_address, factory_setting_thermostat_mode );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.update( fan_mode_address, factory_setting_fan_mode );
-#else
-    EEPROMupdate( fan_mode_address, factory_setting_fan_mode );
-#endif
-//These two must be put's because their data types are longer than one.  Data types of length one can be either updates or puts.
-    short factory_setting_lower_heat_temp_shorted_times_ten = ( short )( factory_setting_lower_heat_temp_floated * 10 );
-    short factory_setting_upper_heat_temp_shorted_times_ten = ( short )( factory_setting_upper_heat_temp_floated * 10 );
-    short factory_setting_lower_cool_temp_shorted_times_ten = ( short )( factory_setting_lower_cool_temp_floated * 10 );
-    short factory_setting_upper_cool_temp_shorted_times_ten = ( short )( factory_setting_upper_cool_temp_floated * 10 );
-#ifndef __LGT8FX8E__
-    EEPROM.put( lower_heat_temp_address, factory_setting_lower_heat_temp_shorted_times_ten );
-#else
-    EEPROMupdate( lower_heat_temp_address, ( u8 )factory_setting_lower_heat_temp_shorted_times_ten );
-    EEPROMupdate( lower_heat_temp_address + 1, ( u8 )( factory_setting_lower_heat_temp_shorted_times_ten >> 8 ) );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.put( upper_heat_temp_address, factory_setting_upper_heat_temp_shorted_times_ten );
-#else
-    EEPROMupdate( upper_heat_temp_address, ( u8 )factory_setting_upper_heat_temp_shorted_times_ten );
-    EEPROMupdate( upper_heat_temp_address + 1, ( u8 )( factory_setting_upper_heat_temp_shorted_times_ten >> 8 ) );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.put( lower_cool_temp_address, factory_setting_lower_cool_temp_shorted_times_ten );
-#else
-    EEPROMupdate( lower_cool_temp_address, ( u8 )factory_setting_lower_cool_temp_shorted_times_ten );
-    EEPROMupdate( lower_cool_temp_address + 1, ( u8 )( factory_setting_lower_cool_temp_shorted_times_ten >> 8 ) );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.put( upper_cool_temp_address, factory_setting_upper_cool_temp_shorted_times_ten );
-#else
-    EEPROMupdate( upper_cool_temp_address, ( u8 )factory_setting_upper_cool_temp_shorted_times_ten );
-    EEPROMupdate( upper_cool_temp_address + 1, ( u8 )( factory_setting_upper_cool_temp_shorted_times_ten >> 8 ) );
-#endif
-
-#ifndef __LGT8FX8E__
-    EEPROM.update( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );
-#else
-    EEPROMupdate( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.update( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );
-#else
-    EEPROMupdate( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.update( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );
-#else
-    EEPROMupdate( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );
-#endif
-#ifndef __LGT8FX8E__
-    EEPROM.put( 0, ( NUM_DIGITAL_PINS + 1 ) * 3 );//Tattoo the board
-#else
-    EEPROMupdate( 0, ( u8 )( ( NUM_DIGITAL_PINS + 1 ) * 3 ) );
-    EEPROMupdate( 1, ( u8 )( ( ( NUM_DIGITAL_PINS + 1 ) * 3 ) >> 8 ) );
-#endif
-    Serial.println( F( "Done. Allowing you time to unplug the Arduino if desired." ) );
-    delay( 10000 );
-      printBasicInfo();
 }
 
 void print_factory_defaults()
@@ -673,16 +508,6 @@ void print_factory_defaults()
     Serial.println( F( " Factory defaults:" ) );
     Serial.print( F( "Operating mode (heat/cool/auto/off)=" ) );
     printThermoModeWord( factory_setting_thermostat_mode, true );
-/*
-    if( factory_setting_thermostat_mode == 'a' )
-        Serial.println( F( "auto" ) );
-    else if( factory_setting_thermostat_mode == 'o' )
-        Serial.println( F( "off" ) );
-    else if( factory_setting_thermostat_mode == 'h' )
-        Serial.println( F( "heat" ) );
-    else if( factory_setting_thermostat_mode == 'c' )
-        Serial.println( F( "cool" ) );
-*/
     Serial.print( F( "Fan mode=" ) );
     if( factory_setting_fan_mode == 'a' ) Serial.println( F( "auto" ) );
     else if( factory_setting_fan_mode == 'o' ) Serial.println( F( "on" ) );
@@ -739,12 +564,35 @@ void setup()
     delay( 10000 );//Needed for this board for Serial communications to be reliable
 #endif
     //tattoo |= EEPROM.read( 0 ); //Location 0 should contain 
+#ifdef __LGT8FX8E__
+    if( ( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) && ( tattoo != 45 ) ) // Check for tattoo, allow for the obsolete one also
+#else
     if( tattoo != ( NUM_DIGITAL_PINS + 1 ) * 3 ) // Check for tattoo
+#endif
     {
         while ( !Serial ); // wait for serial port to connect. Needed for Leonardo's native USB
         Serial.println(); 
-        Serial.println( F( "Detected first time run so initializing to factory default pin names, power-up states and thermostat assignments.  Please wait..." ) );    
-       restore_factory_defaults();
+#ifdef RESTORE_FACTORY_DEFAULTS
+            Serial.println( F( "Detected first time run so initializing to factory default pin names, power-up states and thermostat assignments.  Please wait..." ) );    
+           restore_factory_defaults();
+#else
+        while( true )
+        {
+            Serial.println( F( "For this board to be a thermostat, EEPROM needs to get set up. Because there is not" ) );
+            Serial.println( F( "enough room in some boards for the requisite code to be included by default, the" ) );
+            Serial.println( F( "EEPROM configuring code will need to be executed by the following process:" ) );
+            Serial.println( F( "1.  Modify the soure code of the main .ino file so that the line defining" ) );
+            Serial.println( F( "    RESTORE_FACTORY_DEFAULTS is uncommented back into active code." ) );
+            Serial.println( F( "2.  Do not save the file that way, just reload the board with the modified" ) );
+            Serial.println( F( "    sketch, and let the board execute that modification of the sketch one time" ) );
+            Serial.println( F( "    to set up the EEPROM." ) );
+            Serial.println( F( "3.  Revert the source code again - comment out the line defining RESTORE_FACTORY_DEFAULTS" ) );
+            Serial.println( F( "    just as the source code was originally - and upload the sketch into the board." ) );
+            Serial.println( F( "    After restarting the board it will operate as a thermostat." ) );
+            Serial.println();
+            delay( 20000 );
+        }
+#endif
     }
     primary_temp_sensor_pin = EEPROM.read( primary_temp_sensor_address ); 
     secondary_temp_sensor_pin = EEPROM.read( secondary_temp_sensor_address );
@@ -1413,11 +1261,11 @@ showThermostatSetting:;
         {
             if( strchr( &strFull[ 3 ], ' ' ) )
             {
-#ifndef __LGT8FX8E__
+//#ifndef __LGT8FX8E__
                 Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a or o.  They mean auto and on and optionally may be spelled out completely" ) );
-#else
-                Serial.println( F( "The only valid characters allowed after that space are the options lower case a or o (auto/on or may be spelled out)" ) );
-#endif
+//#else
+//                Serial.println( F( "The only valid characters allowed after that space are the options lower case a or o (auto/on or may be spelled out)" ) );
+//#endif
             }
             Serial.print( F( "Fan is " ) );
             if( fan_mode == 'a' ) Serial.println( F( "auto" ) );
@@ -1614,11 +1462,12 @@ showThermostatSetting:;
 #endif
            
         }
+#ifdef RESTORE_FACTORY_DEFAULTS
         else if( strstr_P( strFull, str_reset ) )
         {
            restore_factory_defaults();
-           
         }
+#endif
         else if( strstr_P( strFull, str_test_alert ) )
         {
            Serial.println( F( "time_stamp_this ALERT test as requested" ) );
@@ -1653,9 +1502,17 @@ showThermostatSetting:;
                  else if( noInterrupt_result->Type == TYPE_KNOWN_DHT22 ) Serial.print( F( "KNOWN_DHT22" ) );
                  else if( noInterrupt_result->Type == TYPE_LIKELY_DHT11 ) Serial.print( F( "LIKELY_DHT11" ) );
                  else if( noInterrupt_result->Type == TYPE_LIKELY_DHT22 ) Serial.print( F( "LIKELY_DHT22" ) );
+                 else if( noInterrupt_result->Type == TYPE_ANALOG ) Serial.print( F( "TYPE_ANALOG" ) );
                  Serial.println(); 
                  if( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) break;
              }
+#ifdef A0
+             if( strFull[ i ] == '.' )
+               for( pin_specified = A0; pin_specified < NUM_ANALOG_PINS; pin_specified++ )
+               {
+               ;
+               }
+#endif
            }
         }
         else
@@ -1768,82 +1625,84 @@ void cool_on_loop()
 
 void loop()
 {
-if( fresh_powerup && logging )
-{
-    if( Serial )
+#if not defined ( __LGT8FX8E__ ) || not defined ( RESTORE_FACTORY_DEFAULTS )
+    if( fresh_powerup && logging )
     {
-        printBasicInfo();
-        fresh_powerup = false;
-    }
-}
-else fresh_powerup = false;
-    DHTresult* noInterrupt_result = ( DHTresult* )( FetchTemp( primary_temp_sensor_pin, RECENT ) ); 
-    if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( FetchTemp( secondary_temp_sensor_pin, RECENT ) );
-    if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
-    {
-        timeOfLastSensorTimeoutError = 0;
-        if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-        else _TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-        _HumidityPercent = ( float )( ( float )noInterrupt_result->HumidityPercent / 10 );
-        last_three_temps[ last_three_temps_index ] = _TemperatureCelsius;
-        float newtemp = ( float )( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )/ 3 );
-        if( ( newtemp != oldtemp ) && ( last_three_temps[ last_three_temps_index ] != old_getCelsius_temp ) )
+        if( Serial )
         {
-            if( logging && logging_temp_changes )
-            {
-                Serial.print( F( "time_stamp_this Temperature change to " ) );
-                Serial.print( ( float )last_three_temps[ last_three_temps_index ], 1 );
-                Serial.print( F( " °C " ) );// Leave in celsius for memory savings
-                if( noInterrupt_result == &DHTfunctionResultsArray[ primary_temp_sensor_pin - 1 ] ) Serial.print( F( "prim" ) );
-                else Serial.print( F( "second" ) );
-                Serial.println( F( "ary sensor" ) );
-            }
-            old_getCelsius_temp = last_three_temps[ last_three_temps_index ];
-            if( heat_state && !timer_alert_furnace_sent && newtemp < oldtemp ) //store temp at every small drop when heat is calling && !timer_alert_furnace_sent
-            {
-                  temp_minimus = min( temp_minimus, last_three_temps[ 0 ] ); //Be sure to set this when heat is manually operated by pin manipulation or any other means also
-                  temp_minimus = min( temp_minimus, last_three_temps[ 1 ] );
-                  temp_minimus = min( temp_minimus, last_three_temps[ 2 ] );
-            }
+            printBasicInfo();
+            fresh_powerup = false;
         }
-        oldtemp = newtemp;
-        last_three_temps_index = ++last_three_temps_index % 3;
-
-        if( last_three_temps[ 0 ] == -100 || last_three_temps[ 1 ] == -101 || last_three_temps[ 2 ] == -102 )
-            ;  //don't do any thermostat function until temps start coming in.  Debatable b/c logically we could do shutoff/reset duties in here instead, but setup() loop did it for us
-        else if( thermostat_mode == 'o' )//thermostat_mode == off
+    }
+    else fresh_powerup = false;
+        DHTresult* noInterrupt_result = ( DHTresult* )( FetchTemp( primary_temp_sensor_pin, RECENT ) ); 
+        if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( FetchTemp( secondary_temp_sensor_pin, RECENT ) );
+        if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
         {
-            digitalWrite( heat_pin, LOW ); 
-            digitalWrite( cool_pin, LOW );
-            heat_state = false;
-            timer_alert_furnace_sent = 0;
-            cool_state = false;
-        }
-        else if( thermostat_mode == 'a' )
-        {
-            noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) ); 
-            if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
-            if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
+            timeOfLastSensorTimeoutError = 0;
+            if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+            else _TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+            _HumidityPercent = ( float )( ( float )noInterrupt_result->HumidityPercent / 10 );
+            last_three_temps[ last_three_temps_index ] = _TemperatureCelsius;
+            float newtemp = ( float )( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )/ 3 );
+            if( ( newtemp != oldtemp ) && ( last_three_temps[ last_three_temps_index ] != old_getCelsius_temp ) )
             {
-                if( noInterrupt_result->TemperatureCelsius & 0x8000 ) O_TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-                else O_TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-                if( O_TemperatureCelsius <= _TemperatureCelsius ) heat_on_loop();//get outdoor temp, use second sensor if first fails, get indoor temp same way, if indoor < outdoor cool_on_loop();
-                else cool_on_loop();
+                if( logging && logging_temp_changes )
+                {
+                    Serial.print( F( "time_stamp_this Temperature change to " ) );
+                    Serial.print( ( float )last_three_temps[ last_three_temps_index ], 1 );
+                    Serial.print( F( " °C " ) );// Leave in celsius for memory savings
+                    if( noInterrupt_result == &DHTfunctionResultsArray[ primary_temp_sensor_pin - 1 ] ) Serial.print( F( "prim" ) );
+                    else Serial.print( F( "second" ) );
+                    Serial.println( F( "ary sensor" ) );
+                }
+                old_getCelsius_temp = last_three_temps[ last_three_temps_index ];
+                if( heat_state && !timer_alert_furnace_sent && newtemp < oldtemp ) //store temp at every small drop when heat is calling && !timer_alert_furnace_sent
+                {
+                      temp_minimus = min( temp_minimus, last_three_temps[ 0 ] ); //Be sure to set this when heat is manually operated by pin manipulation or any other means also
+                      temp_minimus = min( temp_minimus, last_three_temps[ 1 ] );
+                      temp_minimus = min( temp_minimus, last_three_temps[ 2 ] );
+                }
             }
+            oldtemp = newtemp;
+            last_three_temps_index = ++last_three_temps_index % 3;
+    
+            if( last_three_temps[ 0 ] == -100 || last_three_temps[ 1 ] == -101 || last_three_temps[ 2 ] == -102 )
+                ;  //don't do any thermostat function until temps start coming in.  Debatable b/c logically we could do shutoff/reset duties in here instead, but setup() loop did it for us
+            else if( thermostat_mode == 'o' )//thermostat_mode == off
+            {
+                digitalWrite( heat_pin, LOW ); 
+                digitalWrite( cool_pin, LOW );
+                heat_state = false;
+                timer_alert_furnace_sent = 0;
+                cool_state = false;
+            }
+            else if( thermostat_mode == 'a' )
+            {
+                noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) ); 
+                if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
+                if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
+                {
+                    if( noInterrupt_result->TemperatureCelsius & 0x8000 ) O_TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+                    else O_TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+                    if( O_TemperatureCelsius <= _TemperatureCelsius ) heat_on_loop();//get outdoor temp, use second sensor if first fails, get indoor temp same way, if indoor < outdoor cool_on_loop();
+                    else cool_on_loop();
+                }
+            }
+            else if( thermostat_mode == 'h' ) heat_on_loop(); //This heat loop is all that the WeMo/TTGO XI can do as thermostat
+            else if( thermostat_mode == 'c' ) cool_on_loop();
         }
-        else if( thermostat_mode == 'h' ) heat_on_loop(); //This heat loop is all that the WeMo/TTGO XI can do as thermostat
-        else if( thermostat_mode == 'c' ) cool_on_loop();
-    }
-    else
-    {
-        timeOfLastSensorTimeoutError++;
-        Serial.print( F( "time_stamp_this " ) );
-        if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );//These ALERT prefixes get added after consecutive 100 timeout fails
-        Serial.println( F( "Temperature sensor TIMEOUT error" ) );
-    }
-    for( u8 i = 0; i < 4; i++ )
-    {
-        check_for_serial_input( noInterrupt_result->ErrorCode );
-        delay( 500 );
-    }
+        else
+        {
+            timeOfLastSensorTimeoutError++;
+            Serial.print( F( "time_stamp_this " ) );
+            if( timeOfLastSensorTimeoutError > 100 ) Serial.print( F( "ALERT " ) );//These ALERT prefixes get added after consecutive 100 timeout fails
+            Serial.println( F( "Temperature sensor TIMEOUT error" ) );
+        }
+        for( u8 i = 0; i < 4; i++ )
+        {
+            check_for_serial_input( noInterrupt_result->ErrorCode );
+            delay( 500 );
+        }
+#endif
 }
