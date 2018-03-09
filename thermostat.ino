@@ -40,7 +40,7 @@
     #define LED_BUILTIN 12
 //Commonly available TTGO XI/WeMo XI EEPROM library has only .read() and .write() methods.
     u16 EEPROMlength = 1024;
-//    #define NUM_DIGITAL_PINS 14  //here if necessary or FYI
+    #define NUM_DIGITAL_PINS 19  //here if necessary or FYI
 #endif
 
 #ifndef SERIAL_PORT_HARDWARE
@@ -585,9 +585,9 @@ void setup()
             Serial.println( F( "EEPROM configuring code will need to be executed by the following process:" ) );
             Serial.println( F( "1.  Modify the soure code of the main .ino file so that the line defining" ) );
             Serial.println( F( "    RESTORE_FACTORY_DEFAULTS is uncommented back into active code." ) );
-            Serial.println( F( "2.  Do not save the file that way, just reload the board with the modified" ) );
-            Serial.println( F( "    sketch, and let the board execute that modification of the sketch one time" ) );
-            Serial.println( F( "    to set up the EEPROM." ) );
+            Serial.println( F( "2.  Do not save the file that way, its not permanent, just reload the board with" ) );
+            Serial.println( F( "    the modified sketch, and let the board execute that modification of the sketch" ) );
+            Serial.println( F( "    one time to set up the EEPROM." ) );
             Serial.println( F( "3.  Revert the source code again - comment out the line defining RESTORE_FACTORY_DEFAULTS" ) );
             Serial.println( F( "    just as the source code was originally - and upload the sketch into the board." ) );
             Serial.println( F( "    After restarting the board it will operate as a thermostat." ) );
@@ -1212,9 +1212,9 @@ doneWithPinOutput:;
             Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c.  They mean auto, off, heat, and cool and may be fully spelled out" ) );
             goto showThermostatSetting;
            }
+           thermostat_mode = strFull[ 5 ];
             Serial.print( F( "Thermostat being set to " ) );
-          printThermoModeWord( strFull[ 5 ], true );
-          if( thermostat_mode == strFull[ 5 ] );
+            printThermoModeWord( thermostat_mode, true );
            if( thermostat_mode == 'o' ) 
            {
                 digitalWrite( heat_pin, LOW );
@@ -1225,9 +1225,9 @@ doneWithPinOutput:;
            }
             timer_alert_furnace_sent = 0;           
 #ifndef __LGT8FX8E__
-           EEPROM.update( thermostat_mode_address, strFull[ 5 ] );
+           EEPROM.update( thermostat_mode_address, thermostat_mode );
 #else
-           EEPROMupdate( thermostat_mode_address, strFull[ 5 ] );
+           EEPROMupdate( thermostat_mode_address, thermostat_mode );
 #endif
 //            goto after_change_thermostat;
             if( false )
@@ -1487,7 +1487,7 @@ showThermostatSetting:;
                  Serial.print( pin_specified );
                  Serial.print( F( " sensor read: " ) );
                  DHTresult* noInterrupt_result = ( DHTresult* )FetchTemp( pin_specified, LIVE );
-                 if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
+                 if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS || noInterrupt_result->Type == TYPE_ANALOG )
                  {
                      Serial.print( ( float )( ( float )noInterrupt_result->TemperatureCelsius / 10 ), 1 );
                      Serial.print( F( " °C, " ) );
@@ -1499,12 +1499,16 @@ showThermostatSetting:;
                      Serial.print( F( "Error " ) );
                      Serial.print( noInterrupt_result->ErrorCode );
                  }
-                 if( noInterrupt_result->Type > 0 && noInterrupt_result->Type <= TYPE_LIKELY_DHT22 ) Serial.print( F( " TYPE_" ) );
+                 if( noInterrupt_result->Type <= TYPE_ANALOG ) Serial.print( F( " TYPE_" ) );
                  if( noInterrupt_result->Type == TYPE_KNOWN_DHT11 ) Serial.print( F( "KNOWN_DHT11" ) );
                  else if( noInterrupt_result->Type == TYPE_KNOWN_DHT22 ) Serial.print( F( "KNOWN_DHT22" ) );
                  else if( noInterrupt_result->Type == TYPE_LIKELY_DHT11 ) Serial.print( F( "LIKELY_DHT11" ) );
                  else if( noInterrupt_result->Type == TYPE_LIKELY_DHT22 ) Serial.print( F( "LIKELY_DHT22" ) );
-                 else if( noInterrupt_result->Type == TYPE_ANALOG ) Serial.print( F( "TYPE_ANALOG" ) );
+                 else if( noInterrupt_result->Type == TYPE_ANALOG )
+                 {
+                    Serial.print( F( "ANALOG if anything, but not guaranteed" ) );
+//                    Serial.print( analogRead( pin_specified ) );
+                 }
                  Serial.println(); 
                  if( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) break;
              }
@@ -1638,8 +1642,8 @@ void loop()
     }
     else fresh_powerup = false;
         DHTresult* noInterrupt_result = ( DHTresult* )( FetchTemp( primary_temp_sensor_pin, RECENT ) ); 
-        if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( FetchTemp( secondary_temp_sensor_pin, RECENT ) );
-        if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
+        if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && noInterrupt_result->Type < TYPE_ANALOG ) noInterrupt_result = ( DHTresult* )( FetchTemp( secondary_temp_sensor_pin, RECENT ) );
+        if( ( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && noInterrupt_result->Type < TYPE_ANALOG ) || noInterrupt_result->Type == TYPE_ANALOG )
         {
             timeOfLastSensorTimeoutError = 0;
             if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
@@ -1682,8 +1686,8 @@ void loop()
             else if( thermostat_mode == 'a' )
             {
                 noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) ); 
-                if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
-                if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS )
+                if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && noInterrupt_result->Type < TYPE_ANALOG ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
+                if( ( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && noInterrupt_result->Type < TYPE_ANALOG ) || noInterrupt_result->Type == TYPE_ANALOG )
                 {
                     if( noInterrupt_result->TemperatureCelsius & 0x8000 ) O_TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
                     else O_TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
