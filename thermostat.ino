@@ -19,7 +19,7 @@
  *************************************************************************************************************************/
 #define VERSION "0.6"
 // On the first run of this sketch, if you received an error message about the following line...
-// #define RESTORE_FACTORY_DEFAULTS //As the error message said, uncomment this line, compile & load for first run EEPROM setup in WeMo XI/TTGO XI and any other board that needs it, then comment back out and recompile and load b/c sketch would be too long otherwise
+ #define RESTORE_FACTORY_DEFAULTS //As the error message said, uncomment this line, compile & load for first run EEPROM setup in WeMo XI/TTGO XI and any other board that needs it, then comment back out and recompile and load b/c sketch would be too long otherwise
 #ifndef u8
     #define u8 uint8_t
 #endif
@@ -1636,7 +1636,7 @@ void cool_on_loop()
 
 void loop()
 {
-#if not defined ( __LGT8FX8E__ ) || not defined ( RESTORE_FACTORY_DEFAULTS )
+#if not defined ( RESTORE_FACTORY_DEFAULTS ) || ( not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE ) )
     if( fresh_powerup && logging )
     {
         if( Serial )
