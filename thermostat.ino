@@ -493,9 +493,11 @@ void printBasicInfo()
     Serial.println( F( "ch[ange] pers[istent memory] <address> <value> (changes EEPROM, see source code for addresses of data)" ) );
     Serial.println( F( "ch[ange] pers[istent memory] <StartingAddress> \"<character string>[\"[ 0]] (store character string in EEPROM as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])" ) );
     Serial.println( F( "vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>] (views EEPROM)" ) );
-    Serial.println( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );
 #ifdef RESTORE_FACTORY_DEFAULTS
+    Serial.println( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );
     Serial.println( F( "reset (factory defaults: pure, simple and absolute)" ) );
+#else
+    Serial.println( F( "vi[ew] fact[ory defaults] (sketch re-compile required with this board)" ) );
 #endif
     Serial.println( F( "test alert (sends an alert message to host for testing purposes)" ) );
     Serial.println( F( ".." ) );
