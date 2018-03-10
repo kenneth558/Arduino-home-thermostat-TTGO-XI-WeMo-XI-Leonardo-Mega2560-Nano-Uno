@@ -53,17 +53,18 @@ DHTresult DHTfunctionResultsArray[ 15 ]; //The last entry will be the return val
 
 
 //TODO: verify and enforce rest time
-
-void ReadAnalogTempFromPin( u8 pin )
-{
-    if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) )
-        pin = ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) );
-    double Temp = log( ( 10240000 / analogRead( pin ) ) - 10000 );
-    Temp = ( 1 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 273.15;//startpoint as provided, close enough when using 3.3v for sensor supply
-//    Temp = ( 1 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 294.45; //wen connected to full Vcc accurate at 21.4
-    DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( Temp * 10 );
-    DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
-}
+#ifdef NUM_ANALOG_INPUTS
+    void ReadAnalogTempFromPin( u8 pin )
+    {
+        if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) )
+            pin = ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) );
+        double Temp = log( ( 10240000 / analogRead( pin ) ) - 10000 );
+        Temp = ( 1 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 273.15;//startpoint as provided, close enough when using 3.3v for sensor supply
+    //    Temp = ( 1 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 294.45; //wen connected to full Vcc accurate at 21.4
+        DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( Temp * 10 );
+        DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
+    }
+#endif
 
 void GetReading( u8 pin )
 {
@@ -75,13 +76,11 @@ void GetReading( u8 pin )
         if( digitalRead( pin ) == HIGH )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE;
+#ifdef NUM_ANALOG_INPUTS
 tryAnalog:;
-//            Temp = log( ( 10240000 / analogRead( pin ) ) - 10000 );
-//            Temp = 10 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp );
             if( !( DHTfunctionResultsArray[ pin - 1 ].Type > 0 && DHTfunctionResultsArray[ pin - 1 ].Type < TYPE_ANALOG ) )
                 ReadAnalogTempFromPin( pin );
-//            DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( Temp - 273.15 );
-//            DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
+#endif
             return; //to ensure the LOW level remains to ensure no conduction to high level
         }
 //        pinMode( pin, OUTPUT );
@@ -89,7 +88,11 @@ tryAnalog:;
         if( digitalRead( pin ) == HIGH )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE1;
+#ifdef NUM_ANALOG_INPUTS
             goto tryAnalog;
+#else
+            return;
+#endif
             //to ensure the LOW level remains to ensure no conduction to high level
         }
         digitalWrite( pin, HIGH );//Now is safe to put a high on the pin, assuming a DHT data pin is there 
@@ -97,7 +100,11 @@ tryAnalog:;
         if( digitalRead( pin ) == LOW )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE2;
+#ifdef NUM_ANALOG_INPUTS
             goto tryAnalog;
+#else
+            return;
+#endif
              //to ensure the LOW level remains to ensure no conduction to high level
         }
 
@@ -109,14 +116,22 @@ tryAnalog:;
         if( digitalRead( pin ) == LOW )
         {//dht22 errors here with 104 if loop above is skipped
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE3;//88 uSec from pullup applied to high level
+#ifdef NUM_ANALOG_INPUTS
             goto tryAnalog;
+#else
+            return;
+#endif
             //to ensure the LOW level remains to ensure no conduction to high level
         }
         while( ( micros() - startBitTime < 300 ) && ( digitalRead( pin ) == HIGH ) );
         if( digitalRead( pin ) == HIGH )
         {//dht11 errors here at 56-60 uSec if loop above is executed
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE4;//172 uSec from pullup applied to low level
+#ifdef NUM_ANALOG_INPUTS
             goto tryAnalog;
+#else
+            return;
+#endif
             //to ensure the LOW level remains to ensure no conduction to high level
         }
 //All device read errors prior to this line should retry for analog type
