@@ -2,7 +2,7 @@
  *      ARDUINO HOME THERMOSTAT SKETCH  v.0.6
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  03/09/18
+ *      Date:  03/10/18
  * 
  * 
  * TODO:  labels to pins 
@@ -39,7 +39,7 @@
         #define _baud_rate_ 19200 //During sketch development it was found that the XI tends to revert to baud 19200 after programming or need that rate prior to programming so we can't risk setting baud to anything but that until trusted in the future
         #define LED_BUILTIN 12
     //Commonly available TTGO XI/WeMo XI EEPROM library has only .read() and .write() methods.
-        #define EEPROMlength = 1024;
+        #define EEPROMlength 1024
         #define NUM_DIGITAL_PINS 19  //here if necessary or FYI
     #endif
 #endif
