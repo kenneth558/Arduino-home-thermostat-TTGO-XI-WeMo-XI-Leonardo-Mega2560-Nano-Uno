@@ -11,7 +11,6 @@
         #define PIN_A5 A5
         #define PIN_A6 A6
         #define PIN_A7 A7
-/*
         #define PIN_A8 A8
         #define PIN_A9 A9
         #define PIN_A10 A10
@@ -25,7 +24,6 @@
         #define PIN_A18 A18
         #define PIN_A19 A19
         #define PIN_A20 A20
-*/
     #endif
     #if defined ( PIN_A20 ) && not defined ( PIN_Amax )
         #define PIN_Amax PIN_A20
