@@ -28,6 +28,7 @@
 #endif
 #include "DHTdirectRead.h"
 #include <EEPROM.h>
+#include "analog_pin_adjust.h"
 
 #define _baud_rate_ 57600 //Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 #if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
@@ -259,7 +260,7 @@ void refusedNo_exclamation() //putting this in a function for just 2 calls saves
 {
      if( logging )
      {
-        Serial.print( F( "Without appending a '!' pin " ) );
+        Serial.print( F( "Append a '!' or pin " ) );
         Serial.print( pin_specified );
         Serial.println( F( " is reserved" ) );
      }
@@ -301,8 +302,8 @@ bool refuseInput()
     {
          if( logging )
          {
-                if( pin_specified == power_cycle_pin ) Serial.print( F( "Power cycling the to the host system" ) );
-                if( pin_specified == furnace_blower_pin ) Serial.print( F( "Furnace blower fan" ) );
+                if( pin_specified == power_cycle_pin ) Serial.print( F( "Power cycle the host system" ) );
+                if( pin_specified == furnace_blower_pin ) Serial.print( F( "Furnace fan" ) );
                 if( pin_specified == heat_pin ) Serial.print( F( "Furnace" ) );
                 if( pin_specified == cool_pin ) Serial.print( F( "A/C" ) );
                 Serial.print( F( ", pin " ) );
@@ -322,7 +323,7 @@ bool pin_print_and_not_sensor( bool setting )
         else if( pin_specified == secondary_temp_sensor_pin ) Serial.print( F( "Indoor second" ) );
         else if( pin_specified == outdoor_temp_sensor1_pin ) Serial.print( F( "Outdoor prim" ) );
         else if( pin_specified == outdoor_temp_sensor2_pin ) Serial.print( F( "Outdoor second" ) );
-        Serial.print( F( "ary temperature sensor, pin " ) );
+        Serial.print( F( "ary temperature sensor pin " ) );
         return( false );
     }
     if( setting ) Serial.print( F( "time_stamp_this " ) );//only do if returning true
@@ -333,7 +334,7 @@ bool pin_print_and_not_sensor( bool setting )
 
 void illegal_attempt_SERIAL_PORT_HARDWARE()
 {
-    Serial.print( F( "Communications Rx from the host, pin " ) );
+    Serial.print( F( "Rx from host pin " ) );
     Serial.print( SERIAL_PORT_HARDWARE );
     Serial.println( F( " skipped" ) );
 }
@@ -351,13 +352,13 @@ boolean IsValidPinNumber( const char* str )
     while( isdigit( str[ j ] ) ) j++;
     if( j == i )
     {
-        Serial.println( F( "Pin number missing, see help screen" ) );
+        Serial.println( F( "Pin number missing. See help screen" ) );
         return false;
     }
     pin_specified = ( u8 )atoi( str );
     if( pin_specified < 0 || pin_specified >= NUM_DIGITAL_PINS )
     {
-        Serial.print( F( "Pin number must be 0 through " ) );
+        Serial.print( F( "Pin number req'd 0 through " ) );
         Serial.println( NUM_DIGITAL_PINS - 1 );
         return false;
     }
@@ -373,7 +374,7 @@ boolean isanoutput( int pin, boolean reply )
     {
         Serial.print( F( "Sorry, pin " ) );
         Serial.print( pin );
-        Serial.println( F( " is not yet set to output" ) );
+        Serial.println( F( " not yet set to output" ) );
     }
     return false;
 }
@@ -501,7 +502,7 @@ void printBasicInfo()
     Serial.println( F( "vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)" ) );
     Serial.println( F( "reset (factory defaults: pure, simple and absolute)" ) );
 #else
-    Serial.println( F( "vi[ew] fact[ory defaults] (sketch re-compile would be required to reset this board as per source code comments)" ) );
+    Serial.println( F( "vi[ew] fact[ory defaults] (sketch re-compile would be required to reset this board. See source code comments)" ) );
 #endif
     Serial.println( F( "test alert (sends an alert message to host for testing purposes)" ) );
     Serial.println( F( ".." ) );
@@ -1521,9 +1522,9 @@ showThermostatSetting:;
                  Serial.println(); 
                  if( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) break;
              }
-#ifdef A0
+#ifdef PIN_A0
              if( strFull[ i ] == '.' )
-               for( pin_specified = A0; pin_specified < NUM_ANALOG_PINS; pin_specified++ )
+               for( pin_specified = PIN_A0; pin_specified <= PIN_Amax; pin_specified++ )
                {
                ;
                }
