@@ -76,7 +76,7 @@ void GetReading( u8 pin, u8 pin_limited_to_digital_mode )
 #ifdef PIN_Amax
 tryAnalog:;
             if( !( DHTfunctionResultsArray[ pin - 1 ].Type > 0 && DHTfunctionResultsArray[ pin - 1 ].Type < TYPE_ANALOG ) )
-                if( pin_limited_to_digital_mode == 0 ) ReadAnalogTempFromPin( pin );
+                if( pin_limited_to_digital_mode == 0 && memchr( analog_pin_list, pin, PIN_Amax ) ) ReadAnalogTempFromPin( pin );
 #endif
             return; //to ensure the LOW level remains to ensure no conduction to high level
         }
