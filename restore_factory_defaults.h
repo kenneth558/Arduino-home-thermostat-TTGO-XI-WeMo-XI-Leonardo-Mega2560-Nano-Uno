@@ -158,8 +158,9 @@ void restore_factory_defaults()
     EEPROMupdate( 0, ( u8 )( ( NUM_DIGITAL_PINS + 1 ) * 3 ) );
     EEPROMupdate( 1, ( u8 )( ( ( NUM_DIGITAL_PINS + 1 ) * 3 ) >> 8 ) );
 #endif
-    Serial.println( F( "Done. Allowing you time to unplug the Arduino if desired." ) );
+    Serial.println( F( "Done. Unplug the Arduino now if desired." ) );
     delay( 10000 );
       printBasicInfo();
+      assign_pins();
 }
 #endif
