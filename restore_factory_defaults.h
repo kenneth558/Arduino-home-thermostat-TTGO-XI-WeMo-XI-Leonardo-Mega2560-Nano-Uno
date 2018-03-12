@@ -161,6 +161,6 @@ void restore_factory_defaults()
     Serial.println( F( "Done. Unplug the Arduino now if desired." ) );
     delay( 10000 );
       printBasicInfo();
-      assign_pins();
+      assign_pins( NOT_RUNNING );
 }
 #endif
