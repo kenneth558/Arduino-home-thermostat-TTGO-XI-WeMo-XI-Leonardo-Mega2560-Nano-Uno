@@ -26,8 +26,8 @@ This sketch occupies all or nearly all available flash (program) memory in board
 
 TTGO XI/WeMo XI NOTE:  This board trades flash to simulate EEPROM at a cost of 2 to 1.  This sketch assumes your compiler EEPROM command line settings are set for 1K EEPROM.  That is the minimum block size of EEPROM the board allows.  Any more EEPROM by the compiler and this sketch will not fit.  Fortunately for me, my default compiler settings were correct to this requirement, otherwise I wouldn't know how to change them back to what they are.
 
-IMPORTANT SAFETY NOTE - Proper electrical isolation by relay or opto-isolation must be observed whenever connecting to building electrical or furnace controls or other electrical equipment.
+IMPORTANT SAFETY NOTE - Proper electrical isolation by relay or opto-isolation must be observed whenever connecting to building electrical or furnace controls or other electrical equipment.  For the furnace controls, I use ralays driven by open-collector NPN transistors with a 12vdc power supply.  Don't forget the diode across the relay coil.  For 120vac switching, I use opto-coupled dc-drive SSRs, again, driven by NPN transistors and 12vdc.
 
-Future plans TODO: I2C, port expansion, duct damper operation for multi-thermostat-single-furnace environments, but these features will be reserved for boards having greater than 32K flash size.
+TODO - Future enhancements are reserved for boards having greater than 32K flash size: I2C port expansion, duct damper operation for multi-thermostat-single-furnace environments.
 
 WANTED:  ASSISTANCE CONDENSING THE SIZE OF THIS SKETCH BY USE OF ASM CODE.  ANY TAKERS?  POST AN ISSUE, PLEASE.
