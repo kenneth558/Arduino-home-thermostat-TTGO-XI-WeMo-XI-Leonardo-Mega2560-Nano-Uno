@@ -1,3 +1,5 @@
+SKETCH UNDER REPAIRS FOR DIGITAL SENSORS NOT GETTING READ WHEN THE 128 ADDED TO THE PIN # IN EEPROM.  WILL BE WORKING TO CORRECT THIS ASAP.
+
 You'll need to download four files: the .ino and the three .h files.  IF USING TTGO XI/WeMo XI YOU'LL ALSO NEED WHAT YOU'LL FIND AT   https://github.com/wemos/Arduino_XI  (IDE support for TTGO XI/WeMo XI), BUT IF YOU COMPILE UNDER LINUX, READ THAT ISSUES SECTION FOR THE BOARDS.TXT FILE MODIFICATION DUE TO THE DIRECTORY DELIMITER CHARACTER DIFFERENCE ( \ -> / ) 
 # Arduino_home_thermostat
 I use this sketch in the Arduino UNO, Mega2560, Leonardo and Wemo XI (TTGO XI) as my thermostat, and you can easily modify it for humidistat as well.  I have compiled it for all boards I could select in the IDE and ensured it would compile for the boards having at least 32K flash.
