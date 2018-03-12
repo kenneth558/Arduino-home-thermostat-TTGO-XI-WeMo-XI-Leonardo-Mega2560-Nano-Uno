@@ -1,46 +1,49 @@
+
 ..
-Version: 0.0.0045
+Version: 0.6
 Operating mode (heat/cool/auto/off)=auto
 Fan mode=auto
-furnace start low temp=24.0
-furnace stop high temp=25.0
-cool stop low temp=25.0
-cool start high temp=26.0
-Talkback for logging is turned on
-Talkback for logging temp changes is turned off
-primary_, secondary_temp_sensor_pins=2, 8
-outdoor_temp_sensor1_, _2_pins=10, 11
-furnace_, furnace_fan, cool_pins=3, 4, 9
+heat start low temp=22.4
+heat stop high temp=23.0
+cool stop low temp=21.5
+cool start high temp=22.1
+Logging talkback is turned on
+Talkback of temp changes is turned on
+primary, secondary indoor temp sensor pins=2, 8
+outdoor temp sensor1, 2 pins=10, 11
+heat, fan, cool pins=3, 4, 9
 host/aux system power_cycle_pin=5
-LED_BUILTIN pin=12
+LED_BUILTIN pin=13
 .
 Pin numbers may otherwise be period (all pins) with +/-/! for setting and forcing reserved pins
 Example: pin set to output .-! (results in all pins [.] being set to output with low logic level [-], even reserved pins [!])
-Valid commands (cAsE sEnSiTiVe, minimal sanity checking, one per line) are:
+Valid commands (cAsE sEnSiTiVe):
 .
-help (re-display this information)
+help (re-display this screen)
 ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat mode)
 fan[ a[uto]/ o[n]] (to read or set fan)
-furnace start low temp <°C> (to turn furnace on at this or lower temperature, always persistent)
-furnace stop high temp <°C> (to turn furnace off at this or higher temperature, always persistent)
-cool stop low temp <°C> (to turn A/C off at this or lower temperature, always persistent)
-cool start high temp <°C> (to turn A/C on at this or higher temperature, always persistent)
-talkback[ on/off] (or logging on/off)
+heat start low temp[ <°C>] (to turn heat on at this or lower temperature, always persistent)
+heat stop high temp[ <°C>] (to turn heat off at this or higher temperature, always persistent)
+cool stop low temp[ <°C>] (to turn A/C off at this or lower temperature, always persistent)
+cool start high temp[ <°C>] (to turn A/C on at this or higher temperature, always persistent)
+heat temps[ <°C>] (adjust heat settings up, use - for down)
+cool temps[ <°C>] (adjust cool settings up, use - for down)
+all temps[ <°C>] (adjust all temperature settings up, use - for down)
+talkback[ on/off] (or logging[ on/off])
 talkback temp change[s[ on/off]] (or logging temp changes[ on/off])(requires normal talkback on)
 report master room temp
 power cycle (or cycle power)
-read pin <pin number> (or ...pin read...)(obtain the name if any, setting and voltage)
+read pin <pin number or .> (or ...pin read...)(obtain the name if any, setting and voltage)
 read pins (or pins read )(obtain the names, settings and voltages of ALL pins)
-read sens[or] <pin number> (retrieves sensor reading, a period with due care in place of pin number for all pins)
-set pin [to] output <pin number> (or ...pin set)
-set pin [to] input <pin number> [pers] (or ...pin set...) optional persistence FUTURE
-set pin [to] input with pullup <pin number> [pers] (or ...pin set...) optional persistence FUTURE
-set pin [to] low <pin number> [pers] (or ...pin set...)(only allowed to pins assigned as output) optional persistence FUTURE
-set pin [to] high <pin number> [pers] (or ...pin set...)(only allowed to pins assigned as output) optional persistence FUTURE
+read sens[or] <pin number or .> (retrieves sensor reading, a period with due care in place of pin number for all pins)
+set pin [to] output <pin number or .> (or ...pin set)
+set pin [to] input <pin number or .> [pers] (or ...pin set...)
+set pin [to] input with pullup <pin number or .> [pers] (or ...pin set...)
+set pin [to] low <pin number or .> [pers] (or ...pin set...)(only allowed to pins assigned as output)
+set pin [to] high <pin number or .> [pers] (or ...pin set...)(only allowed to pins assigned as output)
 ch[ange] pers[istent memory] <address> <value> (changes EEPROM, see source code for addresses of data)
 ch[ange] pers[istent memory] <StartingAddress> "<character string>["[ 0]] (store character string in EEPROM as long as desired, optional null-terminated. Reminder: echo -e and escape the quote[s])
 vi[ew] pers[istent memory] <StartingAddress>[ <EndingAddress>] (views EEPROM)
-vi[ew] fact[ory defaults] (so you can see what would happen before you reset to them)
-reset (factory defaults: pure, simple and absolute)
-test alert (sends an alert message to host for testing purposes)
+assign pins (from EEPROM)
+test alert (sends an alert message for testing)
 ..
