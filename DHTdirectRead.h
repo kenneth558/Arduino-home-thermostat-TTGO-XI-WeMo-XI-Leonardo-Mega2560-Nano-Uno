@@ -63,7 +63,7 @@ DHTresult DHTfunctionResultsArray[ 15 ]; //The last entry will be the return val
     }
 #endif
 
-void GetReading( u8 pin )
+void GetReading( u8 pin, u8 pin_limited_to_digital_mode )
 {
       long unsigned startBitTime;
         unsigned long turnover_reference_time;
@@ -76,7 +76,7 @@ void GetReading( u8 pin )
 #ifdef PIN_Amax
 tryAnalog:;
             if( !( DHTfunctionResultsArray[ pin - 1 ].Type > 0 && DHTfunctionResultsArray[ pin - 1 ].Type < TYPE_ANALOG ) )
-                if( !( pin & 0x80 ) ) ReadAnalogTempFromPin( pin );
+                if( pin_limited_to_digital_mode == 0 ) ReadAnalogTempFromPin( pin );
 #endif
             return; //to ensure the LOW level remains to ensure no conduction to high level
         }
@@ -315,7 +315,7 @@ DHTresult* FetchTemp( u8 pin, u8 LiveOrRecent )
         return &DHTfunctionResultsArray[ pin - 1 ];
     }
 #endif
-    GetReading( pin | pin_limited_to_digital_mode );
+    GetReading( pin, pin_limited_to_digital_mode );
 deviceReadDone:;    
     digitalWrite( pin, HIGH );
     return &DHTfunctionResultsArray[ pin - 1 ];
