@@ -385,7 +385,7 @@ boolean IsValidPinNumber( const char* str, u8 type_analog_allowed )
     u8 j = i;
     while( isdigit( str[ j ] ) ) j++;
     pin_specified = ( u8 )atoi( str );
-    if( j == i || ( !type_analog_allowed && ( pin_specified & 0x7F ) >= NUM_DIGITAL_PINS ) || ( type_analog_allowed == TYPE_ANALOG && !memchr( analog_pin_list, pin_specified, PIN_Amax ) ) )
+    if( j == i || ( !type_analog_allowed && ( ( pin_specified & 0x7F ) >= NUM_DIGITAL_PINS ) ) || ( ( pin_specified & 0x7F ) >= NUM_DIGITAL_PINS && !memchr( analog_pin_list, pin_specified, PIN_Amax ) ) )
     {
         Serial.println( F( "Pin # error-see help screen" ) );
         return false;
