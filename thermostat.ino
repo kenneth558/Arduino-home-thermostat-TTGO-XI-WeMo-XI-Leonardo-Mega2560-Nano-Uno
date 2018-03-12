@@ -91,6 +91,9 @@ u8 outdoor_temp_sensor2_address = 11;
 #define SHORTEN 0
 #define REPLACE 1
 
+#define NOT_RUNNING false
+#define ALREADY_RUNNING true
+
 unsigned int logging_address = EEPROMlength - sizeof( boolean );
 unsigned int upper_heat_temp_address = logging_address - sizeof( short );//EEPROMlength - 2;
 unsigned int lower_heat_temp_address = upper_heat_temp_address - sizeof( short );//EEPROMlength - 3;
@@ -129,7 +132,7 @@ u8 pin_specified;
 float temp_specified_floated;
 boolean fresh_powerup = true;
 long unsigned timer_alert_furnace_sent = 0;
-const u8 factory_setting_primary_temp_sensor_pin PROGMEM = 2;//analog or digital sensor, 2 | 0x80; would restrict the pin to digital mode only so if device fails in the future unexpectedly sketch would not revert the pin to analog mode if the pin is capable of analog mode
+const u8 factory_setting_primary_temp_sensor_pin PROGMEM = 2 + 128;//the 128 restricts the pin to digital mode only so if device fails in the future unexpectedly sketch would not revert the pin to analog mode if the pin is capable of analog mode
 const u8 PROGMEM factory_setting_heat_pin PROGMEM = 3;
 const u8 PROGMEM factory_setting_furnace_blower_pin PROGMEM = 4;
 const u8 PROGMEM factory_setting_power_cycle_pin PROGMEM = 5;
@@ -142,9 +145,9 @@ const float factory_setting_lower_heat_temp_floated PROGMEM = 22.4;
 const float factory_setting_upper_heat_temp_floated PROGMEM = 23;
 const float factory_setting_lower_cool_temp_floated PROGMEM = 21.5;
 const float factory_setting_upper_cool_temp_floated PROGMEM = 22.1;
-const u8 factory_setting_secondary_temp_sensor_pin PROGMEM = 8;//analog or digital sensor, 2 | 0x80; would limit it to only digital sensor
-const u8 factory_setting_outdoor_temp_sensor1_pin PROGMEM = 10;//analog or digital sensor, 2 | 0x80; would limit it to only digital sensor
-const u8 factory_setting_outdoor_temp_sensor2_pin PROGMEM = 11;//analog or digital sensor, 2 | 0x80; would limit it to only digital sensor
+const u8 factory_setting_secondary_temp_sensor_pin PROGMEM = 8 + 128;//the 128 restricts it to only digital sensor
+const u8 factory_setting_outdoor_temp_sensor1_pin PROGMEM = 10 + 128;//the 128 restricts it to only digital sensor
+const u8 factory_setting_outdoor_temp_sensor2_pin PROGMEM = 11 + 128;//the 128 restricts it to only digital sensor
 const float minutes_furnace_should_be_effective_after PROGMEM = 5.5; //Can be decimal this way
 const unsigned long loop_cycles_to_skip_between_alert_outputs PROGMEM = 4 * 60 * 30;//estimating 4 loops per second, 60 seconds per minute, 30 minutes per alert
 
@@ -222,8 +225,18 @@ void EEPROMupdate ( unsigned long address, u8 val )
 }
 #endif
 
-void assign_pins()
+void assign_pins( bool already_running )
 {
+    if( already_running )
+    {
+        digitalWrite( heat_pin, LOW );
+        digitalWrite( cool_pin, LOW );
+        digitalWrite( furnace_blower_pin, LOW );
+    }
+    else
+    {
+        fan_mode = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
+    }
     primary_temp_sensor_pin = EEPROM.read( primary_temp_sensor_address ); 
     secondary_temp_sensor_pin = EEPROM.read( secondary_temp_sensor_address );
     outdoor_temp_sensor1_pin = EEPROM.read( outdoor_temp_sensor1_address );
@@ -232,6 +245,15 @@ void assign_pins()
     cool_pin = EEPROM.read( cool_pin_address );
     furnace_blower_pin = EEPROM.read( furnace_blower_pin_address );
     power_cycle_pin = EEPROM.read( power_cycle_address );
+    pinMode( power_cycle_pin, OUTPUT );
+    digitalWrite( power_cycle_pin, LOW );
+    pinMode( heat_pin, OUTPUT );
+    digitalWrite( heat_pin, heat_state );
+    pinMode( cool_pin, OUTPUT );
+    digitalWrite( cool_pin, cool_state );
+    pinMode( furnace_blower_pin, OUTPUT );
+    if( fan_mode == 'o' ) digitalWrite( furnace_blower_pin, HIGH );
+    else digitalWrite( furnace_blower_pin, LOW );
 }
 
 void printThermoModeWord( char setting_char, bool newline )
@@ -314,11 +336,11 @@ bool refuseInput()
     {
          if( logging )
          {
-                if( pin_specified == power_cycle_pin ) Serial.print( F( "Power to host system" ) );
+                if( pin_specified == power_cycle_pin ) Serial.print( F( "Host pwr" ) );
                 if( pin_specified == furnace_blower_pin ) Serial.print( F( "Furnace fan" ) );
                 if( pin_specified == heat_pin ) Serial.print( F( "Furnace" ) );
                 if( pin_specified == cool_pin ) Serial.print( F( "A/C" ) );
-                Serial.print( F( ", pin " ) );
+                Serial.print( F( " pin " ) );
                 Serial.print( pin_specified );
                 Serial.println( F( " skipped" ) );
          }
@@ -365,7 +387,7 @@ boolean IsValidPinNumber( const char* str, u8 type_analog_allowed )
     pin_specified = ( u8 )atoi( str );
     if( j == i || ( !type_analog_allowed && ( pin_specified & 0x7F ) >= NUM_DIGITAL_PINS ) || ( type_analog_allowed == TYPE_ANALOG && !memchr( analog_pin_list, pin_specified, PIN_Amax ) ) )
     {
-        Serial.println( F( "Pin number error. See help screen" ) );
+        Serial.println( F( "Pin # error-see help screen" ) );
         return false;
     }
     return true;
@@ -378,7 +400,7 @@ boolean isanoutput( int pin, boolean reply )
     if( *reg & bit ) return true;
     if( reply )
     {
-        Serial.print( F( "Sorry, pin " ) );
+        Serial.print( F( "Pin " ) );
         Serial.print( pin );
         Serial.println( F( " not yet set to output" ) );
     }
@@ -472,7 +494,7 @@ void printBasicInfo()
     Serial.println( F( "Example: pin set to output .-! (results in all pins [.] being set to output with low logic level [-], even reserved pins [!])" ) );
     Serial.println( F( "Valid commands (cAsE sEnSiTiVe):" ) );
     Serial.println( F( "." ) );
-    Serial.println( F( "help (re-display this information)" ) );
+    Serial.println( F( "help (re-display this screen)" ) );
     Serial.println( F( "ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (to read or set thermostat mode)" ) );//, auto requires outdoor sensor[s] and reverts to heat if sensor[s] fail)" ) );
     Serial.println( F( "fan[ a[uto]/ o[n]] (to read or set fan)" ) );
     Serial.println( F( "heat start low temp[ <°C>] (to turn heat on at this or lower temperature, always persistent)" ) );//not worth converting for some unkown odd reason
@@ -512,7 +534,7 @@ void printBasicInfo()
         Serial.println( F( "vi[ew] fact[ory defaults] (sketch re-compile would be required this board. See source code comments)" ) );
     #endif
 #endif
-    Serial.println( F( "assign pins (from EEPROM. Pwr cycle unless only changing sensor pins!)" ) );
+    Serial.println( F( "assign pins (from EEPROM)" ) );
     Serial.println( F( "test alert (sends an alert message for testing)" ) );
     Serial.println( F( ".." ) );
 }
@@ -612,21 +634,11 @@ void setup()
     }
     else
     {
-        assign_pins();
+        assign_pins( NOT_RUNNING );
     }
     logging = ( boolean )EEPROM.read( logging_address );
     logging_temp_changes = ( boolean )EEPROM.read( logging_temp_changes_address );
     thermostat_mode = ( char )EEPROM.read( thermostat_mode_address );
-    fan_mode = ( char )EEPROM.read( fan_mode_address );//a';//Can be either auto (a) or on (o)
-    pinMode( power_cycle_pin, OUTPUT );
-    digitalWrite( power_cycle_pin, LOW );
-    pinMode( heat_pin, OUTPUT );
-    digitalWrite( heat_pin, LOW );
-    pinMode( cool_pin, OUTPUT );
-    digitalWrite( cool_pin, LOW );
-    pinMode( furnace_blower_pin, OUTPUT );
-    if( fan_mode == 'o' ) digitalWrite( furnace_blower_pin, HIGH );
-    else digitalWrite( furnace_blower_pin, LOW );
     short lower_heat_temp_shorted_times_ten = 0;
     short upper_heat_temp_shorted_times_ten = 0;
     short upper_cool_temp_shorted_times_ten = 0;
@@ -1472,7 +1484,9 @@ showThermostatSetting:;
         }
         else if( strstr( strFull, "assign pins" ) )
         {
-            assign_pins();
+            assign_pins( ALREADY_RUNNING );
+            digitalWrite( heat_pin, heat_state ); 
+            digitalWrite( cool_pin, cool_state );
             Serial.println( F( "help will show new pin assignments." ) );
         }
         else if( strstr_P( strFull, str_vi_fact ) ) // The Leonardo does not have enough room in PROGMEM for this feature
