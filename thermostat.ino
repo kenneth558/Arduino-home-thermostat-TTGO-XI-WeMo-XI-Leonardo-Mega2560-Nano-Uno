@@ -751,7 +751,7 @@ void showCoolSettings( void )
     Serial.println( upper_cool_temp_floated, 1 );
 }
 
-void check_for_serial_input( char result )
+void check_for_serial_input()
 {
     
     
@@ -974,26 +974,18 @@ void check_for_serial_input( char result )
         }
         else if( strstr_P( strFull, str_report_master_room_temp ) )
         {
-           if( result == DEVICE_READ_SUCCESS )
-           {
-               Serial.print( F( "Humidity (%): " ) );
-               Serial.println( _HumidityPercent, 1 );
-               Serial.print( F( "Temperature (°C): " ) );
-               Serial.println( _TemperatureCelsius, 1 );
-                showHeatSettings();
-                showCoolSettings();
-                Serial.print( F( "Furnace: " ) );
-               Serial.println( digitalRead( heat_pin ) );
-               Serial.print( F( "Furnace fan: " ) );
-               Serial.println( digitalRead( furnace_blower_pin ) );
-               Serial.print( F( "Cool: " ) );
-               Serial.println( digitalRead( cool_pin ) );
-           }
-           else
-           {
-                Serial.println( F( "Sensor didn't read" ) );
-           }
-            
+           Serial.print( F( "Humidity (%): " ) );
+           Serial.println( _HumidityPercent, 1 );
+           Serial.print( F( "Temperature (°C): " ) );
+           Serial.println( _TemperatureCelsius, 1 );
+            showHeatSettings();
+            showCoolSettings();
+            Serial.print( F( "Furnace: " ) );
+           Serial.println( digitalRead( heat_pin ) );
+           Serial.print( F( "Furnace fan: " ) );
+           Serial.println( digitalRead( furnace_blower_pin ) );
+           Serial.print( F( "Cool: " ) );
+           Serial.println( digitalRead( cool_pin ) );
         }
         else if( strstr_P( strFull, str_read_pin ) || strstr_P( strFull, str_pin_read ) )
         {
@@ -1676,8 +1668,8 @@ void loop()
     }
     else fresh_powerup = false;
         DHTresult* noInterrupt_result = ( DHTresult* )( FetchTemp( primary_temp_sensor_pin, RECENT ) ); 
-        if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && noInterrupt_result->Type < TYPE_ANALOG ) noInterrupt_result = ( DHTresult* )( FetchTemp( secondary_temp_sensor_pin, RECENT ) );
-        if( ( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && noInterrupt_result->Type < TYPE_ANALOG ) || noInterrupt_result->Type == TYPE_ANALOG )
+        if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) noInterrupt_result = ( DHTresult* )( FetchTemp( secondary_temp_sensor_pin, RECENT ) );
+        if( ( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) || noInterrupt_result->Type == TYPE_ANALOG )
         {
             timeOfLastSensorTimeoutError = 0;
             if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
@@ -1741,7 +1733,7 @@ void loop()
         }
         for( u8 i = 0; i < 4; i++ )
         {
-            check_for_serial_input( noInterrupt_result->ErrorCode );
+            check_for_serial_input();
             delay( 500 );
         }
 #endif
