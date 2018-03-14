@@ -58,8 +58,8 @@ This sketch occupies all or nearly all available flash (program) memory in board
 not be able to add features in most 32K flash Arduinos.  Actual compiled sketch size varies in the range of 27K-28K, so 
 boards that allow the entirety of the 32K flash for the user's sketch will have some flash space available for you to add 
 features.  Note that certain of these boards don't even have have enough flash to both initialize EEPROM and advance to 
-production environment operation in the same compilation.  Be prepared to compile twice for Leonardo, TTGO, Micro, et. al. 
-- once for EEPROM intitializing and the final time for production environment operation.  SUPPORTING LIBRARIES CAN ALWAYS 
+production environment operation in the same compilation.  Be prepared to compile twice for Leonardo, TTGO, Micro, et. al.; 
+once for EEPROM intitializing and the final time for production environment operation.  SUPPORTING LIBRARIES CAN ALWAYS 
 INCREASE IN THEIR COMPILED SIZES!  IF THAT HAPPENS, THIS SKETCH PROBABLY WON'T FIT IN SOME BOARDS THAT I AM CLAIMING IT
 FITS IN AT THIS TIME.
 
