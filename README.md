@@ -1,3 +1,5 @@
+# Use of KY-013 almost supported, but not yet
+
 You'll need to download four files: the .ino and the three .h files.  IF USING TTGO XI/WeMo XI YOU'LL ALSO NEED WHAT YOU'LL 
 FIND AT   https://github.com/wemos/Arduino_XI  (IDE support for TTGO XI/WeMo XI), BUT IF YOU COMPILE UNDER LINUX, READ THAT 
 ISSUES SECTION FOR THE BOARDS.TXT FILE MODIFICATION DUE TO THE DIRECTORY DELIMITER CHARACTER DIFFERENCE ( \ -> / ) 
