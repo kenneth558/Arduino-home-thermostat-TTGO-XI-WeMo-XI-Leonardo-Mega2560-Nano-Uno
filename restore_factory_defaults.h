@@ -1,37 +1,6 @@
 #ifdef RESTORE_FACTORY_DEFAULTS
 void restore_factory_defaults()
 {
-// no EEPROM updates allowed while in interrupts
-    primary_temp_sensor_pin = factory_setting_primary_temp_sensor_pin;
-    heat_pin = factory_setting_heat_pin;
-    furnace_blower_pin = factory_setting_furnace_blower_pin;
-    cool_pin = factory_setting_cool_pin;
-    power_cycle_pin = factory_setting_power_cycle_pin;
-    logging = factory_setting_logging_setting;
-    logging_temp_changes = factory_setting_logging_temp_changes_setting;
-    secondary_temp_sensor_pin = factory_setting_secondary_temp_sensor_pin;
-    outdoor_temp_sensor1_pin = factory_setting_outdoor_temp_sensor1_pin;
-    outdoor_temp_sensor2_pin = factory_setting_outdoor_temp_sensor2_pin;
-    thermostat_mode = factory_setting_thermostat_mode;
-    timer_alert_furnace_sent = 0;
-    fan_mode = factory_setting_fan_mode;
-    
-    lower_heat_temp_floated = factory_setting_lower_heat_temp_floated;
-    upper_heat_temp_floated = factory_setting_upper_heat_temp_floated;
-    upper_cool_temp_floated = factory_setting_upper_cool_temp_floated;    
-    lower_cool_temp_floated = factory_setting_lower_cool_temp_floated;    
-    if( fan_mode == 'o' ) digitalWrite( furnace_blower_pin, HIGH );
-    else digitalWrite( furnace_blower_pin, LOW );
-    if( thermostat_mode == 'o' || thermostat_mode == 'c' )
-    {
-        digitalWrite( heat_pin, LOW );
-        heat_state = false;
-    }
-    if( thermostat_mode == 'h' || thermostat_mode == 'o' ) 
-    {
-        digitalWrite( cool_pin, LOW );
-        cool_state = false;
-    }
     Serial.print( F( "Storing thermostat-related.  Primary temperature sensor goes on pin " ) );
     Serial.print( factory_setting_primary_temp_sensor_pin );
     Serial.print( F( ", secondary sensor on pin " ) );
@@ -68,9 +37,9 @@ void restore_factory_defaults()
     Serial.print( F( ", fan mode=" ) );
     Serial.println( factory_setting_fan_mode );
 #ifndef __LGT8FX8E__
-    EEPROM.update( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );
+    EEPROM.update( primary_temp_sensor_pin_address, factory_setting_primary_temp_sensor_pin );
 #else
-    EEPROMupdate( primary_temp_sensor_address, factory_setting_primary_temp_sensor_pin );
+    EEPROMupdate( primary_temp_sensor_pin_address, factory_setting_primary_temp_sensor_pin );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( heat_pin_address, factory_setting_heat_pin );
@@ -83,9 +52,9 @@ void restore_factory_defaults()
     EEPROMupdate( furnace_blower_pin_address, factory_setting_furnace_blower_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( power_cycle_address, factory_setting_power_cycle_pin );
+    EEPROM.update( power_cycle_pin_address, factory_setting_power_cycle_pin );
 #else
-    EEPROMupdate( power_cycle_address, factory_setting_power_cycle_pin );
+    EEPROMupdate( power_cycle_pin_address, factory_setting_power_cycle_pin );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( logging_address, factory_setting_logging_setting );
@@ -138,29 +107,70 @@ void restore_factory_defaults()
 #endif
 
 #ifndef __LGT8FX8E__
-    EEPROM.update( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );
+    EEPROM.update( secondary_temp_sensor_pin_address, factory_setting_secondary_temp_sensor_pin );
 #else
-    EEPROMupdate( secondary_temp_sensor_address, factory_setting_secondary_temp_sensor_pin );
+    EEPROMupdate( secondary_temp_sensor_pin_address, factory_setting_secondary_temp_sensor_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );
+    EEPROM.update( outdoor_temp_sensor1_pin_address, factory_setting_outdoor_temp_sensor1_pin );
 #else
-    EEPROMupdate( outdoor_temp_sensor1_address, factory_setting_outdoor_temp_sensor1_pin );
+    EEPROMupdate( outdoor_temp_sensor1_pin_address, factory_setting_outdoor_temp_sensor1_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );
+    EEPROM.update( outdoor_temp_sensor2_pin_address, factory_setting_outdoor_temp_sensor2_pin );
 #else
-    EEPROMupdate( outdoor_temp_sensor2_address, factory_setting_outdoor_temp_sensor2_pin );
+    EEPROMupdate( outdoor_temp_sensor2_pin_address, factory_setting_outdoor_temp_sensor2_pin );
 #endif
+
+// no EEPROM updates allowed while in interrupts
+    logging = factory_setting_logging_setting;
+    logging_temp_changes = factory_setting_logging_temp_changes_setting;
+    thermostat_mode = factory_setting_thermostat_mode;
+    timer_alert_furnace_sent = 0;
+// gets done later    fan_mode = factory_setting_fan_mode;
+    
+    lower_heat_temp_floated = factory_setting_lower_heat_temp_floated;
+    upper_heat_temp_floated = factory_setting_upper_heat_temp_floated;
+    upper_cool_temp_floated = factory_setting_upper_cool_temp_floated;    
+    lower_cool_temp_floated = factory_setting_lower_cool_temp_floated;    
 #ifndef __LGT8FX8E__
     EEPROM.put( 0, ( NUM_DIGITAL_PINS + 1 ) * 3 );//Tattoo the board
 #else
     EEPROMupdate( 0, ( u8 )( ( NUM_DIGITAL_PINS + 1 ) * 3 ) );
     EEPROMupdate( 1, ( u8 )( ( ( NUM_DIGITAL_PINS + 1 ) * 3 ) >> 8 ) );
 #endif
-    Serial.println( F( "Done. Unplug the Arduino now if desired." ) );
+#ifdef PIN_A0
+    #ifndef __LGT8FX8E__
+        EEPROM.put( calibration_offset_array_start_address_first_byte, ( u16 )lower_cool_temp_address - sizeof( analog_pin_list ) );//This is done so we can more easily change location of this array in future revision, maybe to an end-of-EEPROM-refenced location
+    #else
+        EEPROMupdate( calibration_offset_array_start_address_first_byte, ( u8 )( lower_cool_temp_address - sizeof( analog_pin_list ) ) );
+        EEPROMupdate( calibration_offset_array_start_address_first_byte + 1, ( u8 )( lower_cool_temp_address - sizeof( analog_pin_list ) >> 8 ) );
+    #endif
+    calibration_offset = EEPROM.read( calibration_offset_array_start_address_first_byte );
+    calibration_offset += ( ( u16 )EEPROM.read( calibration_offset_array_start_address_first_byte + 1 ) ) << 8;
+    u8 i;
+    for( i = 0; i < sizeof( analog_pin_list ); i++ )
+    {
+#ifndef __LGT8FX8E__
+        EEPROM.update( calibration_offset + i, 200 ); //the 200 unsigned equates to - 56 signed, adjust to your heart's content for a default analog calibration adjust based on supply voltage.  Tweak each sensor uniquely in the array for further accuracy
+#else
+        EEPROMupdate( calibration_offset + i, 200 );
+#endif
+//        Serial.println( analog_pin_list[ i ] );
+    }
+#endif
+//    Serial.println( logging_address );//
+//    Serial.println( upper_heat_temp_address );// = logging_address - sizeof( short );//EEPROMlength - 2;
+//    Serial.println( lower_heat_temp_address );// = upper_heat_temp_address - sizeof( short );//EEPROMlength - 3;
+//    Serial.println( logging_temp_changes_address );// = lower_heat_temp_address - sizeof( boolean );//EEPROMlength - 4;
+//    Serial.println( upper_cool_temp_address );// = logging_temp_changes_address - sizeof( short );
+//    Serial.println( lower_cool_temp_address );// = upper_cool_temp_address - sizeof( short );
+//    Serial.println( calibration_offset );// = upper_cool_temp_address - sizeof( short );
+//    Serial.println( i );// = upper_cool_temp_address - sizeof( short );
+    assign_pins( NOT_RUNNING );
+
+    Serial.println( F( "Done. Unplug board now if desired." ) );
     delay( 10000 );
       printBasicInfo();
-      assign_pins( NOT_RUNNING );
 }
 #endif
