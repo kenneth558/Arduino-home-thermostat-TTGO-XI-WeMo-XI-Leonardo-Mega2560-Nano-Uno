@@ -1,13 +1,13 @@
 #ifdef NUM_ANALOG_INPUTS
     #ifndef PIN_A0
 //if compiler errors here, you have a board the does not define its analog pins per de facto standards
-//Just comment out ONLY the lines that cause compiler to error, leaving the lines prior to those intact
+//Just comment out ONLY the lines that cause compiler or your board to error, leaving the lines prior to those intact
 //Then save the modified file and re-compile
-        #define PIN_A0 A0
-        #define PIN_A1 A1
-        #define PIN_A2 A2
-        #define PIN_A3 A3
-        #define PIN_A4 A4
+        #define PIN_A0 A0 // TTGO XI/WeMo XI has A0 - A3 for safe use
+        #define PIN_A1 A1 // TTGO XI/WeMo XI has A0 - A3 for safe use
+        #define PIN_A2 A2 // TTGO XI/WeMo XI has A0 - A3 for safe use
+        #define PIN_A3 A3 // TTGO XI/WeMo XI has A0 - A3 for safe use
+        #define PIN_A4 A4 //not safe in TTGO XI hereafter
         #define PIN_A5 A5
         #define PIN_A6 A6
         #define PIN_A7 A7
@@ -24,6 +24,7 @@
         #define PIN_A18 A18
         #define PIN_A19 A19
         #define PIN_A20 A20
+
     #endif
     #if defined ( PIN_A20 ) && not defined ( PIN_Amax )
         #define PIN_Amax PIN_A20
@@ -109,4 +110,5 @@
         #define PIN_Amax PIN_A0
         u8 analog_pin_list[] = { A0 };
     #endif
+//    u16 calibration_offset;
 #endif
