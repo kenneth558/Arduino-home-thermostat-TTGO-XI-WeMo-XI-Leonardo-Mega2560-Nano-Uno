@@ -1,4 +1,4 @@
-
+// ErrorCodes
 #define DEVICE_NOT_YET_ACCESSED 0 //255
 #define DEVICE_FAILS_DURING_INITIALIZE 1  //254
 #define DEVICE_FAILS_DURING_INITIALIZE1 2 //253 common to dht22
@@ -50,20 +50,39 @@ DHTresult DHTfunctionResultsArray[ 15 ]; //The last entry will be the return val
 
 
 //TODO: verify and enforce rest time
-#ifdef PIN_Amax
+#ifdef PIN_Amax  //stay away from #ifdef PIN_A0 due to possible header file not included, plus this is more purpose-driven
     void ReadAnalogTempFromPin( u8 pin )
     {
-        if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) )
-            pin = ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) );
-        double Temp = log( ( 10240000 / analogRead( pin ) ) - 10000 );
-        Temp = ( 1 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 273.15;//startpoint as provided, close enough when using 3.3v for sensor supply
-    //    Temp = ( 1 / ( 0.001129148 + ( 0.000234125 + ( 0.0000000876741 * Temp * Temp ) ) * Temp ) ) - 294.45; //wen connected to full Vcc accurate at 21.4
-        DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( Temp * 10 );
+        double raw = analogRead( pin );
         DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
+        if( raw > 900 || raw < 20 ) DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG + 1;//Readings in this range are indicative of a failed thermistor circuit.  Safety suggests we should assume such.
+/*
+//I include the capability for what I'll call a "ratio'd regressive-differential-from-midpoint voltage offset and raw temperature offset" style of calibration. It prevents out-of-range adjustment to the raw reading and more closely mimics the thermistor characterstics vs some other means of applied offset
+//Calibration "regressive-differential_from-midpint voltage offset" applied here
+        raw += ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * 0.8 * ( float )( 1 - ( ( float )max( abs( ( long signed )( 565 - raw ) ), abs( ( long signed )( raw - 565 ) ) ) / 512 ) );
+
+//At this point in time, I do not know how the following formula can be calibrated non-linearly to best conform to the true characteristics of the KY-013.  
+//        double Temp = 0.175529 * raw ;//Approximation formula is attributed to University of Stuttgart by Tim Waizenegger: https://github.com/timwaizenegger/raspberrypi-examples/blob/master/sensor-temperature/ky013.py, accessed 03/14/18.  It is useful connecting the excitation power as per KY-013 board markings instead of backwards to them as the normal equation demands
+//        Temp = 125.315 - Temp;       //Though not explicitely stated, I suspect it was derived by taking 3 measurements (125 °C, 0 °C & -55 °C) and determining the linear (no good) equation they best fit using the Wolfram|Alpha algorithm-producing tools at www.wolframalpha.com
+*/
+        double Temp = ( double )log( ( float )( ( float )( 10240000 / raw ) - 10000 ) );
+        Temp =  ( float )( 1.0 / ( float )( 0.001129148 + ( float )( 0.000234125 + ( float )( 0.0000000876741 * Temp * Temp ) ) * Temp ) );
+/*
+//Calibration "raw temperature offset" applied here
+        Temp = Temp + ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * 0.2;
+*/
+        Temp -= 273.15;
+        if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) )
+            pin = ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) );//Analog pins not having digital modes will return with this array member
+        DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( ( abs( Temp ) * 10 ) );
+        if( Temp < 0 )
+        {
+            *(u16 *)( &DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius ) |= 0x8000;
+        }
     }
 #endif
 
-void GetReading( u8 pin, u8 pin_limited_to_digital_mode )
+void GetReading( u8 pin, u8 pin_limited_to_digital_mode_flag )
 {
       long unsigned startBitTime;
         unsigned long turnover_reference_time;
@@ -76,7 +95,7 @@ void GetReading( u8 pin, u8 pin_limited_to_digital_mode )
 #ifdef PIN_Amax
 tryAnalog:;
             if( !( DHTfunctionResultsArray[ pin - 1 ].Type > 0 && DHTfunctionResultsArray[ pin - 1 ].Type < TYPE_ANALOG ) )
-                if( pin_limited_to_digital_mode == 0 && memchr( analog_pin_list, pin, PIN_Amax ) ) ReadAnalogTempFromPin( pin );
+                if( pin_limited_to_digital_mode_flag == 0 && memchr( analog_pin_list, pin, PIN_Amax ) ) ReadAnalogTempFromPin( pin );
 #endif
             return; //to ensure the LOW level remains to ensure no conduction to high level
         }
@@ -110,7 +129,7 @@ tryAnalog:;
         startBitTime = micros();//Handover. This marks end of host drive, beginning of device drive
         while( ( micros() - startBitTime < 200 ) && ( digitalRead( pin ) == HIGH ) );
         while( ( micros() - startBitTime < 200 ) && ( digitalRead( pin ) == LOW ) );
-        if( digitalRead( pin ) == LOW )
+        if( digitalRead( pin ) == LOW || micros() - startBitTime > 199 || micros() - startBitTime < 20 )
         {//dht22 errors here with 104 if loop above is skipped
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE3;//88 uSec from pullup applied to high level
 #ifdef PIN_Amax
@@ -261,7 +280,7 @@ past_device_type_sort:;
 DHTresult* FetchTemp( u8 pin, u8 LiveOrRecent )
 {
 #ifdef PIN_A0
-    u8 pin_limited_to_digital_mode = pin & 0x80 ;
+    u8 pin_limited_to_digital_mode_flag = pin & 0x80 ;
     pin &= 0x7F;
     if( pin >= NUM_DIGITAL_PINS && !memchr( analog_pin_list, pin, PIN_Amax ) )//pin no good
 #else
@@ -284,8 +303,8 @@ DHTresult* FetchTemp( u8 pin, u8 LiveOrRecent )
         }
     }
 
-    if( pin < NUM_DIGITAL_PINS && ( ( DHTfunctionResultsArray[ pin - 1 ].ErrorCode == DEVICE_NOT_YET_ACCESSED && !( *portModeRegister( digitalPinToPort( pin ) ) & digitalPinToBitMask( pin ) ) ) || DHTfunctionResultsArray[ pin - 1 ].ErrorCode < TYPE_ANALOG ) )
-    {//"first read" loop
+    if( pin < NUM_DIGITAL_PINS && ( ( DHTfunctionResultsArray[ pin - 1 ].ErrorCode == DEVICE_NOT_YET_ACCESSED && !( *portModeRegister( digitalPinToPort( pin ) ) & digitalPinToBitMask( pin ) ) ) || DHTfunctionResultsArray[ pin - 1 ].Type < TYPE_ANALOG ) )
+    {//"first read" loop, 
         DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis = millis();
 //Yes, we are assuming the high level has been there long enough.  The main loop needs to enforce that
         pinMode( pin, OUTPUT );//Now is safe to put a high on the pin, assuming a DHT data pin is there 
@@ -295,7 +314,7 @@ DHTresult* FetchTemp( u8 pin, u8 LiveOrRecent )
 #ifndef PIN_A0
     else
 #else
-    else if( DHTfunctionResultsArray[ pin - 1 ].ErrorCode < TYPE_ANALOG )
+    else if( DHTfunctionResultsArray[ pin - 1 ].ErrorCode != TYPE_ANALOG )
 #endif
     {
         u16 rest_time = 1000;//1000 mSec or 1 full second
@@ -309,13 +328,13 @@ DHTresult* FetchTemp( u8 pin, u8 LiveOrRecent )
         while( millis() - DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis < rest_time );
     }
 #ifdef PIN_A0
-    else if( !pin_limited_to_digital_mode && memchr( analog_pin_list, pin, PIN_Amax ) )//sensor not digital
+    else if( ( pin_limited_to_digital_mode_flag == 0 ) && memchr( analog_pin_list, pin, PIN_Amax ) )//sensor not digital and on an Analog pin, so without progam space for a more thorough algorithm there is no way of telling if one is actually present, have to assume one is
     {
         ReadAnalogTempFromPin( pin );
         return &DHTfunctionResultsArray[ pin - 1 ];
     }
 #endif
-    GetReading( pin, pin_limited_to_digital_mode );
+    GetReading( pin, pin_limited_to_digital_mode_flag );//pin_limited_to_digital_mode_flag == pin & 0x80
 deviceReadDone:;    
     digitalWrite( pin, HIGH );
     return &DHTfunctionResultsArray[ pin - 1 ];
