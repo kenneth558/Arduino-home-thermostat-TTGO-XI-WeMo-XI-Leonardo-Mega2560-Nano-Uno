@@ -1,13 +1,10 @@
-# Use of KY-013 almost supported, but not yet
-
 You'll need to download four files: the .ino and the three .h files.  IF USING TTGO XI/WeMo XI YOU'LL ALSO NEED WHAT YOU'LL 
 FIND AT   https://github.com/wemos/Arduino_XI  (IDE support for TTGO XI/WeMo XI), BUT IF YOU COMPILE UNDER LINUX, READ THAT 
 ISSUES SECTION FOR THE BOARDS.TXT FILE MODIFICATION DUE TO THE DIRECTORY DELIMITER CHARACTER DIFFERENCE ( \ -> / ) 
 # Arduino_home_thermostat
 I use this sketch in the Arduino UNO, Mega2560, Leonardo and Wemo XI (TTGO XI) as my thermostat, and you can easily modify 
 it for humidistat as well.  I have compiled it for all boards I could select in the IDE and ensured it would compile for 
-the boards having at least 32K flash.  This version allows the thermostat mode of "auto" in all boards but does not have 
-KY-013 analog sensor calibration.
+the boards having at least 32K flash.  
 
 Currently DHT11, DHT22, and KY-013 sensors only are supported.  Obviously, the DHT sensors can connect to Digital and dual-
 mode pins while the KY-013 can connect to Analog and dual-mode pins. UNDOCUMENTED FOR LACK OF FLASH IN SOME BOARDS: I 
@@ -17,9 +14,13 @@ EEPROM by using the "ch pers" command.  It stands for change persistent memory. 
 of a KY-013 analog sensor depends on the DC voltage supplying the "-" pin (these sensors are labeled opposite what the 
 sketch formula is!)  For the best accuracy, supply these sensors with an adjustable and stable supply of about 3.3 to 4.5 
 volts.  The TTGO XI/WeMo XI boards that I have gives accurate readings when the 3v3 pin supplies the sensor (3.3 volts).  
-Adjust the voltage for accurate readings and enjoy.
+Adjust the voltage for accurate readings and enjoy.  I also provide a calibration array in which you may adjust for each analog input pin.  I'll adjust the formula for calibration as I learn more how to make it linear.
 
 This sketch also makes Arduino digital pins to be readable and settable from an optional serial-connected host computer.  
+Analog input pins will report their raw reading if you sen the command "read pin...".  You'' follow the two words with a 
+pin number or a period to mean all pins.  They will instead report a computed temperature of an assumed KY-013 if you send 
+the command "sens read..." with the same ending as in the previous sentence.  In this way, you may use host computing of the analog readings for an alternate to the formula of the sketch.
+
 The host computer can control and read both the digital voltage levels and DHT data of any pin.  For maximum capability, 
 the host computer can optionally run [a] capturing daemon[s] to receive and process the logging output from the Arduino.  
 Temperature changes logging, an option if main logging is also on, is on by default.  The host computer can utilize 
