@@ -736,7 +736,7 @@ void fixInputted( u8 functionDesired, const char *strToFind, const char *strToRe
             }
             else
             {
-                strncpy_P( hit, strToReplaceWith, strlen_P( strToReplaceWith ) ); 
+                strncpy_P( hit, strToReplaceWith, strlen_P( strToReplaceWith ) + 1 ); 
             }
         }
         if( functionDesired == SHORTEN )
