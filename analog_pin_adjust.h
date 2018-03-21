@@ -1,6 +1,6 @@
 #ifdef NUM_ANALOG_INPUTS
     #ifndef PIN_A0
-//if compiler errors here, you have a board the does not define its analog pins per de facto standards
+//if compiler errors here, Nothing is really wrong.  You just have a board the does not define its analog pins per de facto standards
 //Just comment out ONLY the lines that cause compiler or your board to error, leaving the lines prior to those intact
 //Then save the modified file and re-compile
         #define PIN_A0 A0 // TTGO XI/WeMo XI has A0 - A3 for safe use
