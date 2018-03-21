@@ -110,5 +110,5 @@
         #define PIN_Amax PIN_A0
         u8 analog_pin_list[] = { A0 };
     #endif
-//    u16 calibration_offset;
+    u16 calibration_offset;
 #endif
