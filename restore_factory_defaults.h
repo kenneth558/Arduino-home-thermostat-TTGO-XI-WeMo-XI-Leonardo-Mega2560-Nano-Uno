@@ -139,7 +139,6 @@ void restore_factory_defaults()
     EEPROMupdate( 0, ( u8 )( ( NUM_DIGITAL_PINS + 1 ) * 3 ) );
     EEPROMupdate( 1, ( u8 )( ( ( NUM_DIGITAL_PINS + 1 ) * 3 ) >> 8 ) );
 #endif
-/*
 #ifdef PIN_A0
     #ifndef __LGT8FX8E__
         EEPROM.put( calibration_offset_array_start_address_first_byte, ( u16 )lower_cool_temp_address - sizeof( analog_pin_list ) );//This is done so we can more easily change location of this array in future revision, maybe to an end-of-EEPROM-refenced location
@@ -153,24 +152,15 @@ void restore_factory_defaults()
     for( i = 0; i < sizeof( analog_pin_list ); i++ )
     {
 #ifndef __LGT8FX8E__
-        EEPROM.update( calibration_offset + i, 225 ); //the 225 unsigned equates to -31 signed, adjust to your heart's content for a default analog calibration adjust based on supply voltage.  Tweak each sensor individually in the array for further accuracy
-//The calibration offset is applied in both of two ways: 80% is applied up front to the raw device reading in a "regressive-differential-from-midpoint" style, the other 20% is applied after computation to the resultant temperature directly.    The 80-20 split is absolutely total guesswork on my part.
-//Calibration offset values from 0 to 127 move the temperature positive; values from 128 to 255 move it negative.  Both the 80% and 20% portions affects the resultant in the same direction as each other.
+        EEPROM.update( calibration_offset + i, 200 ); //the 200 unsigned equates to -56 signed, 225 unsigned equates to -31 signed, adjust to your heart's content for a default analog calibration adjust based on supply voltage.  Tweak each sensor individually in the array for further accuracy
+//The calibration offset is applied up front to the raw device reading in a "regressive-differential-from-midpoint" style
+//Calibration offset values from 0 to 127 move the temperature further positive; values from 128 to 255 move it further negative than would be seen using a 0 calibration offset. 
 #else
-        EEPROMupdate( calibration_offset + i, 225 );
+        EEPROMupdate( calibration_offset + i, 195 );
 #endif
 //        Serial.println( analog_pin_list[ i ] );
     }
 #endif
-*/
-//    Serial.println( logging_address );//
-//    Serial.println( upper_heat_temp_address );// = logging_address - sizeof( short );//EEPROMlength - 2;
-//    Serial.println( lower_heat_temp_address );// = upper_heat_temp_address - sizeof( short );//EEPROMlength - 3;
-//    Serial.println( logging_temp_changes_address );// = lower_heat_temp_address - sizeof( boolean );//EEPROMlength - 4;
-//    Serial.println( upper_cool_temp_address );// = logging_temp_changes_address - sizeof( short );
-//    Serial.println( lower_cool_temp_address );// = upper_cool_temp_address - sizeof( short );
-//    Serial.println( calibration_offset );// = upper_cool_temp_address - sizeof( short );
-//    Serial.println( i );// = upper_cool_temp_address - sizeof( short );
     assign_pins( NOT_RUNNING );
 
     Serial.println( F( "Done. Unplug board now if desired." ) );
