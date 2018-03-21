@@ -1,8 +1,8 @@
 /***********************************************************************************************************************
- *      ARDUINO HOME THERMOSTAT SKETCH  v.0.11
+ *      ARDUINO HOME THERMOSTAT SKETCH  v.1.0
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  03/18/18
+ *      Date:  03/20/18
  * 
  *     I RECOMMEND WHEN USING A DIGITAL SENSOR ON A PIN THAT YOU ADD 128 TO THE PIN NUMBER WHEN STORING IT IN EEPROM SO IF THE DIGITAL SENSOR FAILS THE SKETCH WILL NOT REVERT TO READ AN INVALID ANALOG VALUE FROM THAT PIN!
  * 
@@ -18,9 +18,14 @@
  *                                                                  fan is the term for same part but for the thermostat operator person
  * 
  *************************************************************************************************************************/
-#define VERSION "0.11"
+#define VERSION "1.0"
+
 //On the first run of this sketch, if you received an error message about the following line...
 //#define RESTORE_FACTORY_DEFAULTS //As the error message said, uncomment this line, compile & load for first run EEPROM setup in WeMo XI/TTGO XI and any other board that needs it, then comment back out and recompile and load b/c sketch would be too long otherwise
+
+//If you've connected the analog temperature sensor[s] the opposite direction, thus seeing reported temperature go the opposite direction the real temperature goes, you may re-compile with the following line commented out rather than re-wire:
+#define ALL_ANALOG_SENSOR_CIRCUITS_ARE_THERMISTOR_TO_EXCITATION_VOLTS_AND_RESISTOR_TO_GROUND
+
 #ifndef u8
     #define u8 uint8_t
 #endif
@@ -54,8 +59,8 @@
 
 
 //All temps are shorts until displayed
-//Where are other indoor sensors?
-//What about utilizing PCI ISRs and how they control which pins to use?
+//Where are other indoor sensors?  TODO WITH DAMPERS
+//What about utilizing PCI ISRs and how they control which pins to use?  POSSIBLY TODO
 
 // INTENT: Access these values by reference and pointers.  They will be hardcoded here only.  The run-time code can only find out what they are, how many there are, and their names by calls to this function
 //  The following are addresses in EEPROM of values that need to be persistent across power outages.
@@ -112,7 +117,7 @@ unsigned int lower_cool_temp_address = upper_cool_temp_address - sizeof( short )
 
 // So we don't assume every board has exactly three
 //in case of boards that have more than 24 pins ( three virtual 8-bit ports )
-//int number_of_ports_that_present_pins = EEPROM.read( EEPROMlength - 5 );  // may never need this
+//int number_of_ports_that_present_pins = EEPROM.read( EEPROMlength - 5 );  // NOT UTILIZED THIS VERSION
 
 // main temperature sensor, heat, auxiliary heat device, system power cycle, porch light, dining room coffee outlet
 //  The following values need to be stored persistent through power outages.  Sadly, the __LGT8FX8E__ will not read EEPROM until the setup() loop starts executing, so these values get set there for all boards for simplicity
@@ -264,10 +269,10 @@ void printThermoModeWord( char setting_char, bool newline )
         setting = str_heat;
     else if( setting_char == 'c' )
         setting = str_cool;
-#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
+//#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
     else if( setting_char == 'a' )
         setting = str_auto;
-#endif
+//#endif
     else 
     {
         Serial.println();
@@ -285,10 +290,10 @@ void printThermoModeWord( long unsigned var_with_setting, bool newline )
         var_with_setting = ( long unsigned )str_heat;
     else if( thermostat_mode == 'c' )
         var_with_setting = ( long unsigned )str_cool;
-#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
+//#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
     else if( thermostat_mode == 'a' )
         var_with_setting = ( long unsigned )str_auto;
-#endif
+//#endif
     else 
     {
         Serial.println();
@@ -363,12 +368,12 @@ bool refuseInput()
 
 bool pin_print_and_not_sensor( bool setting, u8 pin_specified )
 {
-    if( ( pin_specified == primary_temp_sensor_pin & 0x7F || pin_specified == secondary_temp_sensor_pin & 0x7F ) || ( pin_specified ==  outdoor_temp_sensor1_pin & 0x7F && DHTfunctionResultsArray[ outdoor_temp_sensor1_pin ].ErrorCode == DEVICE_READ_SUCCESS ) || ( pin_specified ==  outdoor_temp_sensor2_pin & 0x7F && DHTfunctionResultsArray[ outdoor_temp_sensor2_pin ].ErrorCode == DEVICE_READ_SUCCESS ) )
+    if( ( pin_specified == ( primary_temp_sensor_pin & 0x7F ) || pin_specified == ( secondary_temp_sensor_pin & 0x7F ) ) || ( pin_specified == ( outdoor_temp_sensor1_pin & 0x7F ) && DHTfunctionResultsArray[ outdoor_temp_sensor1_pin ].ErrorCode == DEVICE_READ_SUCCESS ) || ( pin_specified == ( outdoor_temp_sensor2_pin & 0x7F ) && DHTfunctionResultsArray[ outdoor_temp_sensor2_pin ].ErrorCode == DEVICE_READ_SUCCESS ) )
     {
-        if( pin_specified == primary_temp_sensor_pin & 0x7F ) Serial.print( F( "Indoor prim" ) );
-        else if( pin_specified == secondary_temp_sensor_pin & 0x7F ) Serial.print( F( "Indoor second" ) );
-        else if( pin_specified == outdoor_temp_sensor1_pin & 0x7F ) Serial.print( F( "Outdoor prim" ) );
-        else if( pin_specified == outdoor_temp_sensor2_pin & 0x7F ) Serial.print( F( "Outdoor second" ) );
+        if( pin_specified == ( primary_temp_sensor_pin & 0x7F ) ) Serial.print( F( "Indoor prim" ) );
+        else if( pin_specified == ( secondary_temp_sensor_pin & 0x7F ) ) Serial.print( F( "Indoor second" ) );
+        else if( pin_specified == ( outdoor_temp_sensor1_pin & 0x7F ) ) Serial.print( F( "Outdoor prim" ) );
+        else if( pin_specified == ( outdoor_temp_sensor2_pin & 0x7F ) ) Serial.print( F( "Outdoor second" ) );
         Serial.print( F( "ary temp sensor pin " ) );
         return( false );
     }
@@ -464,11 +469,11 @@ void printBasicInfo()
     }
     Serial.print( F( "Version: " ) );
     Serial.println( F( VERSION ) );
-#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
+//#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
     Serial.print( F( "Operating mode (heat/cool/auto/off)=" ) );
-#else
-    Serial.print( F( "Operating mode (heat/cool/off)=" ) );
-#endif
+//#else
+//    Serial.print( F( "Operating mode (heat/cool/off)=" ) );
+//#endif
     printThermoModeWord( thermostat_mode, true );
     Serial.print( F( "Fan mode=" ) );
     if( fan_mode == 'a' ) Serial.println( F( "auto" ) );
@@ -526,16 +531,32 @@ void printBasicInfo()
     Serial.println( F( "  (pin@EEPROM address)" ) );
     Serial.print( F( "LED_BUILTIN pin=" ) );
     Serial.println( LED_BUILTIN );
-//    Serial.print( F( "Analog pins=" ) );
-//    for( u8 i = 0; i < sizeof( analog_pin_list ); i++ )
-//        Serial.println( analog_pin_list[ i ] );
+    Serial.print( F( "Digital pins=0 to " ) );
+    Serial.println( NUM_DIGITAL_PINS - 1 );
+    Serial.print( F( "Analog pins=" ) );
+    for( u8 i = 0; i < sizeof( analog_pin_list ); i++ )
+    {
+        Serial.print( analog_pin_list[ i ] );
+        if( i < sizeof( analog_pin_list ) - 1 )
+        {
+            Serial.print( F( "," ) );
+        }
+        else
+        {
+            Serial.println();
+        }
+    }
     Serial.println( F( "." ) );
     Serial.println( F( "Pin numbers may otherwise be period (all pins) with +/-/! for setting and forcing reserved pins" ) );
     Serial.println( F( "Example: pin set to output .-! (results in all pins [.] being set to output with low logic level [-], even reserved pins [!])" ) );
     Serial.println( F( "Valid commands, cAsE sEnSiTiVe:" ) );
     Serial.println( F( "." ) );
     Serial.println( F( "help (show this screen)" ) );
+//#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
     Serial.println( F( "ther[mostat][ a[uto]/ o[ff]/ h[eat]/ c[ool]] (read or set thermostat mode)" ) );//, auto requires outdoor sensor[s] and reverts to heat if sensor[s] fail)" ) );
+//#else
+//    Serial.println( F( "ther[mostat][ o[ff]/ h[eat]/ c[ool]] (read or set thermostat mode)" ) );//, auto requires outdoor sensor[s] and reverts to heat if sensor[s] fail)" ) );
+//#endif
     Serial.println( F( "fan[ a[uto]/ o[n]] (read or set fan)" ) );
     Serial.println( F( "heat start low temp[ <°C>] (heat turns on at this or lower temperature)" ) );//not worth converting for some unkown odd reason
     Serial.println( F( "heat stop high temp[ <°C>] (heat turns off at this or higher temperature)" ) );
@@ -584,11 +605,11 @@ void print_factory_defaults()
     Serial.print( F( "Version: " ) );
     Serial.print( F( VERSION ) );
     Serial.println( F( " Factory defaults:" ) );
-#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
+//#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
     Serial.print( F( "Operating mode (heat/cool/auto/off)=" ) );
-#else
-    Serial.print( F( "Operating mode (heat/cool/off)=" ) );
-#endif
+//#else
+//    Serial.print( F( "Operating mode (heat/cool/off)=" ) );
+//#endif
     printThermoModeWord( factory_setting_thermostat_mode, true );
     Serial.print( F( "Fan mode=" ) );
     if( factory_setting_fan_mode == 'a' ) Serial.println( F( "auto" ) );
@@ -668,10 +689,10 @@ void setup()
             Serial.println( F( "EEPROM configuring code will need to be executed by the following process:" ) );
             Serial.println( F( "1.  Modify the soure code of the main .ino file so that the line defining" ) );
             Serial.println( F( "    RESTORE_FACTORY_DEFAULTS is uncommented back into active code" ) );
-            Serial.println( F( "2.  Do not save the file that way, its not permanent, just reload the board with" ) );
-            Serial.println( F( "    the modified sketch, and let the board execute that modification of the sketch" ) );
-            Serial.println( F( "    one time to set up the EEPROM.  Then revert source code & reload board" ) );
-//            Serial.println( F( "3.  Revert the source code again - comment out the line defining RESTORE_FACTORY_DEFAULTS" ) );  //Some boards just aren't large enough for the verbosity of these next lines
+            Serial.println( F( "2.  Don't save file that way, just reload board with modified sketch," ) );
+            Serial.println( F( "    let board execute that modification of the sketch" ) );
+            Serial.println( F( "    once to set up the EEPROM" ) );
+            Serial.println( F( "3.  Revert sketch, reload" ) );  //Some boards just aren't large enough for the verbosity of next lines
 //            Serial.println( F( "    just as the source code was originally - and upload the sketch into the board." ) );
 //            Serial.println( F( "    After restarting the board it will operate as a thermostat." ) );
             Serial.println();
@@ -806,14 +827,13 @@ void print_the_pin_and_sensor_reading( u8 pin_specified, u8 KY013orRaw )
 {
     Serial.print( F( "Pin " ) );
     Serial.print( pin_specified );
-    Serial.print( F( " level: " ) );
     if( KY013orRaw == KY013 )
     {
         Serial.print( F( " sensor read: " ) );
         DHTresult* noInterrupt_result = ( DHTresult* )FetchTemp( pin_specified, LIVE );
         if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS || noInterrupt_result->Type == TYPE_ANALOG )
         {
-            Serial.print( ( float )( ( float )noInterrupt_result->TemperatureCelsius / 10 ), 1 );
+            Serial.print( ( float )( ( float )( noInterrupt_result->TemperatureCelsius )/ 10 ), 1 );
             Serial.print( F( " °C, " ) );
             Serial.print( ( float )( ( float )noInterrupt_result->HumidityPercent / 10 ), 1 );
             Serial.print( F( " %" ) );
@@ -838,7 +858,14 @@ void print_the_pin_and_sensor_reading( u8 pin_specified, u8 KY013orRaw )
     }
     else
     {
+#ifdef ADC_BITS
+        analogReadResolution( 12 );
+#endif
+        Serial.print( F( " level: " ) );
         Serial.print( analogRead( pin_specified ) );
+#ifdef ADC_BITS
+        analogReadResolution( 10 );
+#endif
     }
     Serial.println(); 
 }
@@ -888,6 +915,7 @@ void check_for_serial_input()
         char *data_str;
         char *number_specified_str;
         number_specified_str = strrchr( strFull, ' ' ) + 1;
+         Serial.println( strFull );
         if( strstr_P( strFull, str_power_cycle ) ) 
         {
           digitalWrite( power_cycle_pin, HIGH );
@@ -1083,41 +1111,37 @@ void check_for_serial_input()
         {
            if( IsValidPinNumber( number_specified_str, 1 ) )
            {
-               for( u8 pin_specified_local = pin_specified; pin_specified_local < NUM_DIGITAL_PINS; pin_specified_local++ )
+               for( u8 pin_specified_local = pin_specified; ; pin_specified_local++ )
                {
                     if( !pin_print_and_not_sensor( false, pin_specified_local ) )
                     {
                         Serial.print( pin_specified_local );
                     }
-                     if( isanoutput( pin_specified_local, false ) ) Serial.print( F( ": output & logic " ) );
-                     else Serial.print( F( ": input & logic " ) );
-                     Serial.println( digitalRead( pin_specified_local ) );
-                    if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) 
+                    if( pin_specified_local < NUM_DIGITAL_PINS && isanoutput( pin_specified_local, false ) )
                     {
-#ifdef PIN_A0
-                        if( memchr( analog_pin_list, pin_specified, PIN_Amax ) ) 
-                            break;
-#endif
-                        goto noAnalogPins;//here if a single digital pin was specified, never got here if pin was analog only
+                        Serial.print( F( ": out" ) );
                     }
+                    else 
+                    {
+                        Serial.print( F( ": in" ) );
+                    }
+                    Serial.print( F( "put, logic " ) );
+                    Serial.print( digitalRead( pin_specified_local ) );
+#ifdef PIN_A0
+                    if( ( unsigned long )memchr( analog_pin_list, pin_specified_local, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] < sizeof( analog_pin_list ) )
+                    {
+                        Serial.print( F( ", level: " ) );             //This is all we really want here, but it consumes 16 bytes more flash 27258 vs 27242 for example
+                        Serial.print( analogRead( pin_specified_local ) );//This is all we really want here, but it consumes 16 bytes more flash
+                    }
+#endif
+                    Serial.println();
+#ifdef PIN_A0
+                    if( ( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) || ( memchr( analog_pin_list, pin_specified_local, PIN_Amax ) == &analog_pin_list[ sizeof( analog_pin_list ) - 1 ] ) ) break;
+                    if( pin_specified_local == NUM_DIGITAL_PINS - 1 ) Serial.println( F( "Remaining analog inputs:" ) );
+#else
+                    if( ( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) || ( pin_specified_local == NUM_DIGITAL_PINS - 1 ) ) break;
+#endif
                }
-#ifdef PIN_A0
-                //IsValidPinNumber( number_specified_str, 0 );//memchr( analog_pin_list, pin_specified, PIN_Amax ) //( u8 )atoi( number_specified_str but stripped to isdigit )
-                //At this point, is possible user entered "." or a specific analog only pin number
-                if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) 
-                {
-                    print_the_pin_and_sensor_reading( pin_specified, RAW );
-                }
-                else
-                {
-                    Serial.println( F( "Analog input pins:" ) );
-                    for( u8 i = 0; i < sizeof( analog_pin_list ); i++ )//This loop will read from pins that can be analog mode
-                    {
-                        print_the_pin_and_sensor_reading( analog_pin_list[ i ], RAW );
-                    }
-                }
-#endif
-noAnalogPins:;
            }
         }
         else if( strstr_P( strFull, str_set_pin_high ) )
@@ -1154,7 +1178,6 @@ noAnalogPins:;
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           
         }
         else if( strstr_P( strFull, str_set_pin_low ) )
         {
@@ -1190,7 +1213,6 @@ noAnalogPins:;
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           
         }
         else if( strstr_P( strFull, str_set_pin_output ) )
         {
@@ -1226,7 +1248,7 @@ noAnalogPins:;
                         {
                             if( pin_print_and_not_sensor( true, pin_specified ) )
                             {
-                                 Serial.print( F( "output & logic " ) );
+                                 Serial.print( F( "output, logic " ) );
                                  Serial.println( digitalRead( pin_specified ) );
                             }
                             else 
@@ -1241,7 +1263,6 @@ doneWithPinOutput:;
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           
         }
         else if( strstr_P( strFull, str_set_pin_input_with_pullup ) )
         {
@@ -1270,7 +1291,6 @@ doneWithPinOutput:;
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           
         }
         else if( strstr_P( strFull, str_set_pin_input ) )
         {
@@ -1306,13 +1326,12 @@ doneWithPinOutput:;
                     if( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) break;
                }
            }
-           
         }
         else if( strstr_P( strFull, str_ther ) )
         {
             if( strlen( strFull ) == 4 ) goto showThermostatSetting;
             if( strFull[ 4 ] != ' ' ) goto notValidCommand;
-#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
+//#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
            if( strFull[ 5 ] == 'a' )
            {
                 if( ( !( DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS ) && DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].Type < TYPE_ANALOG ) && ( !( DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS ) && DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].Type < TYPE_ANALOG ) ) 
@@ -1346,12 +1365,15 @@ doneWithPinOutput:;
            }
            if( !( strFull[ 5 ] == 'a' ) && !( strFull[ 5 ] == 'h' ) && !( strFull[ 5 ] == 'c' ) && !( strFull[ 5 ] == 'o' ) )
            {
-            Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c. They mean auto, off, heat, and cool and may be fully spelled out" ) );
+#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
+                Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c. They mean auto, off, heat, and cool and may be fully spelled out" ) );
 #else
-           if( !( strFull[ 5 ] == 'h' ) && !( strFull[ 5 ] == 'c' ) && !( strFull[ 5 ] == 'o' ) )
-           {
-            Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case o, h, or c. They mean off, heat, and cool and may be fully spelled out" ) );
+                Serial.println( F( "Valid mode missing after the space: a, h, c, o" ) ); //Trying to save space with these boards
 #endif
+//           if( !( strFull[ 5 ] == 'h' ) && !( strFull[ 5 ] == 'c' ) && !( strFull[ 5 ] == 'o' ) )
+//           {
+//            Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case o, h, or c. They mean off, heat, and cool and may be fully spelled out" ) );
+//#endif
             goto showThermostatSetting;
            }
            thermostat_mode = strFull[ 5 ];
@@ -1405,11 +1427,11 @@ showThermostatSetting:;
         {
             if( strchr( &strFull[ 3 ], ' ' ) )
             {
-//#ifndef __LGT8FX8E__
+#ifndef __LGT8FX8E__//Just to save space as much as possible this board
                 Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a or o. They mean auto and on and optionally may be spelled out completely" ) );
-//#else
-//                Serial.println( F( "The only valid characters allowed after that space are the options lower case a or o (auto/on or may be spelled out)" ) );
-//#endif
+#else
+                Serial.println( F( "The only valid characters allowed after that space are the options lower case a or o (auto/on or may be spelled out)" ) );
+#endif
             }
             Serial.print( F( "Fan is " ) );
             if( fan_mode == 'a' ) Serial.println( F( "auto" ) );
@@ -1618,38 +1640,31 @@ showThermostatSetting:;
         else if( strstr_P( strFull, str_test_alert ) )
         {
            Serial.println( F( "time_stamp_this ALERT test as requested" ) );
-           
         }
         else if( strstr_P( strFull, str_sens_read ) || strstr_P( strFull, str_read_sens ) )
         {
            int i = 9;
            while( strFull[ i ] == ' ' && strlen( strFull ) > i ) i++;
-         if( IsValidPinNumber( &strFull[ i ], TYPE_ANALOG ) )
-         {
-                while( true )//This loop will read from pins that can be digital mode
+             if( IsValidPinNumber( &strFull[ i ], TYPE_ANALOG ) )
+             {
+                for( u8 pin_specified_local = pin_specified; ; pin_specified_local++ )
                 {
                     print_the_pin_and_sensor_reading( pin_specified++, KY013 );
-                    if( pin_specified >= NUM_DIGITAL_PINS || ( strFull[ i ] != '.' && !( strFull[ i ] == ' ' && strFull[ i + 1 ] == '.' ) ) ) break;
-                }
 #ifdef PIN_A0
-                if( strFull[ i ] == '.' ) 
-                {
-                    for( u8 i = 0; i < sizeof( analog_pin_list ); i++  )//This loop will read from pins that can be analog mode, makes a new local var with same name as var in previous scope but don't get confused
-                    {
-                        print_the_pin_and_sensor_reading( analog_pin_list[ i ], KY013 );
-                    }
-                }
+                    if( ( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) || ( memchr( analog_pin_list, pin_specified_local, PIN_Amax ) == &analog_pin_list[ sizeof( analog_pin_list ) - 1 ] ) ) break;
+                    if( pin_specified_local == NUM_DIGITAL_PINS - 1 ) Serial.println( F( "Remaining analog inputs:" ) );
+#else
+                    if( ( *number_specified_str != '.' && !( *number_specified_str == ' ' && *( number_specified_str + 1 ) == '.' ) ) || ( pin_specified_local == NUM_DIGITAL_PINS - 1 ) ) break;
 #endif
-           }
+               }
+             }
         }
         else
         {
           if( !strstr_P( strFull, str_help ) )
           {
 notValidCommand:;
-                Serial.println();
-                 Serial.print( strFull );
-                 Serial.println( F( ": not a valid command, note they are cAsE sEnSiTiVe" ) );
+                 Serial.println( F( "Not a valid command, note they are cAsE sEnSiTiVe" ) );
                 Serial.println(); 
           }
           printBasicInfo();
@@ -1767,9 +1782,10 @@ void loop()
         if( ( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) || noInterrupt_result->Type == TYPE_ANALOG )
         {
             timeOfLastSensorTimeoutError = 0;
-/*            if( noInterrupt_result->Type == TYPE_ANALOG ) _TemperatureCelsius = noInterrupt_result->TemperatureCelsius;
-            else */if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-            else _TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+//            if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+//            else _TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+//            if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+            _TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius )/ 10 );
             _HumidityPercent = ( float )( ( float )noInterrupt_result->HumidityPercent / 10 );
             last_three_temps[ last_three_temps_index ] = _TemperatureCelsius;
             float newtemp = ( float )( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )/ 3 );
@@ -1805,22 +1821,23 @@ void loop()
                 timer_alert_furnace_sent = 0;
                 cool_state = false;
             }
-#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
-            else if( thermostat_mode == 'a' )
-            {
-                noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) ); 
-                if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
-                if( ( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) || DEVICE_READ_SUCCESS )
+//    #if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
+                else if( thermostat_mode == 'a' )
                 {
-/*                    if( noInterrupt_result->Type == TYPE_ANALOG ) O_TemperatureCelsius = noInterrupt_result->TemperatureCelsius;
-                    else */if( noInterrupt_result->TemperatureCelsius & 0x8000 ) O_TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-                    else O_TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-                    if( O_TemperatureCelsius >= _TemperatureCelsius ) cool_on_loop();//get outdoor temp, use second sensor if first fails, get indoor temp same way, if indoor < outdoor cool_on_loop();
+                    noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) ); 
+                    if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
+                    if( ( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) || DEVICE_READ_SUCCESS )
+                    {
+//                        if( noInterrupt_result->TemperatureCelsius & 0x8000 ) O_TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+//                        else O_TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+//                        if( noInterrupt_result->TemperatureCelsius & 0x8000 ) O_TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+                        O_TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius )/ 10 );
+                        if( O_TemperatureCelsius >= _TemperatureCelsius ) cool_on_loop();//get outdoor temp, use second sensor if first fails, get indoor temp same way, if indoor < outdoor cool_on_loop();
+                        else heat_on_loop();
+                    }
                     else heat_on_loop();
                 }
-                else heat_on_loop();
-            }
-#endif
+//    #endif
             else if( thermostat_mode == 'h' ) heat_on_loop(); //This heat loop is all that the WeMo/TTGO XI can do as thermostat
             else if( thermostat_mode == 'c' ) cool_on_loop();
         }
