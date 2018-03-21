@@ -26,59 +26,60 @@
 #define LIVE 0
 #define RECENT 1
 
-float _TemperatureCelsius;  //GLOBAL TO SAVE SPACE IN STRUCT
 float _HumidityPercent;  //GLOBAL TO SAVE SPACE IN STRUCT
-float O_TemperatureCelsius;  //GLOBAL TO SAVE SPACE IN STRUCT
+float _TemperatureCelsius;  //GLOBAL TO SAVE SPACE IN STRUCT
 float O_HumidityPercent;  //GLOBAL TO SAVE SPACE IN STRUCT
+float O_TemperatureCelsius;  //GLOBAL TO SAVE SPACE IN STRUCT
+
 typedef struct DHTresultStruct
 {
+    short HumidityPercent;//The order that DHT22 reports them
+    short TemperatureCelsius;
     u8 ErrorCode = DEVICE_NOT_YET_ACCESSED;//
     u8 Type = TYPE_ANALOG + 1;//
-    short TemperatureCelsius;
-    short HumidityPercent;
     unsigned long timeOfLastAccessMillis;
 } DHTresult;
 
-#ifndef __LGT8FX8E__
 DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will be the return values for "invalid pin numbers sent into the function" 
                                                            //and others like "rollover expected need to wait" where device type shouldn't be mucked with
-#else
-DHTresult DHTfunctionResultsArray[ 15 ]; //The last entry will be the return values for "invalid pin numbers sent into the function" 
-                                                           //and others like "rollover expected need to wait" where device type shouldn't be mucked with
-#endif
-//TODO: make retrieve data into a function
 
-
-//TODO: verify and enforce rest time
 #ifdef PIN_Amax  //stay away from #ifdef PIN_A0 due to possible header file not included, plus this is more purpose-driven
     void ReadAnalogTempFromPin( u8 pin )
     {
         double raw = analogRead( pin );
+#ifndef ALL_ANALOG_SENSOR_CIRCUITS_ARE_THERMISTOR_TO_EXCITATION_VOLTS_AND_RESISTOR_TO_GROUND
+#ifndef ADC_BITS
+        raw = 1024 - raw;//This case only is accomodated
+#else
+        raw = 4096 - raw; // I would use #ifdef ADC_BITS if I can test it out on some board.  I haven't got my STM32 board working yet SO THIS CASE WILL FAIL RIGHT NOW
+#endif
+#endif
         DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
-        if( raw > 900 || raw < 20 ) DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG + 1;//Readings in this range are indicative of a failed thermistor circuit.  Safety suggests we should assume such.
-/*
-//I include the capability for what I'll call a "ratio'd regressive-differential-from-midpoint voltage offset and raw temperature offset" style of calibration. It prevents out-of-range adjustment to the raw reading and more closely mimics the thermistor characterstics vs some other means of applied offset
-//Calibration "regressive-differential_from-midpint voltage offset" applied here
-        raw += ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * 0.8 * ( float )( 1 - ( ( float )max( abs( ( long signed )( 565 - raw ) ), abs( ( long signed )( raw - 565 ) ) ) / 512 ) );
+        if( raw > 900 || raw < 5 ) DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG + 1;//Readings in this range are indicative of a failed thermistor circuit.  Safety suggests we should assume such.
 
-//At this point in time, I do not know how the following formula can be calibrated non-linearly to best conform to the true characteristics of the KY-013.  
-//        double Temp = 0.175529 * raw ;//Approximation formula is attributed to University of Stuttgart by Tim Waizenegger: https://github.com/timwaizenegger/raspberrypi-examples/blob/master/sensor-temperature/ky013.py, accessed 03/14/18.  It is useful connecting the excitation power as per KY-013 board markings instead of backwards to them as the normal equation demands
-//        Temp = 125.315 - Temp;       //Though not explicitely stated, I suspect it was derived by taking 3 measurements (125 °C, 0 °C & -55 °C) and determining the linear (no good) equation they best fit using the Wolfram|Alpha algorithm-producing tools at www.wolframalpha.com
-*/
-        double Temp = ( double )log( ( float )( ( float )( 10240000 / raw ) - 10000 ) );
-        Temp =  ( float )( 1.0 / ( float )( 0.001129148 + ( float )( 0.000234125 + ( float )( 0.0000000876741 * Temp * Temp ) ) * Temp ) );
+//I include the capability for what I'll call a "regressive-differential-from-midpoint voltage offset" style of calibration. It prevents out-of-range adjustment to the raw reading and more closely mimics the thermistor characterstics vs some other means of applied offset
+//need a var that indicates the mid-point of bridge when both components would have equal resistance
+
 /*
-//Calibration "raw temperature offset" applied here
-        Temp = Temp + ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * 0.2;
-*/
+ * NTC with thermistor on high side of bridge means raw reading rises with temperature.
+ * If excitation volts are higher ( hypothetical and unrealistic ) than circuit volts, the midpoint could be 600.
+ * If excitation volts are lower than circuit volts ( if you well-meaningly excited it with 3.3 volts but having a 5v board, or used the anaolg voltage reference to excite it), the midpoint could be 400
+ * THIS SKETCH USES A COMMONLY KNOWN ALGORITHM THAT ASSUMES A MIDPOINT OF 512.  That means the characteristics are assumed to be those where the bridge is excited by the same voltage that the uController (micro-controller) runs at
+ */
+
+//Calibration "regressive-differential_from-midpint voltage offset" applied here
+        raw += ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * 1.5 * ( float )( 1 - ( ( float )max( abs( ( long signed )( 512 - raw ) ), abs( ( long signed )( raw - 512 ) ) ) / 512 ) );
+
+#ifdef __LGT8FX8E__
+        double Temp = ( double )log( ( float )( ( float )( 10240000 / raw ) - 8100 ) );//B/C some pull-up conductance seems to exist due to not able to get pin low when setting it to input mode (?)
+#else
+        double Temp = ( double )log( ( float )( ( float )( 10240000 / raw ) - 10000 ) );
+#endif
+        Temp =  ( float )( 1.0 / ( float )( 0.001129148 + ( float )( 0.000234125 + ( float )( 0.0000000876741 * Temp * Temp ) ) * Temp ) );
         Temp -= 273.15;
         if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) )
             pin = ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) );//Analog pins not having digital modes will return with this array member
-        DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( ( abs( Temp ) * 10 ) );
-        if( Temp < 0 )
-        {
-            *(u16 *)( &DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius ) |= 0x8000;
-        }
+        DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = ( short )( Temp * 10 );
     }
 #endif
 
@@ -88,7 +89,6 @@ void GetReading( u8 pin, u8 pin_limited_to_digital_mode_flag )
         unsigned long turnover_reference_time;
         DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis = millis(); 
         digitalWrite( pin, LOW );
-//        pinMode( pin, INPUT );
         if( digitalRead( pin ) == HIGH )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE;
@@ -99,7 +99,6 @@ tryAnalog:;
 #endif
             return; //to ensure the LOW level remains to ensure no conduction to high level
         }
-//        pinMode( pin, OUTPUT );
         delay( 5 + 19 );//in case the device is in process of giving back data:  Wait for it to finish plus rest time (newer devices need less rest time than this)
         if( digitalRead( pin ) == HIGH )
         {
@@ -155,7 +154,7 @@ tryAnalog:;
         u8 bitnumber = 0;
         u8 DataStreamBits[ 5 ];
         u16* DataStreamBits0 = ( u16* )&DataStreamBits[ 0 ];
-        u16* DataStreamBits2 = ( u16* )&DataStreamBits[ 2 ];
+        u16* DataStreamBits2 = ( u16* )&DataStreamBits[ 2 ];//the sign bit will be bit 7 of second byte of second element (DataStreamBits[ 3 ]) (little-endian protocol), but the device reports in big-endian, so sequence gets changed later
         for( u8 d = 0; d < sizeof( DataStreamBits ); d++ ) DataStreamBits[ d ] = 0;
         while( bitnumber < 40 )
         {
@@ -193,7 +192,7 @@ tryAnalog:;
         }
         pinMode( pin, OUTPUT );
         digitalWrite( pin, HIGH );
-
+//        u8 sign_bit = DataStreamBits[ 2 ] & 0x80;
         if( ( u8 )( DataStreamBits[ 0 ] + DataStreamBits[ 1 ] + DataStreamBits[ 2 ] + DataStreamBits[ 3 ] ) !=  DataStreamBits[ 4 ] )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_CRC_ERROR;
@@ -208,7 +207,7 @@ tryAnalog:;
         }
         else if( DataStreamBits[ 2 ] & 0x80 )
         {
-            if( ( ( DataStreamBits[ 2 ] & 0x7f ) * 256 ) + DataStreamBits[ 3 ] > 410 ) //81.0C max allowed
+            if( ( ( DataStreamBits[ 2 ] & 0x7f ) * 256 ) + DataStreamBits[ 3 ] > 410 ) //81.0C max allowed, means -81.0C 
             {
                 DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_BYTES0and1_ERROR;
                 return;
@@ -218,7 +217,7 @@ tryAnalog:;
         else if( !DataStreamBits[ 1 ] && !DataStreamBits[ 3 ] )
         {
             if( DataStreamBits[ 0 ] < 4 && DataStreamBits[ 2 ] < 4 )
-                goto likely_22;//likely, not known, this is the readings of commonality between both 11 and 22.  We favor the 22 b/c its rest time is compatible with 11, not other way around
+                goto likely_22;//likely, not known, this is in the range of readings of commonality between both 11 and 22.  We favor the 22 b/c its rest time will work on DHT11, not other way around
             else if( DataStreamBits[ 0 ] > 81 || DataStreamBits[ 0 ] < 18 )//must be 18-81
                 goto byte0_error;
             else if( DataStreamBits[ 2 ] > 55 )//must be 0-51 for 11, 22 already accounted for by above readings of commonality check
@@ -246,13 +245,13 @@ known_22:;
 known_22_plus_one:;
             //changing from 22 to 11 is fine but not the other way
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_READ_SUCCESS;
-            DataStreamBits[ 4 ] = DataStreamBits[ 3 ];
-            DataStreamBits[ 3 ] = DataStreamBits[ 2 ];
+            DataStreamBits[ 4 ] = DataStreamBits[ 3 ];// This sequence moves bytes from DHT22-style to little-endian compatibility
+            DataStreamBits[ 3 ] = DataStreamBits[ 2 ];// This byte holds the temperature sign bit
             DataStreamBits[ 2 ] = DataStreamBits[ 1 ];
             DataStreamBits[ 1 ] = DataStreamBits[ 0 ];
             DataStreamBits[ 0 ] = DataStreamBits[ 2 ];
             DataStreamBits[ 2 ] = DataStreamBits[ 4 ];
-//        }
+//DataStreamBits[ 3 ] |= 0x80;//To test negative temperatures processing
         goto past_device_type_sort;
 likely_22:;
             //changing from 22 to 11 is fine but not the other way
@@ -269,11 +268,15 @@ known_11:;
         DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_KNOWN_DHT11;
 known_11_plus_one:;
         DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_READ_SUCCESS;
-        *DataStreamBits0 = ( u16 )( ( DataStreamBits[ 0 ] << 1 ) + ( DataStreamBits[ 0 ] << 3 ) );//multiplies by 10
-        *DataStreamBits2 = ( u16 )( ( DataStreamBits[ 2 ] << 1 ) + ( DataStreamBits[ 2 ] << 3 ) );//multiplies by 10
+        *DataStreamBits0 = ( u16 )( ( DataStreamBits[ 0 ] << 1 ) + ( DataStreamBits[ 0 ] << 3 ) );//multiplies by 10 //Value needs to be multiplied by 10 to imitate DHT22
+        *DataStreamBits2 = ( u16 )( ( DataStreamBits[ 2 ] << 1 ) + ( DataStreamBits[ 2 ] << 3 ) );//multiplies by 10 //No sign bit with DHT11, and its value needs to be multiplied by 10 to imitate DHT22
 past_device_type_sort:;
-        DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = *DataStreamBits2;
         DHTfunctionResultsArray[ pin - 1 ].HumidityPercent = *DataStreamBits0;
+//Change DHT22-style bit stream to two's complement:  It was found to compile to smaller sketch size this way by 140 (Leonardo) - 202 (uno) bytes
+        if( *DataStreamBits2 & 0x8000 )
+            DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = 0 - ( short )( *DataStreamBits2 & 0x7FFF );
+        else
+            DHTfunctionResultsArray[ pin - 1 ].TemperatureCelsius = *DataStreamBits2;
 }
 
 
