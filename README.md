@@ -19,7 +19,10 @@ accuracy of a KY-013 analog sensor depends on the DC voltage supplying the "-" p
 what the sketch formula is!)  For the best accuracy, supply these sensors with an adjustable and stable supply.  Other 
 factors affecting analog sensor accuracy are the resistances of the two components of the sensor circuit (thermistor and 
 resistor supposedly matching thermistor resistance at 25°C).  I've noticed very lax tolerances of these two components 
-between sensor boards.  I'll be adjusting the formula for calibration as I learn more how to make it realistic.
+between sensor boards.  I'll be adjusting the formula for calibration as I learn more how to make it realistic, but 
+right now an array of one byte per analog pin is stored at an address found in EEPROM bytes 12 and 13.  The byte value 
+from that array for any particular analog pin is fully added to raw analog values greater than 512, and decrementally 
+added to raw values between 512 and 329.  No adjustment is made to raw readings below 329.  This was empirically determined.
 
 This sketch also makes Arduino Digital pins to be readable and settable from an optional serial-connected host computer.  
 Analog input pins as well will report their raw reading, but pins restricted to Analog only mode cannot be set to 
