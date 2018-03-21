@@ -78,17 +78,12 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
  * THIS SKETCH USES A COMMONLY KNOWN ALGORITHM THAT ASSUMES A MIDPOINT OF 512.  That means the characteristics are assumed to be those where the bridge is excited by the same voltage that the uController (micro-controller) runs at
  */
 
-//Calibration "regressive-differential_from-midpint voltage offset" applied here
-//        raw += ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * ( float )( 1 - ( ( float )max( abs( ( long signed )( 512 - raw ) ), abs( ( long signed )( raw - 512 ) ) ) / 512 ) );
-
 #ifdef __LGT8FX8E__
         double Temp = ( double )log( ( float )( ( float )( 10240000 / raw ) - 8100 ) );//B/C some pull-up conductance seems to exist due to not able to get pin low when setting it to input mode (?)
 #else
-//        double Temp = ( double )log( ( float )( ( float )( 10240000 / raw ) - 8000 ) );//take subend to 18000: (61.9, ^), 8000:
         double Temp = ( double )log( ( float )( ( float )( 10240000 / raw ) - 10000 ) );//can't tweak on numerator
 #endif
         Temp =  ( float )( 1.0 / ( float )( 0.001129148 + ( float )( 0.000234125 + ( float )( 0.0000000876741 * Temp * Temp ) ) * Temp ) );
-//        Temp =  ( float )( 1.0 / ( float )( 0.001129148 + ( float )( 0.000234125 + ( float )( 0.0000000876741 * Temp * Temp ) ) * Temp ) );
         Temp -= 273.15;
         if( pin > ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) ) )
             pin = ( u8 ) ( sizeof( DHTfunctionResultsArray ) / sizeof( DHTresultStruct ) );//Analog pins not having digital modes will return with this array member
