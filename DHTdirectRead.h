@@ -46,6 +46,7 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
 #ifdef PIN_Amax  //stay away from #ifdef PIN_A0 due to possible header file not included, plus this is more purpose-driven
     void ReadAnalogTempFromPin( u8 pin )
     {
+        digitalWrite( pin, LOW );
         double raw = analogRead( pin );
 #ifndef ALL_ANALOG_SENSOR_CIRCUITS_ARE_THERMISTOR_TO_EXCITATION_VOLTS_AND_RESISTOR_TO_GROUND
 #ifndef ADC_BITS
