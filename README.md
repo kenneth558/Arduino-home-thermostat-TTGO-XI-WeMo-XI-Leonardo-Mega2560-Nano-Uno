@@ -98,3 +98,14 @@ TODO - Future enhancements are reserved for boards having greater than 32K flash
 duct damper operation for shared-furnace environments.
 
 WANTED:  ASSISTANCE CONDENSING THE SIZE OF THIS SKETCH BY USE OF ASM CODE.  ANY TAKERS?  POST AN ISSUE, PLEASE.
+
+# Summary:
+ FUTURE: Improvement to Analog calibration possible
+
+Less flash-endowed boards cannot hold thermostat "auto" mode code, so those boards are identified during compilation by using definitions and will only compile with "heat", "cool", and "off" mode options.
+
+Expect tweaking on the Analog calibration algorithm as I experiment with different boards and thermistor modules.
+
+TTGO/WeMos XI may have Analog pin pullup leakage.  I may investigate into a solution.
+
+Overall, I now present a finished product.
