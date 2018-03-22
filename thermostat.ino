@@ -2,7 +2,7 @@
  *      ARDUINO HOME THERMOSTAT SKETCH  v.1.0
  *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Date:  03/20/18
+ *      Date:  03/21/18
  * 
  *     I RECOMMEND WHEN USING A DIGITAL SENSOR ON A PIN THAT YOU ADD 128 TO THE PIN NUMBER WHEN STORING IT IN EEPROM SO IF THE DIGITAL SENSOR FAILS THE SKETCH WILL NOT REVERT TO READ AN INVALID ANALOG VALUE FROM THAT PIN!
  * 
@@ -233,6 +233,18 @@ void EEPROMupdate ( unsigned long address, u8 val )
     if( EEPROM.read( address ) != val ) EEPROM.write( address, val );
 }
 #endif
+
+void printAnalogLevel( u8 pin_specified_local )
+{
+#ifdef ADC_BITS
+        analogReadResolution( 12 );
+#endif
+        Serial.print( F( " level: " ) );
+        Serial.print( analogRead( pin_specified_local ) );
+#ifdef ADC_BITS
+        analogReadResolution( 10 );
+#endif
+}
 
 void assign_pins( bool already_running )
 {
@@ -853,19 +865,11 @@ void print_the_pin_and_sensor_reading( u8 pin_specified, u8 KY013orRaw )
         else if( noInterrupt_result->Type == TYPE_ANALOG )
         {
             Serial.print( F( "assumed ANALOG" ) );
-    //                    Serial.print( analogRead( pin_specified ) );
         }
     }
     else
     {
-#ifdef ADC_BITS
-        analogReadResolution( 12 );
-#endif
-        Serial.print( F( " level: " ) );
-        Serial.print( analogRead( pin_specified ) );
-#ifdef ADC_BITS
-        analogReadResolution( 10 );
-#endif
+        printAnalogLevel( pin_specified );
     }
     Serial.println(); 
 }
@@ -1130,8 +1134,7 @@ void check_for_serial_input()
 #ifdef PIN_A0
                     if( ( unsigned long )memchr( analog_pin_list, pin_specified_local, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] < sizeof( analog_pin_list ) )
                     {
-                        Serial.print( F( ", level: " ) );             //This is all we really want here, but it consumes 16 bytes more flash 27258 vs 27242 for example
-                        Serial.print( analogRead( pin_specified_local ) );//This is all we really want here, but it consumes 16 bytes more flash
+                        printAnalogLevel( pin_specified_local );
                     }
 #endif
                     Serial.println();
