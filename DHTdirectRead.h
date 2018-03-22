@@ -55,7 +55,8 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
         raw = 4096 - raw; // I would use #ifdef ADC_BITS if I can test it out on some board.  I haven't got my STM32 board working yet SO THIS CASE WILL FAIL RIGHT NOW
 #endif
 #endif
-        if( raw > 280 )//This is 512 - 232.  See line below
+#define RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT 150
+        if( raw > RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT )
         {
             if( raw > 512 )
             {
@@ -63,7 +64,7 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
             }
             else
             {
-                raw += ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * ( float )( 1 - ( ( float )( 512 - raw ) / 232 ) );//This is 512 - 280.  See line above
+                raw += ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * ( float )( 1 - ( ( float )( 512 - raw ) / ( 512 - RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT ) ) );
             }
         }
         DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
