@@ -46,8 +46,8 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
 #ifdef PIN_Amax  //stay away from #ifdef PIN_A0 due to possible header file not included, plus this is more purpose-driven
     void ReadAnalogTempFromPin( u8 pin )
     {
-        digitalWrite( pin, LOW );//Remove any pullup
-        double raw = analogRead( pin );
+        digitalWrite( pin, LOW );//Remove any pullup left over from searching for a DHT device
+        double raw = analogReadLeast( pin );
 #ifndef ALL_ANALOG_SENSOR_CIRCUITS_ARE_THERMISTOR_TO_EXCITATION_VOLTS_AND_RESISTOR_TO_GROUND
 #ifndef ADC_BITS
         raw = 1024 - raw;//This case only is accomodated
@@ -67,7 +67,7 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
             }
         }
         DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
-        if( raw > 900 || raw < 5 ) DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG + 1;//Readings in this range are indicative of a failed thermistor circuit.  Safety suggests we should assume such.
+        if( raw > 900 || raw < 5 ) DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG + 1;//Readings in this range are indicative of a failed or non-existent thermistor circuit.  Safety suggests we should assume such.
 
 //I include the capability for what I'll call a "regressive-differential-from-midpoint voltage offset" style of calibration. It prevents out-of-range adjustment to the raw reading and more closely mimics the thermistor characterstics vs some other means of applied offset
 //need a var that indicates the mid-point of bridge when both components would have equal resistance
