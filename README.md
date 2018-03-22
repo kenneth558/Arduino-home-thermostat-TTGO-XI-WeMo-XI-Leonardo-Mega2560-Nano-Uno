@@ -100,7 +100,7 @@ duct damper operation for shared-furnace environments.
 WANTED:  ASSISTANCE CONDENSING THE SIZE OF THIS SKETCH BY USE OF ASM CODE.  ANY TAKERS?  POST AN ISSUE, PLEASE.
 
 # Summary:
- FUTURE: Improvement to Analog calibration possible
+FUTURE: Improvement to Analog calibration possible
 
 Less flash-endowed boards cannot hold thermostat "auto" mode code, so those boards are identified during compilation by using definitions and will only compile with "heat", "cool", and "off" mode options.
 
@@ -108,4 +108,4 @@ Expect tweaking on the Analog calibration algorithm as I experiment with differe
 
 TTGO/WeMos XI may have Analog pin pullup leakage, which impairs the Analog thermistor temperature algorithm.  I may investigate into a solution.  Until solved, you can always have your host computer calculate from a raw pin reading.
 
-Overall, I now present a finished product.
+With those caveats, I now present a finished product.
