@@ -1,7 +1,7 @@
 /***********************************************************************************************************************
  *      ARDUINO HOME THERMOSTAT SKETCH  v.1.0
- *      Author:  Kenneth L. Anderson
  *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
+ *      Author:  Kenneth L. Anderson
  *      Date:  03/22/18
  * 
  *     I RECOMMEND WHEN USING A DIGITAL SENSOR ON A PIN THAT YOU ADD 128 TO THE PIN NUMBER WHEN STORING IT IN EEPROM SO IF THE DIGITAL SENSOR FAILS THE SKETCH WILL NOT REVERT TO READ AN INVALID ANALOG VALUE FROM THAT PIN!
