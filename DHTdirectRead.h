@@ -46,7 +46,7 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
 #ifdef PIN_Amax  //stay away from #ifdef PIN_A0 due to possible header file not included, plus this is more purpose-driven
     void ReadAnalogTempFromPin( u8 pin )
     {
-        digitalWrite( pin, LOW );
+        digitalWrite( pin, LOW );//Remove any pullup
         double raw = analogRead( pin );
 #ifndef ALL_ANALOG_SENSOR_CIRCUITS_ARE_THERMISTOR_TO_EXCITATION_VOLTS_AND_RESISTOR_TO_GROUND
 #ifndef ADC_BITS
@@ -104,8 +104,14 @@ void GetReading( u8 pin, u8 pin_limited_to_digital_mode_flag )
 #ifdef PIN_Amax
 tryAnalog:;
             if( !( DHTfunctionResultsArray[ pin - 1 ].Type > 0 && DHTfunctionResultsArray[ pin - 1 ].Type < TYPE_ANALOG ) )
-                if( pin_limited_to_digital_mode_flag == 0 && memchr( analog_pin_list, pin, PIN_Amax ) ) ReadAnalogTempFromPin( pin );
+                if( pin_limited_to_digital_mode_flag == 0 && memchr( analog_pin_list, pin, PIN_Amax ) ) ReadAnalogTempFromPin( pin );//on return pin is unspecified
 #endif
+removePullup:;
+            if( DHTfunctionResultsArray[ pin - 1 ].Type >= TYPE_ANALOG )
+            {
+                digitalWrite( pin, LOW );//remove the pullup
+                pinMode( pin, INPUT );//remove the pullup
+            }
             return; //to ensure the LOW level remains to ensure no conduction to high level
         }
         delay( 5 + 19 );//in case the device is in process of giving back data:  Wait for it to finish plus rest time (newer devices need less rest time than this)
@@ -115,7 +121,7 @@ tryAnalog:;
 #ifdef PIN_Amax
             goto tryAnalog;
 #else
-            return;
+            goto removePullup;
 #endif
             //to ensure the LOW level remains to ensure no conduction to high level
         }
@@ -127,7 +133,7 @@ tryAnalog:;
 #ifdef PIN_Amax
             goto tryAnalog;
 #else
-            return;
+            goto removePullup;
 #endif
              //to ensure the LOW level remains to ensure no conduction to high level
         }
@@ -143,7 +149,7 @@ tryAnalog:;
 #ifdef PIN_Amax
             goto tryAnalog;
 #else
-            return;
+            goto removePullup;
 #endif
             //to ensure the LOW level remains to ensure no conduction to high level
         }
@@ -154,7 +160,7 @@ tryAnalog:;
 #ifdef PIN_Amax
             goto tryAnalog;
 #else
-            return;
+            goto removePullup;
 #endif
             //to ensure the LOW level remains to ensure no conduction to high level
         }
@@ -171,14 +177,14 @@ tryAnalog:;
             if( digitalRead( pin ) == LOW )
             {
                 DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE5;//224 uSec from pullup applied to high level
-                return; //to ensure the LOW level remains to ensure no conduction to high level
+                goto removePullup;
             }
             startBitTime = micros();
             while( ( micros() - startBitTime < 170 ) && ( digitalRead( pin ) == HIGH ) );
             if( digitalRead( pin ) == HIGH )
             {
                 DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_FAILS_DURING_INITIALIZE6;//248-252 uSec from pullup applied to high level
-                return; //to ensure the LOW level remains to ensure no conduction to high level
+                goto removePullup;
             }
             /*bit is one if micros() - startBitTime > 48, zero otherwise */
             else if( micros() - startBitTime > 48 ) 
@@ -205,7 +211,7 @@ tryAnalog:;
         if( ( u8 )( DataStreamBits[ 0 ] + DataStreamBits[ 1 ] + DataStreamBits[ 2 ] + DataStreamBits[ 3 ] ) !=  DataStreamBits[ 4 ] )
         {
             DHTfunctionResultsArray[ pin - 1 ].ErrorCode = DEVICE_CRC_ERROR;
-            return;
+            goto removePullup;//
         }
         else if( DataStreamBits[ 0 ] > 3 && DataStreamBits[ 0 ] < 18 ) //no values of 0 are ever valid if between 4 and 17 inclusive
             goto byte0_error;
@@ -347,7 +353,7 @@ DHTresult* FetchTemp( u8 pin, u8 LiveOrRecent )
     }
 #endif
     GetReading( pin, pin_limited_to_digital_mode_flag );//pin_limited_to_digital_mode_flag == pin & 0x80
-deviceReadDone:;    
-    digitalWrite( pin, HIGH );
+deviceReadDone:;
+    if( DHTfunctionResultsArray[ pin - 1 ].Type < TYPE_ANALOG ) digitalWrite( pin, HIGH );
     return &DHTfunctionResultsArray[ pin - 1 ];
 }
