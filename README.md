@@ -106,6 +106,6 @@ Less flash-endowed boards cannot hold thermostat "auto" mode code, so those boar
 
 Expect tweaking on the Analog calibration algorithm as I experiment with different boards and thermistor modules.
 
-TTGO/WeMos XI may have Analog pin pullup leakage.  I may investigate into a solution.
+TTGO/WeMos XI may have Analog pin pullup leakage, which impairs the Analog thermistor temperature algorithm.  I may investigate into a solution.  Until solved, you can always have your host computer calculate from a raw pin reading.
 
 Overall, I now present a finished product.
