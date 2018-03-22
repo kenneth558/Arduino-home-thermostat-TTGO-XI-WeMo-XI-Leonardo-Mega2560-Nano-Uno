@@ -251,7 +251,7 @@ void printAnalogLevel( u8 pin_specified_local )
         analogReadResolution( 12 );
 #endif
         Serial.print( F( " level: " ) );
-        Serial.print( analogReadLeast( pin_specified_local ) );
+        Serial.print( analogReadLeast( pin_specified_local ), 0 );
 #ifdef ADC_BITS
         analogReadResolution( 10 );
 #endif
