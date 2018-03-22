@@ -76,13 +76,13 @@ taking advantage of the thermostat functionality!  As examples:
 -  Etc., etc.!  See the help screen for details.
 
 This sketch occupies all or nearly all available flash (program) memory in boards having 32K of flash.  Therefore, 
-you'll not be able to add features in some 32K flash Arduinos.  Actual compiled sketch size varies in the range of 
-27K-28K, so boards that allow the entirety of the 32K flash for the user's sketch will have some flash space available 
-for you to add features.  Note that certain of these boards don't even have have enough flash to both initialize EEPROM 
-and advance to production environment operation in the same compilation.  Be prepared to compile twice for Leonardo, 
-TTGO, Micro, et. al.; once for EEPROM intitializing and the final time for production environment operation.  SUPPORTING 
-LIBRARIES CAN ALWAYS INCREASE IN THEIR COMPILED SIZES!  IF THAT HAPPENS, THIS SKETCH PROBABLY WON'T FIT IN SOME BOARDS 
-THAT I AM CLAIMING IT FITS IN AT THIS TIME.
+you'll not be able to add features in some 32K flash Arduinos, and some boards will lack the "auto" thermostat mode for 
+the same reason.  Actual compiled sketch size varies in the range of 27K-28K, so boards that allow the entirety of the 
+32K flash for the user's sketch will have some flash space available for you to add features.  Note that certain of 
+these boards don't even have have enough flash to both initialize EEPROM and advance to production environment operation 
+in the same compilation.  Be prepared to compile twice for Leonardo, TTGO, Micro, et. al.; once for EEPROM intitializing 
+and the final time for production environment operation.  SUPPORTING LIBRARIES CAN ALWAYS INCREASE IN THEIR COMPILED 
+SIZES!  IF THAT HAPPENS, THIS SKETCH PROBABLY WON'T FIT IN SOME BOARDS THAT I AM CLAIMING IT FITS IN AT THIS TIME.
 
 TTGO XI/WeMo XI NOTE:  This board trades flash to simulate EEPROM at a cost of 2 to 1.  This sketch assumes your 
 compiler EEPROM command line settings are set for 1K EEPROM.  That is the minimum block size of EEPROM the board allows.  
@@ -90,7 +90,7 @@ Any more EEPROM by the compiler and this sketch will not fit.  Fortunately for m
 correct to this requirement, otherwise I wouldn't know how to change them back to what they are.
 
 IMPORTANT SAFETY NOTE - Proper electrical isolation by relay or opto-isolation must be observed whenever connecting to 
-building electrical or furnace controls or other electrical equipment.  For the furnace controls, I use ralays driven by 
+building electrical or furnace controls or other electrical equipment.  For the furnace controls, I use relays driven by 
 open-collector NPN transistors with a 12vdc power supply.  Don't forget the diode across the relay coil.  For 120vac 
 switching, I use opto-coupled dc-drive SSRs, again, driven by NPN transistors and 12vdc.
 
