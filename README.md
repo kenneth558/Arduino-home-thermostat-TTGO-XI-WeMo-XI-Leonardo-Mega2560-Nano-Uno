@@ -3,7 +3,7 @@ YOU'LL FIND AT   https://github.com/wemos/Arduino_XI  (IDE support for TTGO XI/W
 READ THAT ISSUES SECTION FOR THE BOARDS.TXT FILE MODIFICATION DUE TO THE DIRECTORY DELIMITER CHARACTER DIFFERENCE ( \ -> 
 / ) 
 
-# Arduino_home_thermostat
+# Arduino Home Thermostat and Environment Interface
 I use this sketch in the Arduino UNO, Mega2560, Leonardo and Wemo XI (TTGO XI) as my thermostat, and you can easily 
 modify it for humidistat as well.  I have compiled it for all boards I could select in the IDE and ensured it would 
 compile for the boards having at least 32K flash.  
