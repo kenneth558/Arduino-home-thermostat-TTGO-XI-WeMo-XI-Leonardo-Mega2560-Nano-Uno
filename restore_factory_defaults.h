@@ -152,7 +152,7 @@ void restore_factory_defaults()
     for( i = 0; i < sizeof( analog_pin_list ); i++ )
     {
 #ifndef __LGT8FX8E__
-        EEPROM.update( calibration_offset + i, 200 ); //the 200 unsigned equates to -56 signed, 225 unsigned equates to -31 signed, adjust to your heart's content for a default analog calibration adjust based on supply voltage.  Tweak each sensor individually in the array for further accuracy
+        EEPROM.update( calibration_offset + i, 227 ); //the 200 unsigned equates to -56 signed, 225 unsigned equates to -31 signed, adjust to your heart's content for a default analog calibration adjust based on supply voltage.  Tweak each sensor individually in the array for further accuracy
 //The calibration offset is applied up front to the raw device reading in a "regressive-differential-from-midpoint" style
 //Calibration offset values from 0 to 127 move the temperature further positive; values from 128 to 255 move it further negative than would be seen using a 0 calibration offset. 
 #else
