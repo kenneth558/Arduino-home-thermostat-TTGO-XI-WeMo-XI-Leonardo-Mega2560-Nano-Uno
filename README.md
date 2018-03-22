@@ -112,7 +112,8 @@ investigate into a solution.  Until solved, you can always have your host comput
 
 The raw pin reading (accomplished with the "read pin [pin number]" command) is available to the host.  This is the same 
 method that ANY raw analog input reading or digital pin reading may be gotten by the host.  To clarify, the "sens read 
-[pin number]" command will nearly always provide a far less accurate temperature reading than can be done by host-based 
-algorithms which can take into account many more factors per pin and per raw analog reading.
+[pin number]" command will nearly always provide a far less accurate temperature reading than can be done by the "read 
+pin [pin number]" command and host-based algorithms which can take into account many more factors per pin and per raw 
+analog reading.
 
 With those caveats, I now present a finished product.
