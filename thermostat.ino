@@ -10,7 +10,7 @@
  *        Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
  *        alert when back pressure within furnace indicates to change filter
  *        damper operation with multiple temp sensors
- * 
+ *        known issue: the first time reading a sensor pin it is left with a pullup resistance which throws off the very next analog sensor read on that pin for one read attempt only.
  * 
  *        https://github.com/wemos/Arduino_XI  for the IDE support for TTGO XI/WeMo XI
  * 
