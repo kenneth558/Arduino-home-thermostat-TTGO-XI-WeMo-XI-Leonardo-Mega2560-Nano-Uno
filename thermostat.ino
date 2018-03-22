@@ -865,8 +865,8 @@ void print_the_pin_and_sensor_reading( u8 pin_specified, u8 KY013orRaw )
         {
             Serial.print( F( "Error " ) );
             Serial.print( noInterrupt_result->ErrorCode );
-    //        Serial.print( F( "Type " ) );
-    //        Serial.print( noInterrupt_result->Type );
+//            Serial.print( F( ", Type " ) );
+//            Serial.print( noInterrupt_result->Type );//If no type is printed below it it > TYPE_ANALOG
         }
         if( noInterrupt_result->Type <= TYPE_ANALOG ) Serial.print( F( " TYPE " ) );
         if( noInterrupt_result->Type == TYPE_KNOWN_DHT11 ) Serial.print( F( "DHT11" ) );
@@ -1348,7 +1348,7 @@ doneWithPinOutput:;
 #if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
            if( strFull[ 5 ] == 'a' )
            {
-                if( ( !( DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS ) && DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].Type < TYPE_ANALOG ) && ( !( DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS ) && DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].Type < TYPE_ANALOG ) ) 
+                if( !( DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS || DHTfunctionResultsArray[ outdoor_temp_sensor1_pin - 1 ].Type == TYPE_ANALOG || DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].ErrorCode == DEVICE_READ_SUCCESS || DHTfunctionResultsArray[ outdoor_temp_sensor2_pin - 1 ].Type == TYPE_ANALOG ) )
                 {
                     DHTresult* noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) );
                     if( !( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS || noInterrupt_result->Type == TYPE_ANALOG ) ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
@@ -1379,15 +1379,11 @@ doneWithPinOutput:;
            }
            if( !( strFull[ 5 ] == 'a' ) && !( strFull[ 5 ] == 'h' ) && !( strFull[ 5 ] == 'c' ) && !( strFull[ 5 ] == 'o' ) )
            {
-//#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
                 Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a, o, h, or c. They mean auto, off, heat, and cool and may be fully spelled out" ) );
 #else
-//                Serial.println( F( "Valid mode missing after the space: a, h, c, o" ) ); //Trying to save space with these boards
-//#endif
            if( !( strFull[ 5 ] == 'h' ) && !( strFull[ 5 ] == 'c' ) && !( strFull[ 5 ] == 'o' ) )
            {
-//            Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case o, h, or c. They mean off, heat, and cool and may be fully spelled out" ) );
-                Serial.println( F( "Valid mode missing after the space: h, c, o" ) ); //Trying to save space with these boards
+                Serial.println( F( "Valid mode missing after the space: h, c, o (heat/cool/off or may be spelled out)" ) ); //Trying to save space with these boards
 #endif
             goto showThermostatSetting;
            }
