@@ -100,12 +100,19 @@ duct damper operation for shared-furnace environments.
 WANTED:  ASSISTANCE CONDENSING THE SIZE OF THIS SKETCH BY USE OF ASM CODE.  ANY TAKERS?  POST AN ISSUE, PLEASE.
 
 # Summary:
-FUTURE: Improvement to Analog calibration possible
+Less flash-endowed boards cannot hold thermostat "auto" mode code, so those boards are identified during compilation by 
+using definitions and will only compile with "heat", "cool", and "off" mode options.
 
-Less flash-endowed boards cannot hold thermostat "auto" mode code, so those boards are identified during compilation by using definitions and will only compile with "heat", "cool", and "off" mode options.
+FUTURE: Improvement to Analog calibration possible
 
 Expect tweaking on the Analog calibration algorithm as I experiment with different boards and thermistor modules.
 
-TTGO/WeMos XI may have Analog pin pullup leakage, which impairs the Analog thermistor temperature algorithm.  I may investigate into a solution.  Until solved, you can always have your host computer calculate from a raw pin reading.
+TTGO/WeMos XI may have Analog pin pullup leakage, which impairs the Analog thermistor temperature algorithm.  I may 
+investigate into a solution.  Until solved, you can always have your host computer calculate temperature from:
+
+The raw pin reading (accomplished with the "read pin [pin number]" command) is available to the host.  This is the same 
+method that ANY raw analog input reading or digital pin reading may be gotten by the host.  To clarify, the "sens read 
+[pin number]" command will nearly always provide a far less accurate temperature reading than can be done by host-based 
+algorithms which can take into account many more factors per pin and per raw analog reading.
 
 With those caveats, I now present a finished product.
