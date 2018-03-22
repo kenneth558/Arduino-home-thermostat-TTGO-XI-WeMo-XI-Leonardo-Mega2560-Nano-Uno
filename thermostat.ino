@@ -10,7 +10,6 @@
  *        Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
  *        alert when back pressure within furnace indicates to change filter
  *        damper operation with multiple temp sensors
- *        known issue: the first time reading a dual-mode sensor pin it is left with a pullup resistance which throws off the very next analog sensor read on that pin for one read attempt only.
  * 
  *        https://github.com/wemos/Arduino_XI  for the IDE support for TTGO XI/WeMo XI
  * 
@@ -1430,7 +1429,7 @@ showThermostatSetting:;
         {
             if( strchr( &strFull[ 3 ], ' ' ) )
             {
-#ifndef __LGT8FX8E__//Just to save space as much as possible this board
+#if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
                 Serial.println( F( "That space you entered also then requires a valid mode. The only valid characters allowed after that space are the options lower case a or o. They mean auto and on and optionally may be spelled out completely" ) );
 #else
                 Serial.println( F( "The only valid characters allowed after that space are the options lower case a or o (auto/on or may be spelled out)" ) );
