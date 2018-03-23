@@ -55,7 +55,7 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
         raw = 4096 - raw; // I would use #ifdef ADC_BITS if I can test it out on some board.  I haven't got my STM32 board working yet SO THIS CASE WILL FAIL RIGHT NOW
 #endif
 #endif
-#define RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT 150
+#define RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT 10//This number must be in the range of raw analog readings
         if( raw > RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT )
         {
             if( raw > 512 )
