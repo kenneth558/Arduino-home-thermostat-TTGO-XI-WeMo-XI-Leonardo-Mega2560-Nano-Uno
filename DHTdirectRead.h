@@ -56,15 +56,16 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
 #endif
 #endif
 #define RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT 10//This number must be in the range of raw analog readings
-        if( raw > RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT )
+#define RAW_ANALOG_VALUE_OF_FULL_ADJUSTMENT 512//This number must be in the range of raw analog readings
+        if( raw > RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT )//below this value, no adjustment is applied
         {
-            if( raw > 512 )
+            if( raw > RAW_ANALOG_VALUE_OF_FULL_ADJUSTMENT )//At this value or higher we simply apply full calibration value against the raw reading
             {
                 raw += ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] );
             }
-            else
+            else //In this range only a portion of calibration adjustment is applied
             {
-                raw += ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * ( float )( 1 - ( ( float )( 512 - raw ) / ( 512 - RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT ) ) );
+                raw += ( signed char )EEPROM.read( calibration_offset + ( unsigned long )memchr( analog_pin_list, pin, PIN_Amax ) - ( unsigned long )&analog_pin_list[ 0 ] ) * ( float )( 1 - ( ( float )( RAW_ANALOG_VALUE_OF_FULL_ADJUSTMENT - raw ) / ( RAW_ANALOG_VALUE_OF_FULL_ADJUSTMENT - RAW_ANALOG_VALUE_OF_ZERO_ADJUSTMENT ) ) );
             }
         }
         DHTfunctionResultsArray[ pin - 1 ].Type = TYPE_ANALOG;
