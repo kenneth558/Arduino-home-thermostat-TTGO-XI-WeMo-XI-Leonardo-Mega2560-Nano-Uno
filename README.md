@@ -1,8 +1,7 @@
-You'll need to download four files: the .ino and the three .h files.  IF USING TTGO XI/WeMo XI YOU'LL ALSO NEED WHAT 
-YOU'LL FIND AT   https://github.com/wemos/Arduino_XI  (IDE support for TTGO XI/WeMo XI), BUT IF YOU COMPILE UNDER LINUX, 
-READ THAT ISSUES SECTION FOR THE BOARDS.TXT FILE MODIFICATION DUE TO THE DIRECTORY DELIMITER CHARACTER DIFFERENCE ( \ -> 
-/ ) 
-
+You'll need to download four files: the .ino and the three .h files.  IF USING TTGO XI/WeMo XI you'll also need the IDE-
+specific files found at https://github.com/wemos/Arduino_XI  (IDE support for TTGO XI/WeMo XI), but if you compile under 
+Linux, read that issues section for the boards.txt corrective file modification due to the directory delimiter character 
+difference ( \ -> / ).
 # Arduino Home Thermostat and Environment Interface
 I use this sketch in the Arduino UNO, Mega2560, Leonardo and Wemo XI (TTGO XI) as my thermostat, and you can easily 
 modify it for humidistat as well.  I have compiled it for all boards I could select in the IDE and ensured it would 
