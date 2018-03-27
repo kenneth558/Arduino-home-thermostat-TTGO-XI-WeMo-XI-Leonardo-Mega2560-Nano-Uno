@@ -1815,38 +1815,38 @@ void loop()
         }
     }
     else bFresh_powerup = false;
-        DHTresult* noInterrupt_result = ( DHTresult* )( FetchTemp( primary_temp_sensor_pin, RECENT ) ); 
-        if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) noInterrupt_result = ( DHTresult* )( FetchTemp( secondary_temp_sensor_pin, RECENT ) );
-        if( ( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) || noInterrupt_result->Type == TYPE_ANALOG )
+        DHTresult* pNoInterrupt_result = ( DHTresult* )( FetchTemp( primary_temp_sensor_pin, RECENT ) ); 
+        if( pNoInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && pNoInterrupt_result->Type != TYPE_ANALOG ) pNoInterrupt_result = ( DHTresult* )( FetchTemp( secondary_temp_sensor_pin, RECENT ) );
+        if( ( pNoInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS && pNoInterrupt_result->Type != TYPE_ANALOG ) || pNoInterrupt_result->Type == TYPE_ANALOG )
         {
             timeOfLastSensorTimeoutError = 0;
-//            if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-//            else _TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-//            if( noInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( noInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
-            _TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius )/ 10 );
-            _HumidityPercent = ( float )( ( float )noInterrupt_result->HumidityPercent / 10 );
+//            if( pNoInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( pNoInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+//            else _TemperatureCelsius = ( float )( ( float )( pNoInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+//            if( pNoInterrupt_result->TemperatureCelsius & 0x8000 ) _TemperatureCelsius = 0 - ( float )( ( float )( pNoInterrupt_result->TemperatureCelsius & 0x7FFF )/ 10 );
+            _TemperatureCelsius = ( float )( ( float )( pNoInterrupt_result->TemperatureCelsius )/ 10 );
+            _HumidityPercent = ( float )( ( float ) pNoInterrupt_result->HumidityPercent / 10 );
             last_three_temps[ last_three_temps_index ] = _TemperatureCelsius;
-            float newtemp = ( float )( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )/ 3 );
-            if( ( newtemp != oldtemp ) && ( last_three_temps[ last_three_temps_index ] != old_getCelsius_temp ) )
+            float pNewtemp = ( float )( ( float )( last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] )/ 3 );
+            if( ( pNewtemp != oldtemp ) && ( last_three_temps[ last_three_temps_index ] != old_getCelsius_temp ) )
             {
                 if( bLogging && bLogging_temp_changes )
                 {
                     Serial.print( F( "time_stamp_this Temperature change to " ) );
                     Serial.print( ( float )last_three_temps[ last_three_temps_index ], 1 );
                     Serial.print( F( " °C " ) );// Leave in celsius for memory savings
-                    if( noInterrupt_result == &DHTfunctionResultsArray[ ( primary_temp_sensor_pin & 0x7F ) - 1 ] ) Serial.print( F( "prim" ) );
+                    if( pNoInterrupt_result == &DHTfunctionResultsArray[ ( primary_temp_sensor_pin & 0x7F ) - 1 ] ) Serial.print( F( "prim" ) );
                     else Serial.print( F( "second" ) );
                     Serial.println( F( "ary sensor" ) );
                 }
                 old_getCelsius_temp = last_three_temps[ last_three_temps_index ];
-                if( bHeat_state && !timer_alert_furnace_sent && newtemp < oldtemp ) //store temp at every small drop when heat is calling && !timer_alert_furnace_sent
+                if( bHeat_state && !timer_alert_furnace_sent && pNewtemp < oldtemp ) //store temp at every small drop when heat is calling && !timer_alert_furnace_sent
                 {
                       temp_minimus = min( temp_minimus, last_three_temps[ 0 ] ); //Be sure to set this when heat is manually operated by pin manipulation or any other means also
                       temp_minimus = min( temp_minimus, last_three_temps[ 1 ] );
                       temp_minimus = min( temp_minimus, last_three_temps[ 2 ] );
                 }
             }
-            oldtemp = newtemp;
+            oldtemp = pNewtemp;
             last_three_temps_index = ++last_three_temps_index % 3;
     
             if( last_three_temps[ 0 ] == -100 || last_three_temps[ 1 ] == -101 || last_three_temps[ 2 ] == -102 )
@@ -1862,11 +1862,11 @@ void loop()
     #if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
                 else if( thermostat_mode == 'a' )
                 {
-                    noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) ); 
-                    if( noInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && noInterrupt_result->Type != TYPE_ANALOG ) noInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
-                    if( noInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS || noInterrupt_result->Type == TYPE_ANALOG )
+                    pNoInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor1_pin, RECENT ) ); 
+                    if( pNoInterrupt_result->ErrorCode != DEVICE_READ_SUCCESS && pNoInterrupt_result->Type != TYPE_ANALOG ) pNoInterrupt_result = ( DHTresult* )( FetchTemp( outdoor_temp_sensor2_pin, RECENT ) );
+                    if( pNoInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS || pNoInterrupt_result->Type == TYPE_ANALOG )
                     {
-                        O_TemperatureCelsius = ( float )( ( float )( noInterrupt_result->TemperatureCelsius )/ 10 );
+                        O_TemperatureCelsius = ( float )( ( float )( pNoInterrupt_result->TemperatureCelsius )/ 10 );
                         if( O_TemperatureCelsius >= _TemperatureCelsius ) cool_on_loop();//get outdoor temp, use second sensor if first fails, get indoor temp same way, if indoor < outdoor cool_on_loop();
                         else heat_on_loop();
                     }
