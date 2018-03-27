@@ -36,7 +36,7 @@
 *      Standard furnace nomenclature can be somewhat disorienting: blower is the term for fan when the furnace unit is being referenced by part for a furnace workman,
 *                                                                  fan is the term for same part but for the thermostat operator person
 * 
-********************************************************************************************************************************************************************************************************/
+*************************************************************************************************************************/
 #define VERSION "1.0"
 
 //On the first run of this sketch, if you received an error message about the following line...
@@ -45,12 +45,10 @@
 //If you've connected the analog temperature sensor[s] the opposite direction, thus seeing reported temperature go the opposite direction the real temperature goes, you may re-compile with the following line commented out rather than re-wire:
 #define ALL_ANALOG_SENSOR_CIRCUITS_ARE_THERMISTOR_TO_EXCITATION_VOLTS_AND_RESISTOR_TO_GROUND
 
-#ifndef u8
-    #define u8 uint8_t
-#endif
-#ifndef u16
-    #define u16 uint16_t
-#endif
+#undef u8
+#define u8 uint8_t
+#undef u16
+#define u16 uint16_t
 #include "analog_pin_adjust.h"
 #include <EEPROM.h> // Any board that errors compiling this line is unsuitable to be a thermostat because it cannot store settings persistently
 
@@ -75,7 +73,7 @@ double analogReadLeast( u8 pin )
     #if defined ( __LGT8FX8E__ )
         #define _baud_rate_ 19200 //During sketch development it was found that the XI tends to revert to baud 19200 after programming or need that rate prior to programming so we can't risk setting baud to anything but that until trusted in the future
         #define LED_BUILTIN 12
-//Commonly available TTGO XI/WeMo XI EEPROM library has only .read() and .write() methods.
+//Commonly available TTGO XI/WeMo XI EEPROM library has only .read() and .write() methods, no EEPROM.length().
         #define EEPROMlength 1024
         #define NUM_DIGITAL_PINS 14  //here if necessary or FYI.  TTGO XI has no D13 labeled but its prob sck, https://www.avrfreaks.net/comment/2247501#comment-2247501 says why D14 and up don't work digital: "lgt8fx8x_init() disables digital with DIDR0 register.   Subsequent pinMode() should enable/disable digital as required.   i.e. needs a patch in wiring_digital.c"
     #endif
@@ -85,8 +83,9 @@ double analogReadLeast( u8 pin )
 #endif
 
 #ifndef SERIAL_PORT_HARDWARE
-    #define SERIAL_PORT_HARDWARE 0
+    #define SERIAL_PORT_HARDWARE 0 // We make a risky but necessary assumption here
 #endif
+
 
 
 //All temps are shorts until displayed
