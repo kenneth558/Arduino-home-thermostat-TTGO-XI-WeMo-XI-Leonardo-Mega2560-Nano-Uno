@@ -8,11 +8,13 @@
 #define DEVICE_FAILS_DURING_INITIALIZE5 6 //249
 #define DEVICE_FAILS_DURING_INITIALIZE6 7 //248
 #define DEVICE_FAILS_DURING_DATA_STREAM 8 //245
+#undef DEVICE_CRC_ERROR //just in case
 #define DEVICE_CRC_ERROR 9 //244
 #define DEVICE_BYTE0_ERROR 10 //243
 #define DEVICE_BYTE2_ERROR 11 //242
 #define DEVICE_BYTES0and1_ERROR 12 //241
 #define DEVICE_BYTES2and3_ERROR 13 //240
+#undef DEVICE_READ_SUCCESS //just in case
 #define DEVICE_READ_SUCCESS 14 //239
 
 #define REFUSED_INVALID_PIN 15 //237
@@ -96,7 +98,7 @@ DHTresult DHTfunctionResultsArray[ NUM_DIGITAL_PINS + 1 ]; //The last entry will
 
 void GetReading( u8 pin, u8 pin_limited_to_digital_mode_flag )
 {
-      long unsigned startBitTime;
+        long unsigned startBitTime;
         unsigned long turnover_reference_time;
         DHTfunctionResultsArray[ pin - 1 ].timeOfLastAccessMillis = millis(); 
         digitalWrite( pin, LOW );
