@@ -18,12 +18,12 @@ void restore_factory_defaults()
     Serial.print( F( ", power cycle of automation system or whatnot controlled by pin " ) );
     Serial.print( factory_setting_power_cycle_pin );
     Serial.print( F( ", logging o" ) );
-    if( factory_setting_logging_setting ) Serial.print( F( "n" ) );
+    if( bFactory_setting_logging_setting ) Serial.print( F( "n" ) );
     else Serial.print( F( "ff" ) );
     Serial.print( F( ", logging temp changes o" ) );
-    if( factory_setting_logging_temp_changes_setting ) Serial.print( F( "n, " ) );
+    if( bFactory_setting_logging_temp_changes_setting ) Serial.print( F( "n, " ) );
     else Serial.print( F( "ff, " ) );
-    Serial.print( ( const __FlashStringHelper * )str_heatStartLowTemp );
+    Serial.print( ( const __FlashStringHelper * )szHeatStartLowTemp );
     Serial.print( '=' );
     Serial.print( factory_setting_lower_heat_temp_floated, 1 );
     Serial.print( F( ", heat stop high temp=" ) );
@@ -57,14 +57,14 @@ void restore_factory_defaults()
     EEPROMupdate( power_cycle_pin_address, factory_setting_power_cycle_pin );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( logging_address, factory_setting_logging_setting );
+    EEPROM.update( logging_address, bFactory_setting_logging_setting );
 #else
-    EEPROMupdate( logging_address, factory_setting_logging_setting );
+    EEPROMupdate( logging_address, bFactory_setting_logging_setting );
 #endif
 #ifndef __LGT8FX8E__
-    EEPROM.update( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );
+    EEPROM.update( logging_temp_changes_address, bFactory_setting_logging_temp_changes_setting );
 #else
-    EEPROMupdate( logging_temp_changes_address, factory_setting_logging_temp_changes_setting );
+    EEPROMupdate( logging_temp_changes_address, bFactory_setting_logging_temp_changes_setting );
 #endif
 #ifndef __LGT8FX8E__
     EEPROM.update( thermostat_mode_address, factory_setting_thermostat_mode );
@@ -123,8 +123,8 @@ void restore_factory_defaults()
 #endif
 
 // no EEPROM updates allowed while in interrupts
-    logging = factory_setting_logging_setting;
-    logging_temp_changes = factory_setting_logging_temp_changes_setting;
+    bLogging = bFactory_setting_logging_setting;
+    bLogging_temp_changes = bFactory_setting_logging_temp_changes_setting;
     thermostat_mode = factory_setting_thermostat_mode;
     timer_alert_furnace_sent = 0;
 // gets done later    fan_mode = factory_setting_fan_mode;
@@ -153,6 +153,7 @@ void restore_factory_defaults()
     {
 #ifndef __LGT8FX8E__
         EEPROM.update( calibration_offset + i, 245 ); //the 200 unsigned equates to -56 signed, 225 unsigned equates to -31 signed, adjust to your heart's content for a default analog calibration adjust based on supply voltage.  Tweak each sensor individually in the array for further accuracy
+//164-165 good at 10.1C premise
 //The calibration offset is applied up front to the raw device reading in a "regressive-differential-from-midpoint" style
 //Calibration offset values from 0 to 127 move the temperature further positive; values from 128 to 255 move it further negative than would be seen using a 0 calibration offset. 
 #else
