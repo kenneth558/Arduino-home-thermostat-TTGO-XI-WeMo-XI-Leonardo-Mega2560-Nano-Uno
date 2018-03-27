@@ -25,7 +25,7 @@
 *     I RECOMMEND WHEN USING A DIGITAL SENSOR ON A PIN THAT YOU ADD 128 TO THE PIN NUMBER WHEN STORING IT IN EEPROM SO IF THE DIGITAL SENSOR FAILS THE SKETCH WILL NOT REVERT TO READ AN INVALID ANALOG VALUE FROM THAT PIN!
 *     
 * 
-* TODO:  Scheduling and GPS-acquired time using NMEA streaming to/from GPS module
+* TODO:  Scheduling and GPS-acquired time using NMEA link to/from GPS module
 *        labels to pins 
 *        Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
 *        alert when back pressure within furnace indicates to change filter
