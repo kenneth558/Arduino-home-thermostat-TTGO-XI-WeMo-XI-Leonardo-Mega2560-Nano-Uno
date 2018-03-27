@@ -1,22 +1,42 @@
-/***********************************************************************************************************************
- *      ARDUINO HOME THERMOSTAT SKETCH  v.1.0
- *      Boards tested on: Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
- *      Author:  Kenneth L. Anderson
- *      Date:  03/22/18
- * 
- *     I RECOMMEND WHEN USING A DIGITAL SENSOR ON A PIN THAT YOU ADD 128 TO THE PIN NUMBER WHEN STORING IT IN EEPROM SO IF THE DIGITAL SENSOR FAILS THE SKETCH WILL NOT REVERT TO READ AN INVALID ANALOG VALUE FROM THAT PIN!
- * 
- * TODO:  labels to pins 
- *        Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
- *        alert when back pressure within furnace indicates to change filter
- *        damper operation with multiple temp sensors
- * 
- *        https://github.com/wemos/Arduino_XI  for the IDE support for TTGO XI/WeMo XI
- * 
- *      Standard furnace nomenclature can be somewhat disorienting: blower is the term for fan when the furnace unit is being referenced by part for a furnace workman,
- *                                                                  fan is the term for same part but for the thermostat operator person
- * 
- *************************************************************************************************************************/
+/*******************(C)  COPYRIGHT 2018 KENNETH L ANDERSON *********************
+*      ARDUINO SINGLE REGULATED SPACE THERMOSTAT 
+* File Name          : thermostat.ino
+* Author             : KENNETH L ANDERSON
+* Version            : v.1.0
+* Date               : 26-March-2018
+* Description        : Implements residential thermostat functionality on Arduino-compatible hardware platforms having 32K minimum Flash + 64 bytes minimum EEPROM
+* Boards tested on   : Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
+* Known limitations  : Only a host serially-connected computer can effect run-time change and/or viewing of thermostat settings ("Here, have yourself a thermostat that is locked from changing if not attached to a host computer")
+*                    : No scheduling ability to work around that limitation is integrated
+*                    : No time-of-day ability is even vaguely allowed for except if implemented on a host computer
+********************************************************************************
+* THE PRESENT PRODUCT WHICH IS ONLY FOR USE BY SOFTWARE- AND HARDWARE-COMPETENT USERS
+* IS INTENDED TO OFFER VARIOUS CAPABILITIES.  BECAUSE ABSOLUTELY NO CONSIDERATION 
+* IS EXPECTED IN RETURN, NO CONTRACT, WHETHER OFFERING SUITABILITY, RELIABILITY, 
+* FUNCTIONALITY, SAFETY, OR OTHER, EXISTS.  BY USING THIS PRODUCT YOU EXPRESSLY AND
+* TOTALLY ACCEPT FULL LIABILITY FOR ANY DIRECT, INDIRECT OR CONSEQUENTIAL DAMAGES 
+* WITH RESPECT TO ANY CLAIMS ARISING FROM SOFTWARE AND/OR HARDWARE DERIVATIONS OF PRODUCT.
+* I MAKE ABSOLUTELY NO CLAIM OF MY OWN COMPETENCE, LICENSURE, CERTIFICATION, EXPERIENCE,
+* OR PROFESSIONAL STANDING OTHER THAN BEING AN ELECTRONICS TECHNICIAN BY FORMAL 
+* DEGREE AND UNITED STATES FCC RADIOTELEPHONE OPERATORS LICENSE, AND 
+* A SOFTWARE DEVELOPER BY LIMITED PRACTICAL EXPERIENCE
+********************************************************************************
+*
+*     I RECOMMEND WHEN USING A DIGITAL SENSOR ON A PIN THAT YOU ADD 128 TO THE PIN NUMBER WHEN STORING IT IN EEPROM SO IF THE DIGITAL SENSOR FAILS THE SKETCH WILL NOT REVERT TO READ AN INVALID ANALOG VALUE FROM THAT PIN!
+*     
+* 
+* TODO:  Scheduling and GPS-acquired time using e NMEA streaming to/from GPS module
+*        labels to pins 
+*        Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
+*        alert when back pressure within furnace indicates to change filter
+*        damper operation with multiple temp sensors
+* 
+*        https://github.com/wemos/Arduino_XI  for the IDE support for TTGO XI/WeMo XI
+* 
+*      Standard furnace nomenclature can be somewhat disorienting: blower is the term for fan when the furnace unit is being referenced by part for a furnace workman,
+*                                                                  fan is the term for same part but for the thermostat operator person
+* 
+********************************************************************************************************************************************************************************************************/
 #define VERSION "1.0"
 
 //On the first run of this sketch, if you received an error message about the following line...
