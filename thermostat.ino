@@ -3,7 +3,7 @@
 * File Name          : thermostat.ino
 * Author             : KENNETH L ANDERSON
 * Version            : v.1.0
-* Date               : 26-March-2018
+* Date               : 27-March-2018
 * Description        : Implements residential thermostat functionality on Arduino-compatible hardware platforms having 32K minimum Flash + 64 bytes minimum EEPROM
 * Boards tested on   : Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
 * Known limitations  : Only a host serially-connected computer can effect run-time change and/or viewing of thermostat settings ("Here, have yourself a thermostat that is locked from changing if not attached to a host computer")
@@ -1718,14 +1718,14 @@ float temp_minimus;
 
 void heat_on_loop()
 {
+    digitalWrite( cool_pin, LOW );
+    bCool_state = false;
    if( !bHeat_state )
    {
           if( last_three_temps[ 0 ] < lower_heat_temp_floated && last_three_temps[ 1 ] < lower_heat_temp_floated && last_three_temps[ 2 ] < lower_heat_temp_floated && last_three_temps[ 0 ] + last_three_temps[ 1 ] + last_three_temps[ 2 ] > lower_heat_temp_floated )
           {
                 digitalWrite( heat_pin, HIGH ); 
-//                digitalWrite( cool_pin, LOW );
               bHeat_state = true;
-//              bCool_state = false;
               timer_alert_furnace_sent = 0;
               if( bLogging )
               {
@@ -1773,15 +1773,15 @@ void heat_on_loop()
 
 void cool_on_loop()
 {
+    digitalWrite( heat_pin, LOW ); 
+    bHeat_state = false;
+    timer_alert_furnace_sent = 0;
    if( !bCool_state )
    {
           if( last_three_temps[ 0 ] > upper_cool_temp_floated && last_three_temps[ 1 ] > upper_cool_temp_floated && last_three_temps[ 2 ] > upper_cool_temp_floated )
           {
-//                digitalWrite( heat_pin, LOW ); 
                 digitalWrite( cool_pin, HIGH );
-//              bHeat_state = false;
               bCool_state = true;
-//              timer_alert_furnace_sent = 0;
               if( bLogging )
               {
                 Serial.println( F( "time_stamp_this A/C on" ) );
@@ -1867,7 +1867,7 @@ void loop()
                     if( pNoInterrupt_result->ErrorCode == DEVICE_READ_SUCCESS || pNoInterrupt_result->Type == TYPE_ANALOG )
                     {
                         O_TemperatureCelsius = ( float )( ( float )( pNoInterrupt_result->TemperatureCelsius )/ 10 );
-                        if( O_TemperatureCelsius >= _TemperatureCelsius ) cool_on_loop();//get outdoor temp, use second sensor if first fails, get indoor temp same way, if indoor < outdoor cool_on_loop();
+                        if( ( O_TemperatureCelsius >= _TemperatureCelsius ) && ( ( last_three_temps[ 0 ] > upper_heat_temp_floated && last_three_temps[ 1 ] > upper_heat_temp_floated && last_three_temps[ 2 ] > upper_heat_temp_floated ) || ( last_three_temps[ 0 ] > upper_cool_temp_floated && last_three_temps[ 1 ] > upper_cool_temp_floated && last_three_temps[ 2 ] > upper_cool_temp_floated ) ) ) cool_on_loop();//get outdoor temp, use second sensor if first fails, get indoor temp same way, if indoor < outdoor cool_on_loop();
                         else heat_on_loop();
                     }
                     else heat_on_loop();
