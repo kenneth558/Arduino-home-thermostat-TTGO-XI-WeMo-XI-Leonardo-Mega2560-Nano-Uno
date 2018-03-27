@@ -26,7 +26,8 @@
         #define PIN_A20 A20
 
     #endif
-    #if defined ( PIN_A20 ) && not defined ( PIN_Amax )
+    #undef PIN_Amax
+    #if defined ( PIN_A20 )
         #define PIN_Amax PIN_A20
         u8 analog_pin_list[] = { A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20 };
     #endif
