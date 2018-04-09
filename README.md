@@ -1,7 +1,7 @@
 You'll need to download four files: the .ino and the three .h files.  IF USING TTGO XI/WeMo XI you'll also need the IDE-
 specific files found at https://github.com/wemos/Arduino_XI  (IDE support for TTGO XI/WeMo XI), but if you compile under 
 Linux, read that issues section for the boards.txt corrective file modification due to the directory delimiter character 
-difference ( \ -> / ).  An alternative that will give you 12-bit analog resolution can be found here: https://github.com/EHbtj/Customized-WWMOS-XI  Note that the installation of this second tool-set does not seem to be straightforward, but I did finally get it to work with several manual file creations and manipulations.
+difference ( \ -> / ).  An alternative that will give you 12-bit analog resolution can be found here: https://github.com/EHbtj/Customized-WWMOS-XI  Note that the installation of this second tool-set does not seem to be straightforward, but I did finally get it to work with several manual file creations and manipulations.  The second set seems to require several files from the first, or maybe it is meant to be unzipped and its files overlayed on the first.
 # Arduino Home Thermostat and Environment Interface
 I use this sketch in the Arduino UNO, Mega2560, Leonardo and Wemo XI (TTGO XI) as my thermostat, and you can easily 
 modify it for humidistat as well.  I have compiled it for all boards I could select in the IDE and ensured it would 
