@@ -2,8 +2,8 @@
 *      ARDUINO SINGLE REGULATED SPACE THERMOSTAT 
 * File Name          : thermostat.ino
 * Author             : KENNETH L ANDERSON
-* Version            : v.1.0
-* Date               : 27-March-2018
+* Version            : v.2.0
+* Date               : 15-April-2018
 * Description        : Implements residential thermostat functionality on Arduino-compatible hardware platforms having 32K minimum Flash + 64 bytes minimum EEPROM
 * Boards tested on   : Uno Mega2560 WeMo XI/TTGO XI Leonardo Nano
 * Known limitations  : Only a host serially-connected computer can effect run-time change and/or viewing of thermostat settings ("Here, have yourself a thermostat that is locked from changing if not attached to a host computer")
@@ -30,6 +30,7 @@
 *        Add more externally-scripted functions, like entire port pin changes, watches on pins with routines that will execute routines to any combo of pins upon pin[s] conditions,
 *        alert when back pressure within furnace indicates to change filter
 *        damper operation with multiple temp sensors
+*        see if using highbyte and lowbyte functions save flash space
 * 
 *        https://github.com/wemos/Arduino_XI  for the IDE support for TTGO XI/WeMo XI
 * 
@@ -37,10 +38,16 @@
 *                                                                  fan is the term for same part but for the thermostat operator person
 * 
 *************************************************************************************************************************/
-#define VERSION "1.0"
+#define VERSION "2.0"
 
 //On the first run of this sketch, if you received an error message about the following line...
 //#define RESTORE_FACTORY_DEFAULTS //As the error message said, uncomment this line, compile & load for first run EEPROM setup in WeMo XI/TTGO XI and any other board that needs it, then comment back out and recompile and load b/c sketch would be too long otherwise
+
+//Options to give flexibility with boards having limitations due to lack of enough flash space.  Comment out certain ones of your choice to reduce flash consumption
+#define FORCE_INCLUSION_OF_THERMOSTAT_AUTO_ABILITY Yes
+#define FORCE_COMPILE_FOR_KY013_ANALOG_SENSORS Yes
+#define FORCE_COMPILE_FOR_DHT11_22_SENSORS Yes
+//#define FORCE_COMPILE_FOR_BME280_SENSORS Yes
 
 //If you've connected the analog temperature sensor[s] the opposite direction, thus seeing reported temperature go the opposite direction the real temperature goes, you may re-compile with the following line commented out rather than re-wire:
 #define ALL_ANALOG_SENSOR_CIRCUITS_ARE_THERMISTOR_TO_EXCITATION_VOLTS_AND_RESISTOR_TO_GROUND
@@ -64,6 +71,13 @@ double analogReadLeast( u8 pin )
 }
 
 #include "DHTdirectRead.h"
+
+#ifdef FORCE_COMPILE_FOR_BME280_SENSORS == Yes
+    #include <SPI.h>                         // Needed for legacy versions of Arduino.
+    #include <BME280Spi.h>
+    BME280Spi::Settings settings( 11 );//DEVICE_PIN);
+#endif
+
 #undef BAUD_RATE
 #define BAUD_RATE 57600 //Very much dependent upon the capability of the host computer to process talkback data, not just baud rate of its interface
 #if not defined ( __LGT8FX8E__ ) && not defined ( ARDUINO_AVR_YUN ) && not defined ( ARDUINO_AVR_LEONARDO ) && not defined ( ARDUINO_AVR_LEONARDO_ETH ) && not defined ( ARDUINO_AVR_MICRO ) && not defined ( ARDUINO_AVR_ESPLORA ) && not defined ( ARDUINO_AVR_LILYPAD_USB ) && not defined ( ARDUINO_AVR_YUNMINI ) && not defined ( ARDUINO_AVR_INDUSTRIAL101 ) && not defined ( ARDUINO_AVR_LININO_ONE )
@@ -277,7 +291,7 @@ void EEPROMupdate ( unsigned long address, u8 val )
 
 void printAnalogLevel( u8 pin_specified_local )
 {
-#ifdef ADC_BITS
+#ifdef __LGT8FX8E__
         analogReadResolution( 12 );
 #endif
         Serial.print( F( " level: " ) );
