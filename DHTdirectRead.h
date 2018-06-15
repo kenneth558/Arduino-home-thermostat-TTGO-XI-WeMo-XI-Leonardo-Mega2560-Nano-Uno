@@ -194,7 +194,7 @@ removePullup:;
             else if( micros() - startBitTime > 48 ) 
             {
                  startBitTime = micros();//capture time of signal going low
-//here we have some time to compute
+//here we have some time to compute.  Found this capability if changed to using SPI object: SPI.setBitOrder(MSBFIRST);
                  if( bitnumber < 8 )
                       DataStreamBits[ 0 ] |= bit( 7 - bitnumber );//or do we need to adjust bitnumber to eliminate rounding error?
                  else if( bitnumber < 16 )
