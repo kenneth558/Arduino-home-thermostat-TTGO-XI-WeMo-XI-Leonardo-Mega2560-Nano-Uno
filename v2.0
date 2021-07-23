@@ -44,9 +44,9 @@ TO  DIGITAL SENSORS WHILE THEIR CIRCUITRY/PHYSICAL NUMBERING ARE KNOWN TO BE 128
 //#define RESTORE_FACTORY_DEFAULTS //As the error message said, uncomment this line, compile & load for first run EEPROM setup in WeMo XI/TTGO XI and any other board that needs it, then comment back out and recompile and load b/c sketch would be too long otherwise
 
 //Options to give flexibility with boards having limitations due to lack of enough flash space.  Comment out certain ones of your choice to reduce flash consumption
-//#define FORCE_INCLUSION_OF_THERMOSTAT_AUTO_ABILITY Yes
-//#define FORCE_COMPILE_FOR_KY013_ANALOG_SENSORS Yes
-//#define FORCE_COMPILE_FOR_DHT11_22_SENSORS Yes
+#define FORCE_INCLUSION_OF_THERMOSTAT_AUTO_ABILITY Yes
+#define FORCE_COMPILE_FOR_KY013_ANALOG_SENSORS Yes
+#define FORCE_COMPILE_FOR_DHT11_22_SENSORS Yes
 //#define FORCE_COMPILE_FOR_BME280_SENSORS Yes
 
 //If you've connected the analog temperature sensor[s] the opposite direction, thus seeing reported temperature go the opposite direction the real temperature goes, you may re-compile with the following line commented out rather than re-wire:
